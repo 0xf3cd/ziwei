@@ -2,7 +2,7 @@
 
 [项目入口](../README.md) · [文档入口](index.md)
 
-先读相关 issue 和[结构设计](architecture.md)。issue 定义功能范围与验收盘例，
+先读[相关 issue](https://github.com/0xf3cd/ziwei/issues)和[结构设计](architecture.md)。issue 定义功能范围与验收盘例，
 每次改动应能作为一个行为变化讲清楚、审清楚。
 
 PR 标题与正文、issue、评论与审阅回复使用中文。文档中文。
