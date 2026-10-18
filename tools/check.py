@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import tomllib
 from collections.abc import Sequence
+from email.parser import Parser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from zipfile import ZipFile
@@ -16,6 +19,23 @@ from zipfile import ZipFile
 from markdown_it import MarkdownIt
 
 ROOT = Path(__file__).resolve().parents[1]
+# sdist 须能重建 wheel 并重跑全部检查：源码、测试、工具、文档、锁文件与约定。
+SOURCE_FILES = (
+  "pyproject.toml",
+  "uv.lock",
+  "LICENSE",
+  "README.md",
+  "AGENTS.md",
+  "src/ziwei/__init__.py",
+  "src/ziwei/py.typed",
+)
+SOURCE_PATTERNS = (
+  "src/ziwei/**/*.py",
+  "tools/*.py",
+  "tests/*.py",
+  "docs/**/*.md",
+  "docs/**/*.py",
+)
 
 
 def run(command: Sequence[str], *, cwd: Path = ROOT) -> None:
@@ -64,10 +84,35 @@ def check_examples(report: str) -> None:
     raise ValueError("No executed documentation examples in docs/contributing")
 
 
+def source_members(root: Path) -> tuple[str, ...]:
+  """列出 sdist 必须携带的工作树文件。"""
+  members = set(SOURCE_FILES)
+  for pattern in SOURCE_PATTERNS:
+    members.update(path.relative_to(root).as_posix() for path in root.glob(pattern))
+  return tuple(sorted(members))
+
+
+def check_sdist(sdist: Path, expected_version: str, members: Sequence[str]) -> None:
+  """校验 sdist 身份与内容，拒绝缺文件或夹带审阅材料。"""
+  base = f"ziwei-{expected_version}"
+  with tarfile.open(sdist) as archive:
+    names = archive.getnames()
+    stream = archive.extractfile(f"{base}/PKG-INFO") if f"{base}/PKG-INFO" in names else None
+    if stream is None:
+      raise ValueError("Sdist directory or PKG-INFO differs from project metadata")
+    with stream:
+      metadata = Parser().parsestr(stream.read().decode("utf-8"))
+  if metadata["Name"] != "ziwei" or metadata["Version"] != expected_version:
+    raise ValueError("Sdist identity differs from project metadata")
+  missing = [member for member in members if f"{base}/{member}" not in names]
+  if missing:
+    raise ValueError(f"Sdist is missing: {', '.join(missing)}")
+  if any(name.startswith(f"{base}/.review/") for name in names):
+    raise ValueError("Sdist carries review material")
+
+
 def check_wheel(wheel: Path, expected_version: str) -> None:
   """校验 wheel 内容与元数据。"""
-  from email.parser import Parser
-
   with ZipFile(wheel) as archive:
     names = archive.namelist()
     metadata_paths = [name for name in names if name.endswith(".dist-info/METADATA")]
@@ -82,25 +127,61 @@ def check_wheel(wheel: Path, expected_version: str) -> None:
       raise ValueError("Wheel is missing its license")
 
 
+def built_artifacts(directory: Path) -> tuple[Path, Path]:
+  """返回唯一的 sdist 与 wheel。"""
+  sdists = tuple(directory.glob("*.tar.gz"))
+  wheels = tuple(directory.glob("*.whl"))
+  if len(sdists) != 1 or len(wheels) != 1:
+    raise ValueError("Expected one sdist and one wheel")
+  return sdists[0], wheels[0]
+
+
 def check_distribution(directory: Path) -> None:
   """经 sdist 构建 wheel 并验证隔离安装。"""
   metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+  version = metadata["version"]
+  # 旧的 SOURCES.txt 会把已从清单删除的文件带回 sdist，掩盖清单变化。
+  for stale in ROOT.glob("src/*.egg-info"):
+    shutil.rmtree(stale)
   artifacts = directory / "artifacts"
   run((sys.executable, "-m", "build", "--outdir", str(artifacts)))
-  wheels = tuple(artifacts.glob("*.whl"))
-  if len(wheels) != 1 or len(tuple(artifacts.glob("*.tar.gz"))) != 1:
-    raise ValueError("Expected one wheel and one sdist")
-  check_wheel(wheels[0], metadata["version"])
+  sdist, wheel = built_artifacts(artifacts)
+  check_sdist(sdist, version, source_members(ROOT))
+  check_wheel(wheel, version)
 
   environment = directory / "consumer"
   run(("uv", "venv", "--python", sys.executable, str(environment)))
   python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-  run(("uv", "pip", "install", "--python", str(python), "--no-deps", str(wheels[0])))
+  run(("uv", "pip", "install", "--python", str(python), "--no-deps", str(wheel)))
   for mode in ((), ("-O",)):
     run(
-      (str(python), *mode, "-I", str(ROOT / "tools/installed_check.py"), metadata["version"]),
+      (str(python), *mode, "-I", str(ROOT / "tools/installed_check.py"), version),
       cwd=directory,
     )
+
+
+def sphinx_report(directory: Path) -> str:
+  """严格构建 HTML 与 doctest，返回 doctest 报告。"""
+  for builder in ("html", "doctest"):
+    run(
+      (
+        sys.executable,
+        "-m",
+        "sphinx",
+        "-E",
+        "-a",
+        "-n",
+        "-W",
+        "--keep-going",
+        "-b",
+        builder,
+        "-c",
+        "docs",
+        ".",
+        str(directory / builder),
+      )
+    )
+  return (directory / "doctest/output.txt").read_text(encoding="utf-8")
 
 
 def main() -> None:
@@ -126,27 +207,7 @@ def main() -> None:
     prefix="ziwei-check-", dir=os.environ.get("SCRATCH")
   ) as temporary:
     directory = Path(temporary)
-    for builder in ("html", "doctest"):
-      run(
-        (
-          sys.executable,
-          "-m",
-          "sphinx",
-          "-E",
-          "-a",
-          "-n",
-          "-W",
-          "--keep-going",
-          "-b",
-          builder,
-          "-c",
-          "docs",
-          ".",
-          str(directory / builder),
-        )
-      )
-    results = (directory / "doctest/output.txt").read_text(encoding="utf-8")
-    check_examples(results)
+    check_examples(sphinx_report(directory))
     check_distribution(directory)
   print("All checks passed.")
 

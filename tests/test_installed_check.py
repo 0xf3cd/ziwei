@@ -1,5 +1,7 @@
 """安装后消费者的拒绝用例。"""
 
+import re
+import subprocess
 import sys
 from importlib.metadata import version
 from pathlib import Path
@@ -60,3 +62,17 @@ def test_installed_check_passes_for_consumer(
 ) -> None:
   installed_check.main(version("ziwei"))
   assert "Installed ziwei" in capsys.readouterr().out
+
+
+def test_command_line_entry_validates_under_optimization(tmp_path: Path) -> None:
+  """命令行入口在 -O 下仍执行校验，而不是依赖 assert。"""
+  result = subprocess.run(
+    (sys.executable, "-O", "-I", str(Path(installed_check.__file__)), "unrelated-version"),
+    cwd=tmp_path,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode != 0
+  assert "ValueError" in result.stderr
+  assert re.search("outside the consumer environment|Installed version differs", result.stderr)
