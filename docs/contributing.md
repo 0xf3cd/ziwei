@@ -2,7 +2,7 @@
 
 [项目入口](../README.md) · [文档入口](index.md)
 
-先读相关 issue 和[结构设计](architecture.md)。issue 定义功能范围与验收盘例，
+先读[相关 issue](https://github.com/0xf3cd/ziwei/issues)和[结构设计](architecture.md)。issue 定义功能范围与验收盘例，
 每次改动应能作为一个行为变化讲清楚、审清楚。
 
 PR 标题与正文、issue、评论与审阅回复使用中文。文档中文。
@@ -21,8 +21,10 @@ CI 在 Linux 3.11／3.14 和 macOS／Windows 3.14 上运行同一命令。
 本地验证下限时使用 `uv sync --locked --python 3.11`。
 
 该命令检查 Ruff lint 与两空格格式、严格 mypy、普通与优化模式下的 pytest、文档本地链接、
-每次重新读取的严格 HTML／doctest 构建及隔离安装的 wheel。
-`python -m build` 经 sdist 构建 wheel；安装消费在仓外使用隔离导入，分别运行普通与优化模式。
+每次重新读取的严格 HTML／doctest 构建、sdist 内容及隔离安装的 wheel。
+`python -m build` 经 sdist 构建 wheel。sdist 须带全源码、测试、工具、文档、锁文件与协作约定，
+不得夹带 `.review/`；构建前删除 `src/*.egg-info`，旧的文件清单会掩盖 `MANIFEST.in` 的变化。
+安装消费在仓外使用隔离导入，分别运行普通与优化模式。
 临时 HTML、doctest 报告、分发包和消费者环境优先使用 `SCRATCH`，否则使用系统临时目录，
 退出时删除。构建元数据和工具缓存可能保留在仓内已忽略的目录中。
 
@@ -66,8 +68,8 @@ uv run python -m sphinx -E -a -n -W -b html -c docs . build/docs
 
 ## 正确性
 
-除代表值外，还要测试领域边界：闰月、早晚子时、正月初一与立春之间、支持范围端点、
-真太阳时跨日、缺失信息与不支持的组合。公开输入校验在 `python -O` 下也必须有效。
+除代表值外，还要测试领域边界：闰月、早晚子时、正月初一与立春之间、立春瞬间两侧的时标比较、
+支持范围端点、真太阳时跨日、缺失信息与不支持的组合。公开输入校验在 `python -O` 下也必须有效。
 
 参考盘例记录来源、口径配置、农历算法与版本、时区与真太阳时处理。往返测试检验保真，
 重新计算检验执行，独立来源检验一致性。外部排盘器是下游参考，不是一手来源；
