@@ -16,7 +16,7 @@ from tools import installed_check
 from ziwei.birth import GregorianBirthRecord
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
-from ziwei.knowledge.model import PremiseStatus
+from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
 from ziwei.timezone import TimezoneData
 
 
@@ -151,3 +151,46 @@ def test_knowledge_consumer_rejects_missing_or_changed_corpus(
   monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
   with pytest.raises(ValueError, match="knowledge"):
     installed_check.check_knowledge()
+
+
+@pytest.mark.parametrize("defect", ["tianma-alias", "geng-count", "empty-reference"])
+def test_knowledge_consumer_rejects_each_independent_missing_condition(
+  defect: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  if defect == "empty-reference":
+    original_references = Catalog.references
+
+    def references(self: Catalog, identifier: str) -> tuple[Citation, ...]:
+      return (
+        () if identifier == "entry.tianma.year-branch" else original_references(self, identifier)
+      )
+
+    monkeypatch.setattr(Catalog, "references", references)
+  else:
+    original_find = Catalog.find
+    target = "天馬" if defect == "tianma-alias" else "庚干四化"
+
+    def find(self: Catalog, name: str) -> tuple[Concept | RuleVariant, ...]:
+      return () if name == target else original_find(self, name)
+
+    monkeypatch.setattr(Catalog, "find", find)
+  with pytest.raises(ValueError, match="knowledge"):
+    installed_check.check_knowledge()
+
+
+def test_consumers_succeed_in_an_optimized_process(tmp_path: Path) -> None:
+  root = Path(__file__).resolve().parents[1]
+  script = (
+    "import sys; sys.path.insert(0, sys.argv[1]); "
+    "from tools.installed_check import check_knowledge, check_inputs; "
+    "check_knowledge(); check_inputs(); print('optimized-consumers-passed')"
+  )
+  result = subprocess.run(
+    (sys.executable, "-O", "-I", "-c", script, str(root)),
+    cwd=tmp_path,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 0, result.stderr
+  assert "optimized-consumers-passed" in result.stdout

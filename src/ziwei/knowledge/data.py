@@ -106,7 +106,7 @@ VARIANTS = (
     aliases=("月马", "月馬"),
     definition="网页将天马列在月系诸星；生月按实际农历、不看节气，闰月归下月。",
     scope="《精成》网页转录第11项",
-    concept_ids=("concept.star.tianma",),
+    concept_ids=("concept.star.tianma", "concept.policy.leap-month"),
     conditions=("按该页准备工作的农历生月口径，以正月对应寅宫",),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
@@ -245,7 +245,7 @@ CITATIONS = (
     locator="安天马星诀/标题后",
     quote="论本生年支",
     aspects=(EvidenceAspect.系统归属, EvidenceAspect.查法),
-    limits="只确认本页紫微安星段的年支锚。",
+    limits="只确认电子录文安星段的年支锚；未核底本，标题后缀在刊本中属白文或注文未定。",
   ),
   Citation(
     id="citation.quanshu.tianma-text",
@@ -335,7 +335,7 @@ CITATIONS = (
     locator="第3节/早子時與夜子時",
     quote="命盤應分早子與夜子",
     aspects=(EvidenceAspect.查法,),
-    limits="解释见同节夜半分日段，未实际运行网站排盘器。",
+    limits="依据见同节夜半分日段及末段反对23点后加一天的说明；未实际运行网站排盘器。",
   ),
 )
 
@@ -427,7 +427,7 @@ ENTRIES = (
   KnowledgeEntry(
     id="entry.tianma.month-branch",
     statement="精成网页将天马列入月系诸星；准备工作明确按农历生月，不看节气，闰月归下月。",
-    concept_ids=("concept.star.tianma",),
+    concept_ids=("concept.star.tianma", "concept.policy.leap-month"),
     variant_ids=("variant.tianma.month-branch",),
     citation_ids=("citation.jingcheng.tianma", "citation.jingcheng.birth-month"),
     premises=("采用该网页明确写出的农历生月口径，正月对应寅宫",),
@@ -491,7 +491,7 @@ ENTRIES = (
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.待整理,
     alternatives=("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星"),
-    limits="这是跨段应用前的未决范围，不否认该段已明确的身命归月，也不是两种已准入规则。",
+    limits="两读是拟应用范围，并非各有直接出处的规则；同段后文“凡有闰月具要依此为例”是待对照的范围线索，不否认已明确的身命归月。",
     recheck="取得同版其他月系星的闰月例，核安身命例的归月是否被沿用；不由身命段自行外推。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
   ),

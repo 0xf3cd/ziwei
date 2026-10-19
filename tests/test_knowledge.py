@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import pytest
 
-from ziwei.config import DayRollover, LeapMonthPolicy
+from ziwei.config import DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog, Record
 from ziwei.knowledge.model import (
@@ -534,3 +534,128 @@ def test_empty_catalog_is_valid_but_does_not_resolve(catalog: Catalog) -> None:
 def test_record_union_is_public() -> None:
   record: Record = load_catalog().concepts[0]
   assert record.id.startswith("concept.")
+
+
+def test_builtin_filters_intersect_individually_nonempty_sets() -> None:
+  catalog = load_catalog()
+  leap = "concept.policy.leap-month"
+  school = "concept.school.zhongzhou"
+  assert catalog.list_variants(concept_id=leap)
+  assert catalog.list_variants(school_id=school)
+  assert catalog.list_variants(concept_id=leap, school_id=school) == ()
+  assert [
+    variant.id
+    for variant in catalog.list_variants(concept_id="concept.sihua.shengnian", school_id=school)
+  ] == ["variant.sihua.geng-jiuqian-zhongzhou"]
+  assert catalog.filter_entries(concept_id="concept.star.tianma")
+  assert catalog.filter_entries(source_id="source.lifedna-flying")
+  assert (
+    catalog.filter_entries(concept_id="concept.star.tianma", source_id="source.lifedna-flying")
+    == ()
+  )
+  assert catalog.filter_entries(variant_id="variant.leap-month.next")
+  assert (
+    catalog.filter_entries(concept_id="concept.star.tianma", variant_id="variant.leap-month.next")
+    == ()
+  )
+  assert catalog.filter_sources(aspect=EvidenceAspect.系统归属)
+  assert catalog.filter_sources(lineage_id="lineage.lifedna-flying")
+  assert (
+    catalog.filter_sources(aspect=EvidenceAspect.系统归属, lineage_id="lineage.lifedna-flying")
+    == ()
+  )
+  assert "entry.tianma.month-branch" in {
+    entry.id for entry in catalog.filter_entries(concept_id=leap)
+  }
+
+
+@pytest.mark.parametrize("simplified,traditional", [("命宫", "命宮"), ("天马", "天馬")])
+def test_builtin_name_aliases_are_identical(simplified: str, traditional: str) -> None:
+  catalog = load_catalog()
+  assert catalog.find(simplified) == catalog.find(traditional)
+  assert catalog.find(simplified)
+  assert catalog.find("閏月歸屬") == ()
+  assert catalog.find("晚子時") == ()
+
+
+def test_option_can_match_a_later_concept_and_have_multiple_variants(catalog: Catalog) -> None:
+  first = replace(
+    catalog.variants[0], concept_ids=("concept.school.synthetic", "concept.synthetic")
+  )
+  second = replace(first, id="variant.second")
+  shared = replace(catalog, variants=(first, second))
+  assert shared.list_variants(concept_id="concept.synthetic") == (first, second)
+  assert first.option is second.option is LeapMonthPolicy.全月归本月
+  year = Concept(
+    id="concept.year-boundary", name="合成换年", kind=ConceptKind.口径, options=tuple(YearBoundary)
+  )
+  variant = replace(
+    first,
+    id="variant.year-boundary",
+    concept_ids=(year.id,),
+    school_ids=(),
+    option=YearBoundary.立春,
+  )
+  extended = replace(
+    shared, concepts=(*shared.concepts, year), variants=(*shared.variants, variant)
+  )
+  assert extended.list_variants(concept_id=year.id) == (variant,)
+
+
+def test_all_catalog_sequences_and_variant_relations_are_isolated(catalog: Catalog) -> None:
+  for name in ("variants", "sources", "citations", "entries"):
+    values = list(getattr(catalog, name))
+    changes: dict[str, Any] = {name: values}
+    copied = replace(catalog, **changes)
+    values.clear()
+    assert getattr(copied, name) == getattr(catalog, name)
+    assert isinstance(getattr(copied, name), tuple)
+  variant = catalog.variants[0]
+  for name in ("concept_ids", "school_ids", "aliases"):
+    values = list(getattr(variant, name))
+    changes = {name: values}
+    copied_variant = replace(variant, **changes)
+    values.clear()
+    assert getattr(copied_variant, name) == getattr(variant, name)
+    assert isinstance(getattr(copied_variant, name), tuple)
+
+
+def test_record_text_layers_are_independent(catalog: Catalog) -> None:
+  source = replace(catalog.sources[0], layer=TextLayer.今人说明)
+  citation = replace(catalog.citations[0], layer=TextLayer.注释)
+  entry = replace(catalog.entries[0], layer=TextLayer.仓内说明)
+  mixed = replace(catalog, sources=(source,), citations=(citation,), entries=(entry,))
+  assert mixed.references(entry.id)[0].layer is TextLayer.注释
+  assert mixed.sources[0].layer is TextLayer.今人说明
+  assert mixed.entries[0].layer is TextLayer.仓内说明
+
+
+@pytest.mark.parametrize(
+  "member,alias",
+  [
+    (ConceptKind.STAR, "星曜"),
+    (ConceptKind.PALACE, "宫位"),
+    (ConceptKind.SIHUA, "四化"),
+    (ConceptKind.WUXINGJU, "五行局"),
+    (ConceptKind.POLICY, "口径"),
+    (ConceptKind.SCHOOL, "流派"),
+    (TextLayer.ORIGINAL, "原文"),
+    (TextLayer.COMMENTARY, "注释"),
+    (TextLayer.TRANSLATION, "译文"),
+    (TextLayer.MODERN, "今人说明"),
+    (TextLayer.EDITORIAL, "仓内说明"),
+    (EvidenceAspect.SYSTEM, "系统归属"),
+    (EvidenceAspect.RULE, "规则"),
+    (EvidenceAspect.METHOD, "查法"),
+    (SourceStatus.VERIFIED, "已核"),
+    (SourceStatus.UNVERIFIED, "待核"),
+    (PremiseStatus.COMPLETE, "已明确"),
+    (PremiseStatus.UNRESOLVED, "待定"),
+    (DisplayEligibility.DEFAULT, "可默认展示"),
+    (DisplayEligibility.WITHHELD, "暂不默认展示"),
+    (CurationStatus.DRAFT, "待整理"),
+    (CurationStatus.CURATED, "已整理"),
+  ],
+)
+def test_knowledge_chinese_alias_is_the_canonical_member(member: Any, alias: str) -> None:
+  assert getattr(type(member), alias) is member

@@ -66,10 +66,13 @@ class KnowledgeTargets(HTMLParser):
     self.text: dict[str, str] = {}
     self.links: list[str] = []
     self.members: dict[str, list[tuple[str, str]]] = {}
+    self.rows: dict[str, list[tuple[str, ...]]] = {}
     self._sections: list[str | None] = []
     self._member_tag: str | None = None
     self._member_text: list[str] = []
     self._member_name = ""
+    self._row: list[str] | None = None
+    self._cell: list[str] | None = None
 
   def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
     attributes = dict(attrs)
@@ -81,12 +84,23 @@ class KnowledgeTargets(HTMLParser):
     if tag in ("dt", "dd"):
       self._member_tag = tag
       self._member_text = []
+    if tag == "tr":
+      self._row = []
+    if tag == "td" and self._row is not None:
+      self._cell = []
     if tag == "a":
       href = attributes.get("href")
       if href is not None:
         self.links.append(href)
 
   def handle_endtag(self, tag: str) -> None:
+    if tag == "td" and self._cell is not None and self._row is not None:
+      self._row.append("".join(self._cell))
+      self._cell = None
+    if tag == "tr" and self._row is not None:
+      if self._sections and self._sections[-1] is not None:
+        self.rows.setdefault(self._sections[-1], []).append(tuple(self._row))
+      self._row = None
     if tag == self._member_tag:
       text = "".join(self._member_text)
       if tag == "dt":
@@ -100,6 +114,8 @@ class KnowledgeTargets(HTMLParser):
       self._sections.pop()
 
   def handle_data(self, data: str) -> None:
+    if self._cell is not None:
+      self._cell.append(data)
     if self._member_tag is not None:
       self._member_text.append(data)
     for section in self._sections:
@@ -134,10 +150,13 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
     ]
     if parser.members.get(record.id) != expected:
       raise ValueError(f"Knowledge HTML lost or changed fields: {record.id}")
-  for enumeration in (config.LeapMonthPolicy, config.DayRollover, config.YearBoundary):
-    for option in enumeration:
-      if option.value not in parser.text.get("implemented-policies", ""):
-        raise ValueError(f"Policy reference differs from definition: {option.value}")
+  options = [
+    (enumeration.__name__, option.value)
+    for enumeration in (config.LeapMonthPolicy, config.DayRollover, config.YearBoundary)
+    for option in enumeration
+  ]
+  if parser.rows.get("implemented-policies") != options:
+    raise ValueError("Policy reference differs from definition")
   if " ".join(str(item) for item in ganzhi.JIAZI) not in parser.text.get("implemented-jiazi", ""):
     raise ValueError("Jiazi reference differs from definition")
   ids = {record.id for record in catalog.records}

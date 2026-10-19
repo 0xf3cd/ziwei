@@ -99,3 +99,18 @@ def test_init_api_is_required_without_another_nested_module(
     check_api_reference(api_tree, api_tree)
   page.write_text(base + f'<dt id="{namespace}.lookup"></dt>', encoding="utf-8")
   check_api_reference(api_tree, api_tree)
+
+
+@pytest.mark.parametrize("annotation", ["TypeAlias", "typing.TypeAlias"])
+def test_explicit_type_alias_has_a_real_api_signature(api_tree: Path, annotation: str) -> None:
+  (api_tree / "src/ziwei/sample.py").write_text(
+    f"import typing\nfrom typing import TypeAlias\nPublic: {annotation} = str | int\n"
+    f"_private: {annotation} = str\n",
+    encoding="utf-8",
+  )
+  page = api_tree / "docs/api.html"
+  page.write_text('<p>id="ziwei.sample.Public"</p>', encoding="utf-8")
+  with pytest.raises(ValueError, match=r"ziwei\.sample\.Public"):
+    check_api_reference(api_tree, api_tree)
+  page.write_text('<dt id="ziwei.sample.Public"></dt>', encoding="utf-8")
+  check_api_reference(api_tree, api_tree)

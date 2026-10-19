@@ -106,12 +106,22 @@ class ApiTargets(HTMLParser):
 
 
 def check_api_reference(directory: Path, root: Path = ROOT) -> None:
-  """要求实现中公开的类、函数及方法出现在生成的 API 签名里。"""
+  """要求公开类、函数、方法及显式类型别名出现在生成的API签名里。"""
   expected: set[str] = set()
   for module in (root / "src/ziwei").rglob("*.py"):
     parts = module.relative_to(root / "src").with_suffix("").parts
     namespace = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
     for node in ast.parse(module.read_text(encoding="utf-8")).body:
+      if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+        annotation = node.annotation
+        is_type_alias = (isinstance(annotation, ast.Name) and annotation.id == "TypeAlias") or (
+          isinstance(annotation, ast.Attribute)
+          and annotation.attr == "TypeAlias"
+          and isinstance(annotation.value, ast.Name)
+          and annotation.value.id == "typing"
+        )
+        if is_type_alias and not node.target.id.startswith("_"):
+          expected.add(f"{namespace}.{node.target.id}")
       if isinstance(node, ast.ClassDef | ast.FunctionDef) and not node.name.startswith("_"):
         name = f"{namespace}.{node.name}"
         expected.add(name)

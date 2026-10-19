@@ -144,6 +144,28 @@ def test_gate_rejects_wrong_field_association(html: Path, defect: str) -> None:
     check_knowledge_reference(html)
 
 
+@pytest.mark.parametrize("defect", ["label", "duplicate", "order"])
+def test_policy_table_checks_the_enum_value_association(html: Path, defect: str) -> None:
+  page = html / "docs/knowledge-reference.html"
+  text = page.read_text(encoding="utf-8")
+  start = text.index('<section id="implemented-policies">')
+  end = text.index("</section>", start)
+  section = text[start:end]
+  rows = re.findall(r"<tr>.*?</tr>", section)
+  assert len(rows) > 1
+  if defect == "label":
+    section = section.replace("<td>LeapMonthPolicy</td>", "<td>DayRollover</td>", 1)
+  elif defect == "duplicate":
+    section = section.replace(rows[1], rows[0], 1)
+  else:
+    section = (
+      section.replace(rows[0], "@@", 1).replace(rows[1], rows[0], 1).replace("@@", rows[1], 1)
+    )
+  page.write_text(text[:start] + section + text[end:], encoding="utf-8")
+  with pytest.raises(ValueError, match="Policy reference differs"):
+    check_knowledge_reference(html)
+
+
 @pytest.mark.parametrize("value", [True, 1, object()])
 def test_unknown_field_types_are_not_silently_rendered_as_none(value: object) -> None:
   with pytest.raises(TypeError, match="Unsupported knowledge field type"):
