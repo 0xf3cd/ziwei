@@ -121,7 +121,7 @@ def test_input_consumer_rejects_faulty_results(kind: str, monkeypatch: pytest.Mo
     installed_check.check_inputs()
 
 
-@pytest.mark.parametrize("kind", ["aliases", "pending", "alternatives", "quote"])
+@pytest.mark.parametrize("kind", ["aliases", "pending", "alternatives", "quote", "chart_match"])
 def test_knowledge_consumer_rejects_missing_or_changed_corpus(
   kind: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -140,6 +140,10 @@ def test_knowledge_consumer_rejects_missing_or_changed_corpus(
         for item in catalog.entries
       ),
     )
+  elif kind == "chart_match":
+    catalog = replace(catalog, entries=tuple(replace(item) for item in catalog.entries))
+    pending = catalog.filter_entries(premise_status=PremiseStatus.待定)[0]
+    object.__setattr__(pending, "chart_match", "已匹配")
   else:
     catalog = replace(
       catalog,

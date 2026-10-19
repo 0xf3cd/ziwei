@@ -123,7 +123,7 @@ def test_gate_rejects_missing_field_even_when_value_remains(
     check_knowledge_reference(html)
 
 
-@pytest.mark.parametrize("defect", ["swap", "rename", "duplicate", "none"])
+@pytest.mark.parametrize("defect", ["swap", "rename", "duplicate", "identical", "order", "none"])
 def test_gate_rejects_wrong_field_association(html: Path, defect: str) -> None:
   page = html / "docs/knowledge-reference.html"
   text = page.read_text(encoding="utf-8")
@@ -137,6 +137,15 @@ def test_gate_rejects_wrong_field_association(html: Path, defect: str) -> None:
     text = text.replace("<dt>status</dt>", "<dt>layer</dt>")
   elif defect == "duplicate":
     text = text.replace("<dt>name</dt>", "<dt>name</dt><dd>重复</dd><dt>name</dt>", 1)
+  elif defect in ("identical", "order"):
+    pairs = re.findall(r"<dt>.*?</dt><dd>.*?</dd>", text)
+    assert len(pairs) > 1
+    if defect == "identical":
+      text = text.replace(pairs[0], pairs[0] * 2, 1)
+    else:
+      text = (
+        text.replace(pairs[0], "@@", 1).replace(pairs[1], pairs[0], 1).replace("@@", pairs[1], 1)
+      )
   else:
     text = text.replace("<dt>option</dt><dd>（无）</dd>", "<dt>option</dt><dd></dd>", 1)
   page.write_text(text, encoding="utf-8")

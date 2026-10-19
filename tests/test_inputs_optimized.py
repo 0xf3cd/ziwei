@@ -110,6 +110,7 @@ class Block(MetaPathFinder):
       raise RuntimeError('knowledge tried to initialize a foreign boundary: ' + fullname)
 sys.meta_path.insert(0, Block())
 from dataclasses import replace
+from ziwei.config import DayRollover
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import Concept, ConceptKind
 c = load_catalog()
@@ -121,6 +122,10 @@ cases = [
   lambda: replace(c, concepts=(*c.concepts, c.concepts[0])),
   lambda: replace(c, citations=(replace(c.citations[0], source_id='source.unknown'),)),
   lambda: c.filter_entries(default_only=1),
+  lambda: replace(c, variants=tuple(
+    replace(item, option=DayRollover.晚子时归次日) if item.id == 'variant.leap-month.current' else item
+    for item in c.variants)),
+  lambda: replace(c.citations[0], layer='原文'),
 ]
 for action in cases:
   try:
@@ -139,4 +144,4 @@ print('knowledge isolated and checked=' + str(len(cases)))
     check=False,
   )
   assert result.returncode == 0, result.stderr
-  assert "checked=5" in result.stdout
+  assert "checked=7" in result.stdout
