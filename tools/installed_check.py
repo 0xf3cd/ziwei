@@ -7,62 +7,62 @@ from importlib.metadata import distribution
 from pathlib import Path
 
 import ziwei
-from ziwei.birth import GongliBirthRecord, JisuanInput, ShijianJingdu, Xingbie
-from ziwei.config import Huannian, PaipanConfig, RunyueGuishu, ZishiHuanri
+from ziwei.birth import CalculationInput, Gender, GregorianBirthRecord, TimePrecision
+from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.ganzhi import Dizhi
-from ziwei.shiqu import AmbiguousTimeError, IanaShiqu, NonexistentTimeError
+from ziwei.timezone import AmbiguousTimeError, IanaTimezone, NonexistentTimeError
 
 
 def check_inputs() -> None:
   """消费已安装的出生输入与时区数据，不触发历法初始化。"""
-  record = GongliBirthRecord(
-    riqi=date(1988, 7, 1),
-    shijian=time(12),
-    shijian_jingdu=ShijianJingdu.分,
-    shiqu=IanaShiqu("Asia/Shanghai"),
-    xingbie=Xingbie.男,
+  record = GregorianBirthRecord(
+    birth_date=date(1988, 7, 1),
+    birth_time=time(12),
+    time_precision=TimePrecision.分,
+    timezone=IanaTimezone("Asia/Shanghai"),
+    gender=Gender.男,
   )
   result = record.resolve_time()
   dependency = distribution("tzdata")
   if f"tzdata=={dependency.version}" not in (distribution("ziwei").requires or ()):
     raise ValueError("Installed timezone data differs from the declared pin")
-  if result.shuju is None or result.shuju.banben != dependency.version:
+  if result.data is None or result.data.package_version != dependency.version:
     raise ValueError("Timezone data provenance is missing or inconsistent")
-  if result.shuju.iana_banben != import_module("tzdata").IANA_VERSION:
+  if result.data.iana_version != import_module("tzdata").IANA_VERSION:
     raise ValueError("Timezone IANA release differs from the installed data")
   if result.offset != timedelta(hours=9) or result.utc != datetime(1988, 7, 1, 3, tzinfo=UTC):
     raise ValueError("Installed timezone data did not resolve Shanghai summer time")
-  for riqi, clock, error in (
+  for birth_date, clock, error in (
     (date(1988, 4, 17), time(2, 30), NonexistentTimeError),
     (date(1988, 9, 11), time(1, 30), AmbiguousTimeError),
   ):
     try:
-      GongliBirthRecord(
-        riqi=riqi,
-        shijian=clock,
-        shijian_jingdu=ShijianJingdu.分,
-        shiqu=IanaShiqu("Asia/Shanghai"),
-        xingbie=Xingbie.男,
+      GregorianBirthRecord(
+        birth_date=birth_date,
+        birth_time=clock,
+        time_precision=TimePrecision.分,
+        timezone=IanaTimezone("Asia/Shanghai"),
+        gender=Gender.男,
       ).resolve_time()
     except error:
       pass
     else:
       raise ValueError("Installed timezone validation accepted an unresolved local time")
-  choices = PaipanConfig(
-    runyue_guishu=RunyueGuishu.全月归本月,
-    zishi_huanri=ZishiHuanri.晚子时归次日,
-    huannian=Huannian.农历正月初一,
+  choices = ChartConfig(
+    leap_month_policy=LeapMonthPolicy.全月归本月,
+    day_rollover=DayRollover.晚子时归次日,
+    year_boundary=YearBoundary.农历正月初一,
   )
   # 合成计算输入只检验消费合同，不作为历法转换或参考盘例。
-  value = JisuanInput(
-    jilu=record,
-    nongli_nian=2000,
-    yue=1,
-    ri=1,
-    runyue=False,
+  value = CalculationInput(
+    record=record,
+    lunar_year=2000,
+    month=1,
+    day=1,
+    is_leap_month=False,
     shichen=Dizhi.子,
-    ganzhi_nian=2000,
-    koujing=choices,
+    ganzhi_year=2000,
+    config=choices,
   )
   value.require_complete()
 

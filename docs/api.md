@@ -8,13 +8,13 @@
 
 ```{eval-rst}
 .. automodule:: ziwei.birth
-   :members: Xingbie, ShijianJingdu, GongliBirthRecord, NongliBirthRecord, JisuanInput, shichen_from_time
+   :members: Gender, TimePrecision, GregorianBirthRecord, LunarBirthRecord, CalculationInput, shichen_from_time
    :undoc-members:
    :member-order: bysource
 ```
 
 ```{eval-rst}
-.. autodata:: ziwei.birth.ChushengJilu
+.. autodata:: ziwei.birth.BirthRecord
    :no-value:
 ```
 
@@ -22,7 +22,7 @@
 
 ```{eval-rst}
 .. automodule:: ziwei.config
-   :members: RunyueGuishu, ZishiHuanri, Huannian, PaipanConfig
+   :members: LeapMonthPolicy, DayRollover, YearBoundary, ChartConfig
    :undoc-members:
    :member-order: bysource
 ```
@@ -30,8 +30,8 @@
 ## 时区与消歧
 
 ```{eval-rst}
-.. automodule:: ziwei.shiqu
-   :members: IanaShiqu, GudingShiqu, ShiquShuju, MinyongShike, NonexistentTimeError, AmbiguousTimeError, resolve_minyong_shike
+.. automodule:: ziwei.timezone
+   :members: IanaTimezone, FixedOffset, TimezoneData, ResolvedTime, NonexistentTimeError, AmbiguousTimeError, resolve_civil_time
    :undoc-members:
    :member-order: bysource
 ```
@@ -40,7 +40,7 @@
 
 ```{eval-rst}
 .. automodule:: ziwei.ganzhi
-   :members: Yinyang, Tiangan, Dizhi, Ganzhi, nian_ganzhi
+   :members: Yinyang, Tiangan, Dizhi, Ganzhi, year_ganzhi
    :undoc-members:
    :member-order: bysource
 ```
@@ -49,6 +49,6 @@
 .. autodata:: ziwei.ganzhi.JIAZI
    :no-value:
 
-.. autodata:: ziwei.ganzhi.NIAN_GANZHI
+.. autodata:: ziwei.ganzhi.YEAR_GANZHI
    :no-value:
 ```

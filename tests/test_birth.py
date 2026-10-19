@@ -8,64 +8,64 @@ from typing import Any
 import pytest
 
 from ziwei.birth import (
-  GongliBirthRecord,
-  JisuanInput,
-  NongliBirthRecord,
-  ShijianJingdu,
-  Xingbie,
+  CalculationInput,
+  Gender,
+  GregorianBirthRecord,
+  LunarBirthRecord,
+  TimePrecision,
   shichen_from_time,
 )
-from ziwei.config import Huannian, PaipanConfig, RunyueGuishu, ZishiHuanri
+from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.ganzhi import Dizhi, Yinyang
-from ziwei.shiqu import GudingShiqu, IanaShiqu
+from ziwei.timezone import FixedOffset, IanaTimezone
 
 
-def gongli(**changes: Any) -> GongliBirthRecord:
+def gregorian_record(**changes: Any) -> GregorianBirthRecord:
   values: dict[str, Any] = {
-    "riqi": date(1988, 7, 1),
-    "shijian": time(12),
-    "shijian_jingdu": ShijianJingdu.分,
-    "shiqu": IanaShiqu("Asia/Shanghai"),
-    "xingbie": Xingbie.男,
+    "birth_date": date(1988, 7, 1),
+    "birth_time": time(12),
+    "time_precision": TimePrecision.分,
+    "timezone": IanaTimezone("Asia/Shanghai"),
+    "gender": Gender.男,
   }
   values.update(changes)
-  return GongliBirthRecord(**values)
+  return GregorianBirthRecord(**values)
 
 
-def nongli(**changes: Any) -> NongliBirthRecord:
+def lunar_record(**changes: Any) -> LunarBirthRecord:
   values: dict[str, Any] = {
-    "nian": 2000,
-    "yue": 4,
-    "ri": 15,
-    "runyue": True,
+    "year": 2000,
+    "month": 4,
+    "day": 15,
+    "is_leap_month": True,
     "shichen": Dizhi.子,
-    "xingbie": Xingbie.女,
+    "gender": Gender.女,
   }
   values.update(changes)
-  return NongliBirthRecord(**values)
+  return LunarBirthRecord(**values)
 
 
-def config() -> PaipanConfig:
-  return PaipanConfig(
-    runyue_guishu=RunyueGuishu.全月归本月,
-    zishi_huanri=ZishiHuanri.早晚子时同日,
-    huannian=Huannian.立春,
+def config() -> ChartConfig:
+  return ChartConfig(
+    leap_month_policy=LeapMonthPolicy.全月归本月,
+    day_rollover=DayRollover.早晚子时同日,
+    year_boundary=YearBoundary.立春,
   )
 
 
-def jisuan(**changes: Any) -> JisuanInput:
+def calculation_input(**changes: Any) -> CalculationInput:
   values: dict[str, Any] = {
-    "jilu": nongli(),
-    "nongli_nian": 2000,
-    "yue": 4,
-    "ri": 15,
-    "runyue": True,
+    "record": lunar_record(),
+    "lunar_year": 2000,
+    "month": 4,
+    "day": 15,
+    "is_leap_month": True,
     "shichen": Dizhi.子,
-    "ganzhi_nian": 1999,
-    "koujing": config(),
+    "ganzhi_year": 1999,
+    "config": config(),
   }
   values.update(changes)
-  return JisuanInput(**values)
+  return CalculationInput(**values)
 
 
 @pytest.mark.parametrize(
@@ -81,9 +81,9 @@ def jisuan(**changes: Any) -> JisuanInput:
 )
 def test_both_sides_of_zishi(clock: time, expected: Dizhi) -> None:
   assert shichen_from_time(clock) is expected
-  record = gongli(shijian=clock, shijian_jingdu=ShijianJingdu.微秒)
+  record = gregorian_record(birth_time=clock, time_precision=TimePrecision.微秒)
   assert record.shichen is expected
-  assert record.riqi == date(1988, 7, 1)
+  assert record.birth_date == date(1988, 7, 1)
 
 
 def test_every_shichen_boundary() -> None:
@@ -119,28 +119,28 @@ def test_clock_does_not_hide_timezone_choice(bad: time) -> None:
     shichen_from_time(bad)
 
 
-def test_gongli_original_and_explicit_offset() -> None:
-  record = gongli(jingdu_deg=121.5, didian="合成省", laiyuan="合成记录")
+def test_gregorian_original_and_explicit_offset() -> None:
+  record = gregorian_record(longitude_deg=121.5, place="合成省", source="合成记录")
   resolved = record.resolve_time()
   assert resolved.offset == timedelta(hours=9)
   assert resolved.utc == datetime(1988, 7, 1, 3, tzinfo=UTC)
-  assert record.shijian == time(12)
-  assert record.jingdu_deg == 121.5
-  assert record.didian == "合成省"
-  assert record.laiyuan == "合成记录"
-  fixed = replace(record, shiqu=GudingShiqu(timedelta(hours=8))).resolve_time()
+  assert record.birth_time == time(12)
+  assert record.longitude_deg == 121.5
+  assert record.place == "合成省"
+  assert record.source == "合成记录"
+  fixed = replace(record, timezone=FixedOffset(timedelta(hours=8))).resolve_time()
   assert fixed.utc == datetime(1988, 7, 1, 4, tzinfo=UTC)
-  assert fixed.shuju is None
+  assert fixed.data is None
 
 
 def test_unknown_and_historical_originals_are_preserved() -> None:
-  record = gongli(shijian=None, shijian_jingdu=ShijianJingdu.日, xingbie=Xingbie.未知)
+  record = gregorian_record(birth_time=None, time_precision=TimePrecision.日, gender=Gender.未知)
   assert record.shichen is None
-  assert record.xingbie is Xingbie.未知
+  assert record.gender is Gender.未知
   with pytest.raises(ValueError, match="未知"):
     record.resolve_time()
-  old = gongli(riqi=date(1900, 1, 1))
-  assert old.riqi.year == 1900
+  old = gregorian_record(birth_date=date(1900, 1, 1))
+  assert old.birth_date.year == 1900
   with pytest.raises(ValueError, match="1972"):
     old.resolve_time()
 
@@ -148,80 +148,82 @@ def test_unknown_and_historical_originals_are_preserved() -> None:
 @pytest.mark.parametrize(
   "changes, error",
   [
-    ({"riqi": datetime(2000, 1, 1)}, TypeError),
-    ({"riqi": "2000-01-01"}, TypeError),
-    ({"shiqu": "Asia/Shanghai"}, TypeError),
-    ({"xingbie": "男"}, TypeError),
-    ({"shijian_jingdu": "分"}, TypeError),
-    ({"shijian": None}, ValueError),
-    ({"shijian_jingdu": ShijianJingdu.日}, ValueError),
-    ({"shijian": time(12, 1), "shijian_jingdu": ShijianJingdu.时}, ValueError),
-    ({"shijian": time(12, 0, 1)}, ValueError),
-    ({"shijian": time(12, 0, 0, 1), "shijian_jingdu": ShijianJingdu.秒}, ValueError),
-    ({"jingdu_deg": float("nan")}, ValueError),
-    ({"jingdu_deg": float("inf")}, ValueError),
-    ({"jingdu_deg": 180.1}, ValueError),
-    ({"jingdu_deg": -180.1}, ValueError),
-    ({"jingdu_deg": True}, TypeError),
-    ({"jingdu_deg": "120"}, TypeError),
-    ({"didian": ["合成省"]}, TypeError),
-    ({"laiyuan": {}}, TypeError),
+    ({"birth_date": datetime(2000, 1, 1)}, TypeError),
+    ({"birth_date": "2000-01-01"}, TypeError),
+    ({"timezone": "Asia/Shanghai"}, TypeError),
+    ({"gender": "男"}, TypeError),
+    ({"time_precision": "分"}, TypeError),
+    ({"birth_time": None}, ValueError),
+    ({"time_precision": TimePrecision.日}, ValueError),
+    ({"birth_time": time(12, 1), "time_precision": TimePrecision.时}, ValueError),
+    ({"birth_time": time(12, 0, 1)}, ValueError),
+    ({"birth_time": time(12, 0, 0, 1), "time_precision": TimePrecision.秒}, ValueError),
+    ({"longitude_deg": float("nan")}, ValueError),
+    ({"longitude_deg": float("inf")}, ValueError),
+    ({"longitude_deg": 180.1}, ValueError),
+    ({"longitude_deg": -180.1}, ValueError),
+    ({"longitude_deg": True}, TypeError),
+    ({"longitude_deg": "120"}, TypeError),
+    ({"place": ["合成省"]}, TypeError),
+    ({"source": {}}, TypeError),
   ],
 )
-def test_gongli_rejects_invalid_inputs(changes: dict[str, Any], error: type[Exception]) -> None:
+def test_gregorian_rejects_invalid_inputs(changes: dict[str, Any], error: type[Exception]) -> None:
   with pytest.raises(error):
-    gongli(**changes)
+    gregorian_record(**changes)
 
 
-@pytest.mark.parametrize("precision", list(ShijianJingdu)[1:])
-def test_known_time_precision(precision: ShijianJingdu) -> None:
-  assert gongli(shijian_jingdu=precision).shijian_jingdu is precision
+@pytest.mark.parametrize("precision", list(TimePrecision)[1:])
+def test_known_time_precision(precision: TimePrecision) -> None:
+  assert gregorian_record(time_precision=precision).time_precision is precision
 
 
-def test_nongli_is_structural_not_a_calendar_converter() -> None:
-  record = nongli(nian=2000, yue=12, ri=30, runyue=True, shichen=None, xingbie=Xingbie.未知)
-  assert (record.nian, record.yue, record.ri, record.runyue) == (2000, 12, 30, True)
+def test_lunar_is_structural_not_a_calendar_converter() -> None:
+  record = lunar_record(
+    year=2000, month=12, day=30, is_leap_month=True, shichen=None, gender=Gender.未知
+  )
+  assert (record.year, record.month, record.day, record.is_leap_month) == (2000, 12, 30, True)
   assert record.shichen is None
   assert not hasattr(record, "resolve_time")
   for longitude in (-180, 180):
-    assert nongli(jingdu_deg=longitude).jingdu_deg == longitude
+    assert lunar_record(longitude_deg=longitude).longitude_deg == longitude
 
 
-@pytest.mark.parametrize("field, maximum", [("nian", 9999), ("yue", 12), ("ri", 30)])
-def test_nongli_ranges_and_types(field: str, maximum: int) -> None:
+@pytest.mark.parametrize("field, maximum", [("year", 9999), ("month", 12), ("day", 30)])
+def test_lunar_ranges_and_types(field: str, maximum: int) -> None:
   for value in (0, maximum + 1):
     with pytest.raises(ValueError):
-      nongli(**{field: value})
+      lunar_record(**{field: value})
   for invalid in (True, 1.0, "1", None):
     with pytest.raises(TypeError):
-      nongli(**{field: invalid})
+      lunar_record(**{field: invalid})
 
 
-@pytest.mark.parametrize("changes", [{"runyue": 1}, {"shichen": "子"}, {"xingbie": "女"}])
-def test_nongli_nominal_types(changes: dict[str, Any]) -> None:
+@pytest.mark.parametrize("changes", [{"is_leap_month": 1}, {"shichen": "子"}, {"gender": "女"}])
+def test_lunar_nominal_types(changes: dict[str, Any]) -> None:
   with pytest.raises(TypeError):
-    nongli(**changes)
+    lunar_record(**changes)
 
 
 def test_parsed_contract_and_independent_year_choice() -> None:
-  value = jisuan()
-  assert value.nongli_nian == 2000
-  assert str(value.nian_ganzhi) == "己卯"
-  assert value.ganzhi_nian == 1999
-  assert value.xingbie is Xingbie.女
+  value = calculation_input()
+  assert value.lunar_year == 2000
+  assert str(value.year_ganzhi) == "己卯"
+  assert value.ganzhi_year == 1999
+  assert value.gender is Gender.女
   assert value.yinyang is Yinyang.阴
   value.require_complete()
-  assert jisuan(ganzhi_nian=2000).yinyang is Yinyang.阳
-  for runyue, zishi, year in product(RunyueGuishu, ZishiHuanri, Huannian):
-    choices = PaipanConfig(runyue_guishu=runyue, zishi_huanri=zishi, huannian=year)
-    assert jisuan(koujing=choices).koujing is choices
+  assert calculation_input(ganzhi_year=2000).yinyang is Yinyang.阳
+  for leap_month, day, year in product(LeapMonthPolicy, DayRollover, YearBoundary):
+    choices = ChartConfig(leap_month_policy=leap_month, day_rollover=day, year_boundary=year)
+    assert calculation_input(config=choices).config is choices
 
 
 def test_partial_parsed_inputs_do_not_gain_defaults() -> None:
   for unknown_time, unknown_gender in ((True, False), (False, True), (True, True)):
-    value = jisuan(
+    value = calculation_input(
       shichen=None if unknown_time else Dizhi.子,
-      jilu=nongli(xingbie=Xingbie.未知 if unknown_gender else Xingbie.女),
+      record=lunar_record(gender=Gender.未知 if unknown_gender else Gender.女),
     )
     with pytest.raises(ValueError, match="完整命盘"):
       value.require_complete()
@@ -230,33 +232,33 @@ def test_partial_parsed_inputs_do_not_gain_defaults() -> None:
 @pytest.mark.parametrize(
   "changes, error",
   [
-    ({"jilu": {}}, TypeError),
-    ({"koujing": None}, TypeError),
-    ({"ganzhi_nian": None}, TypeError),
-    ({"ganzhi_nian": 0}, ValueError),
-    ({"nongli_nian": True}, TypeError),
-    ({"yue": 13}, ValueError),
-    ({"runyue": 0}, TypeError),
+    ({"record": {}}, TypeError),
+    ({"config": None}, TypeError),
+    ({"ganzhi_year": None}, TypeError),
+    ({"ganzhi_year": 0}, ValueError),
+    ({"lunar_year": True}, TypeError),
+    ({"month": 13}, ValueError),
+    ({"is_leap_month": 0}, TypeError),
     ({"shichen": "子"}, TypeError),
   ],
 )
 def test_parsed_input_validation(changes: dict[str, Any], error: type[Exception]) -> None:
   with pytest.raises(error):
-    jisuan(**changes)
+    calculation_input(**changes)
 
 
 def test_frozen_inputs_and_nested_values() -> None:
-  value = jisuan()
+  value = calculation_input()
   for instance, field, replacement in (
-    (gongli(), "laiyuan", "更改"),
-    (nongli(), "runyue", False),
-    (value, "ganzhi_nian", 2001),
-    (value.jilu, "xingbie", Xingbie.男),
-    (value.koujing, "huannian", Huannian.农历正月初一),
+    (gregorian_record(), "source", "更改"),
+    (lunar_record(), "is_leap_month", False),
+    (value, "ganzhi_year", 2001),
+    (value.record, "gender", Gender.男),
+    (value.config, "year_boundary", YearBoundary.农历正月初一),
   ):
     with pytest.raises(FrozenInstanceError):
       setattr(instance, field, replacement)
-  for chinese, pinyin in (("男", "NAN"), ("女", "NV"), ("未知", "WEIZHI")):
-    assert Xingbie.__members__[chinese] is Xingbie.__members__[pinyin]
-  for precision in ShijianJingdu:
-    assert ShijianJingdu.__members__[precision.value] is precision
+  for chinese, english in (("男", "MALE"), ("女", "FEMALE"), ("未知", "UNKNOWN")):
+    assert Gender.__members__[chinese] is Gender.__members__[english]
+  for precision in TimePrecision:
+    assert TimePrecision.__members__[precision.value] is precision

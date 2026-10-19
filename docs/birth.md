@@ -12,17 +12,17 @@
 
 ```{doctest}
 >>> from datetime import date, time
->>> from ziwei.birth import GongliBirthRecord, ShijianJingdu, Xingbie
->>> from ziwei.shiqu import IanaShiqu
->>> record = GongliBirthRecord(
-...   riqi=date(1988, 7, 1), shijian=time(12), shijian_jingdu=ShijianJingdu.分,
-...   shiqu=IanaShiqu("Asia/Shanghai"), xingbie=Xingbie.男,
-...   didian="合成省", laiyuan="合成记录",
+>>> from ziwei.birth import GregorianBirthRecord, TimePrecision, Gender
+>>> from ziwei.timezone import IanaTimezone
+>>> record = GregorianBirthRecord(
+...   birth_date=date(1988, 7, 1), birth_time=time(12), time_precision=TimePrecision.分,
+...   timezone=IanaTimezone("Asia/Shanghai"), gender=Gender.男,
+...   place="合成省", source="合成记录",
 ... )
 >>> moment = record.resolve_time()
 >>> str(moment.offset), moment.utc.isoformat()
 ('9:00:00', '1988-07-01T03:00:00+00:00')
->>> record.shijian.isoformat()
+>>> record.birth_time.isoformat()
 '12:00:00'
 >>> record.shichen.value
 '午'
@@ -33,45 +33,45 @@
 ```{doctest}
 >>> from dataclasses import replace
 >>> from datetime import timedelta
->>> from ziwei.shiqu import GudingShiqu
->>> fixed = replace(record, shiqu=GudingShiqu(timedelta(hours=8)))
+>>> from ziwei.timezone import FixedOffset
+>>> fixed = replace(record, timezone=FixedOffset(timedelta(hours=8)))
 >>> fixed.resolve_time().utc.isoformat()
 '1988-07-01T04:00:00+00:00'
 ```
 
 精度为时、分或秒时，低于该精度的钟面分量须为零；微秒精度可保留全部分量。
-钟点未知用 `shijian=None`、精度为日；性别未知用 `Xingbie.未知`，都不代填。
+钟点未知用 `birth_time=None`、精度为日；性别未知用 `Gender.未知`，都不代填。
 来源与地点是可选字符串；原始记录、配置和结果均冻结，成员也不包含调用方可修改的容器。
 
 ## 间隙拒绝，重叠显式选
 
 ```{doctest}
->>> from ziwei.shiqu import AmbiguousTimeError, NonexistentTimeError
->>> gap = replace(record, riqi=date(1988, 4, 17), shijian=time(2, 30))
+>>> from ziwei.timezone import AmbiguousTimeError, NonexistentTimeError
+>>> gap = replace(record, birth_date=date(1988, 4, 17), birth_time=time(2, 30))
 >>> try:
 ...   gap.resolve_time()
 ... except NonexistentTimeError:
 ...   print("不存在，不自动平移")
 不存在，不自动平移
->>> overlap = replace(record, riqi=date(1988, 9, 11), shijian=time(1, 30))
+>>> overlap = replace(record, birth_date=date(1988, 9, 11), birth_time=time(1, 30))
 >>> try:
 ...   overlap.resolve_time()
 ... except AmbiguousTimeError:
 ...   print("需要选择 fold")
 需要选择 fold
->>> early = replace(overlap, shiqu=IanaShiqu("Asia/Shanghai", fold=0)).resolve_time()
->>> late = replace(overlap, shiqu=IanaShiqu("Asia/Shanghai", fold=1)).resolve_time()
+>>> early = replace(overlap, timezone=IanaTimezone("Asia/Shanghai", fold=0)).resolve_time()
+>>> late = replace(overlap, timezone=IanaTimezone("Asia/Shanghai", fold=1)).resolve_time()
 >>> early.utc.isoformat(), late.utc.isoformat()
 ('1988-09-10T16:30:00+00:00', '1988-09-10T17:30:00+00:00')
 ```
 
 `fold=0` 取较早瞬间，`fold=1` 取较晚瞬间。普通时刻不接受多余的 `fold=1`。
-请求保留在结果的 `shiqu`，实际选择保留在 `fold`；间隙没有可供选择的瞬间。
+请求保留在结果的 `zone`，实际选择保留在 `fold`；间隙没有可供选择的瞬间。
 
 IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，也不修改全局搜索路径。
-`moment.shuju` 记录实际包版本 `banben` 与 IANA 发布版本 `iana_banben`，两者不是同一个版本号；
-固定偏移结果的 `shuju` 为 `None`。未知标识抛 `ZoneInfoNotFoundError`，缺包不回落系统库。
-文件读取发生在 `resolve_time()` 或 `resolve_minyong_shike()` 调用时，导入包和构造原始记录不读时区文件。
+`moment.data` 记录实际包版本 `package_version` 与 IANA 发布版本 `iana_version`，两者不是同一个版本号；
+固定偏移结果的 `data` 为 `None`。未知标识抛 `ZoneInfoNotFoundError`，缺包不回落系统库。
+文件读取发生在 `resolve_time()` 或 `resolve_civil_time()` 调用时，导入包和构造原始记录不读时区文件。
 
 原始历史日期可以保存；民用时刻解析只支持 UTC 不早于 1972-01-01。
 时标转换、历法算法与版本记录随后续历法适配提供，不用现代 UTC 合同替代更早的历史时标。
@@ -79,44 +79,44 @@ IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，�
 ## 显式配置与解析后的输入形状
 
 三个口径互相独立，构造配置时全部必填；它们不改变原始日期。
-领域枚举的拼音成员及中文别名指向同一成员，枚举的 JSON 值是中文。
+术数专有词用拼音，通用概念用惯用英语。枚举的中文别名与对应成员相同，JSON 值是中文。
 
 ```{doctest}
 >>> from dataclasses import asdict
 >>> import json
->>> from ziwei.config import Huannian, PaipanConfig, RunyueGuishu, ZishiHuanri
->>> choices = PaipanConfig(
-...   runyue_guishu=RunyueGuishu.全月归本月,
-...   zishi_huanri=ZishiHuanri.晚子时归次日,
-...   huannian=Huannian.立春,
+>>> from ziwei.config import YearBoundary, ChartConfig, LeapMonthPolicy, DayRollover
+>>> choices = ChartConfig(
+...   leap_month_policy=LeapMonthPolicy.全月归本月,
+...   day_rollover=DayRollover.晚子时归次日,
+...   year_boundary=YearBoundary.立春,
 ... )
->>> json.loads(json.dumps(asdict(choices), ensure_ascii=False))["huannian"]
+>>> json.loads(json.dumps(asdict(choices), ensure_ascii=False))["year_boundary"]
 '立春'
 ```
 
 农历原始记录显式给闰月标志，时辰未知为 `None`。这里只核年1至9999、月1至12、日1至30等形状与值域，
 不证明该年有这个闰月、这个月有这一天；这些须由历法适配验证。
 
-`JisuanInput` 是解析层完成处理后的输出形状，本批没有从原始记录生成它的转换器。
-`ganzhi_nian` 须是解析层按换年口径确定的纪年编号，可能不同于农历年；不能把公历出生年直接代入。
+`CalculationInput` 是解析层完成处理后的输出形状，本批没有从原始记录生成它的转换器。
+`ganzhi_year` 须是解析层按换年口径确定的纪年编号，可能不同于农历年；不能把公历出生年直接代入。
 以下仍为合成值，只示范保存字段与拒绝缺项，不是历法转换或参考盘例。
 
 ```{doctest}
->>> from ziwei.birth import JisuanInput, NongliBirthRecord
+>>> from ziwei.birth import CalculationInput, LunarBirthRecord
 >>> from ziwei.ganzhi import Dizhi
->>> lunar = NongliBirthRecord(
-...   nian=2000, yue=1, ri=1, runyue=False, shichen=Dizhi.子, xingbie=Xingbie.女,
+>>> lunar = LunarBirthRecord(
+...   year=2000, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.女,
 ... )
->>> value = JisuanInput(
-...   jilu=lunar, nongli_nian=2000, yue=1, ri=1, runyue=False,
-...   shichen=Dizhi.子, ganzhi_nian=1999, koujing=choices,
+>>> value = CalculationInput(
+...   record=lunar, lunar_year=2000, month=1, day=1, is_leap_month=False,
+...   shichen=Dizhi.子, ganzhi_year=1999, config=choices,
 ... )
->>> str(value.nian_ganzhi), value.yinyang.value, value.xingbie.value
+>>> str(value.year_ganzhi), value.yinyang.value, value.gender.value
 ('己卯', '阴', '女')
->>> value.koujing is choices
+>>> value.config is choices
 True
 >>> value.require_complete()
->>> partial = replace(value, shichen=None, jilu=replace(lunar, xingbie=Xingbie.未知))
+>>> partial = replace(value, shichen=None, record=replace(lunar, gender=Gender.未知))
 >>> try:
 ...   partial.require_complete()
 ... except ValueError:
@@ -131,7 +131,7 @@ True
 
 六十甲子定义采用香港天文台[《天干和地支》表二](https://www.hko.gov.hk/tc/gts/time/stemsandbranches.htm)，
 时辰钟面区间据同页表三；纪年锚为该台[1984年对照表首行](https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T1984c.txt)。
-年干支参考表由同一六十甲子定义生成，不手抄第二套序列。`nian_ganzhi()` 只查已经确定的纪年编号，
+年干支参考表由同一六十甲子定义生成，不手抄第二套序列。`year_ganzhi()` 只查已经确定的纪年编号，
 不采用该台的换年时刻去替调用方选择正月初一或立春。
 
 独立 golden 据交通部中央气象署编印[《天文日曆 2024》](https://www.cwa.gov.tw/Data/service/notice/download/Publish_20231127145652.pdf)，

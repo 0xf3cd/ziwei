@@ -8,30 +8,30 @@ import pytest
 
 PUBLIC_CHECKS = r"""
 from datetime import date, datetime, time, timedelta
-from ziwei.birth import GongliBirthRecord, NongliBirthRecord, JisuanInput, ShijianJingdu, Xingbie
-from ziwei.config import PaipanConfig, RunyueGuishu, ZishiHuanri, Huannian
-from ziwei.ganzhi import Ganzhi, nian_ganzhi
-from ziwei.shiqu import IanaShiqu, GudingShiqu, resolve_minyong_shike
-config = PaipanConfig(runyue_guishu=RunyueGuishu.全月归本月,
-                      zishi_huanri=ZishiHuanri.晚子时归次日, huannian=Huannian.立春)
-record = NongliBirthRecord(nian=2000, yue=4, ri=1, runyue=False,
-                          shichen=None, xingbie=Xingbie.未知)
+from ziwei.birth import GregorianBirthRecord, LunarBirthRecord, CalculationInput, TimePrecision, Gender
+from ziwei.config import ChartConfig, LeapMonthPolicy, DayRollover, YearBoundary
+from ziwei.ganzhi import Ganzhi, year_ganzhi
+from ziwei.timezone import IanaTimezone, FixedOffset, resolve_civil_time
+config = ChartConfig(leap_month_policy=LeapMonthPolicy.全月归本月,
+                     day_rollover=DayRollover.晚子时归次日, year_boundary=YearBoundary.立春)
+record = LunarBirthRecord(year=2000, month=4, day=1, is_leap_month=False,
+                          shichen=None, gender=Gender.未知)
 cases = [
-  lambda: nian_ganzhi(True), lambda: nian_ganzhi(0),
+  lambda: year_ganzhi(True), lambda: year_ganzhi(0),
   lambda: Ganzhi.from_str('甲丑'),
-  lambda: PaipanConfig(runyue_guishu=None, zishi_huanri=config.zishi_huanri,
-                       huannian=config.huannian),
-  lambda: IanaShiqu('../UTC'), lambda: IanaShiqu('UTC', True),
-  lambda: GudingShiqu(timedelta(days=1)),
-  lambda: resolve_minyong_shike(datetime(1988, 4, 17, 2, 30), IanaShiqu('Asia/Shanghai')),
-  lambda: resolve_minyong_shike(datetime(1988, 9, 11, 1, 30), IanaShiqu('Asia/Shanghai')),
-  lambda: GongliBirthRecord(riqi=date(2000, 1, 1), shijian=time(12),
-                           shijian_jingdu=ShijianJingdu.分,
-                           shiqu=GudingShiqu(timedelta(0)), xingbie='男'),
-  lambda: NongliBirthRecord(nian=True, yue=4, ri=1, runyue=False,
-                           shichen=None, xingbie=Xingbie.未知),
-  lambda: JisuanInput(jilu=record, nongli_nian=2000, yue=4, ri=1, runyue=False,
-                      shichen=None, ganzhi_nian=2000, koujing=config).require_complete(),
+  lambda: ChartConfig(leap_month_policy=None, day_rollover=config.day_rollover,
+                     year_boundary=config.year_boundary),
+  lambda: IanaTimezone('../UTC'), lambda: IanaTimezone('UTC', True),
+  lambda: FixedOffset(timedelta(days=1)),
+  lambda: resolve_civil_time(datetime(1988, 4, 17, 2, 30), IanaTimezone('Asia/Shanghai')),
+  lambda: resolve_civil_time(datetime(1988, 9, 11, 1, 30), IanaTimezone('Asia/Shanghai')),
+  lambda: GregorianBirthRecord(birth_date=date(2000, 1, 1), birth_time=time(12),
+                              time_precision=TimePrecision.分,
+                              timezone=FixedOffset(timedelta(0)), gender='男'),
+  lambda: LunarBirthRecord(year=True, month=4, day=1, is_leap_month=False,
+                          shichen=None, gender=Gender.未知),
+  lambda: CalculationInput(record=record, lunar_year=2000, month=4, day=1, is_leap_month=False,
+                           shichen=None, ganzhi_year=2000, config=config).require_complete(),
 ]
 for index, action in enumerate(cases):
   try:
@@ -72,7 +72,7 @@ import ziwei
 import ziwei.birth
 import ziwei.config
 import ziwei.ganzhi
-import ziwei.shiqu
+import ziwei.timezone
 print('isolated imports passed')
 """
   result = subprocess.run(

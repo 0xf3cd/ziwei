@@ -13,8 +13,8 @@ import pytest
 
 import ziwei
 from tools import installed_check
-from ziwei.birth import GongliBirthRecord
-from ziwei.shiqu import ShiquShuju
+from ziwei.birth import GregorianBirthRecord
+from ziwei.timezone import TimezoneData
 
 
 @pytest.fixture
@@ -97,22 +97,22 @@ def test_dependency_pin_is_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
   "kind", ["no_provenance", "wrong_package", "wrong_iana", "wrong_offset", "gap", "fold"]
 )
 def test_input_consumer_rejects_faulty_results(kind: str, monkeypatch: pytest.MonkeyPatch) -> None:
-  resolve = GongliBirthRecord.resolve_time
+  resolve = GregorianBirthRecord.resolve_time
 
-  def faulty(self: GongliBirthRecord) -> Any:
-    if kind in ("gap", "fold") and self.riqi.month == (4 if kind == "gap" else 9):
+  def faulty(self: GregorianBirthRecord) -> Any:
+    if kind in ("gap", "fold") and self.birth_date.month == (4 if kind == "gap" else 9):
       return None
     result = resolve(self)
     if kind == "no_provenance":
-      return SimpleNamespace(shuju=None)
+      return SimpleNamespace(data=None)
     if kind == "wrong_package":
-      return replace(result, shuju=ShiquShuju("0.0.0", "2026e"))
+      return replace(result, data=TimezoneData("0.0.0", "2026e"))
     if kind == "wrong_iana":
-      return replace(result, shuju=ShiquShuju(version("tzdata"), "0000a"))
+      return replace(result, data=TimezoneData(version("tzdata"), "0000a"))
     if kind == "wrong_offset":
-      return SimpleNamespace(shuju=result.shuju, offset=None)
+      return SimpleNamespace(data=result.data, offset=None)
     return result
 
-  monkeypatch.setattr(GongliBirthRecord, "resolve_time", faulty)
+  monkeypatch.setattr(GregorianBirthRecord, "resolve_time", faulty)
   with pytest.raises(ValueError, match=r"Timezone|timezone"):
     installed_check.check_inputs()

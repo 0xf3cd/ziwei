@@ -169,22 +169,22 @@ JIAZI: Final[tuple[Ganzhi, ...]] = tuple(
 
 # 纪年锚取香港天文台1984年对照表首行，不代表该民用年内任一出生都属甲子年。
 # https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T1984c.txt
-NIAN_GANZHI: Final[tuple[tuple[int, Ganzhi], ...]] = tuple(
+YEAR_GANZHI: Final[tuple[tuple[int, Ganzhi], ...]] = tuple(
   (1984 + index, ganzhi) for index, ganzhi in enumerate(JIAZI)
 )
 """1984起的一个纪年周期，由六十甲子定义生成。"""
 
 
-def nian_ganzhi(ganzhi_nian: int) -> Ganzhi:
+def year_ganzhi(ganzhi_year: int) -> Ganzhi:
   """查已确定纪年编号的干支；接受1至9999，不判断出生时刻应属哪一年。
 
   正月初一或立春换年须由历法解析层先决定纪年编号，不能直接用出生公历年代替。
   """
-  if type(ganzhi_nian) is not int:
+  if type(ganzhi_year) is not int:
     raise TypeError("干支纪年编号须为整数，不接受 bool")
-  if not 1 <= ganzhi_nian <= 9999:
+  if not 1 <= ganzhi_year <= 9999:
     raise ValueError("干支纪年编号须在1至9999之间")
-  return NIAN_GANZHI[(ganzhi_nian - NIAN_GANZHI[0][0]) % len(NIAN_GANZHI)][1]
+  return YEAR_GANZHI[(ganzhi_year - YEAR_GANZHI[0][0]) % len(YEAR_GANZHI)][1]
 
 
 阴阳 = Yinyang

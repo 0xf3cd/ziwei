@@ -11,40 +11,40 @@ from typing import Any
 
 import pytest
 
-from ziwei import shiqu as implementation
-from ziwei.shiqu import (
+from ziwei import timezone as implementation
+from ziwei.timezone import (
   AmbiguousTimeError,
-  GudingShiqu,
-  IanaShiqu,
-  MinyongShike,
+  FixedOffset,
+  IanaTimezone,
   NonexistentTimeError,
-  ShiquShuju,
-  resolve_minyong_shike,
+  ResolvedTime,
+  TimezoneData,
+  resolve_civil_time,
 )
 
 
 def test_historical_china_summer_time_and_versions() -> None:
-  result = resolve_minyong_shike(datetime(1988, 7, 1, 12), IanaShiqu("Asia/Shanghai"))
+  result = resolve_civil_time(datetime(1988, 7, 1, 12), IanaTimezone("Asia/Shanghai"))
   assert result.offset == timedelta(hours=9)
   assert result.utc == datetime(1988, 7, 1, 3, tzinfo=UTC)
-  assert result.shuju is not None
-  assert result.shuju.banben == version("tzdata")
-  assert result.shuju.iana_banben == "2026e"
-  winter = resolve_minyong_shike(datetime(1988, 1, 1, 12), IanaShiqu("Asia/Shanghai"))
+  assert result.data is not None
+  assert result.data.package_version == version("tzdata")
+  assert result.data.iana_version == "2026e"
+  winter = resolve_civil_time(datetime(1988, 1, 1, 12), IanaTimezone("Asia/Shanghai"))
   assert winter.offset == timedelta(hours=8)
 
 
 def test_both_real_shanghai_overlap_instants() -> None:
   wall = datetime(1988, 9, 11, 1, 30)
   with pytest.raises(AmbiguousTimeError):
-    resolve_minyong_shike(wall, IanaShiqu("Asia/Shanghai"))
+    resolve_civil_time(wall, IanaTimezone("Asia/Shanghai"))
   for fold, hour, offset in ((0, 16, 9), (1, 17, 8)):
-    result = resolve_minyong_shike(wall, IanaShiqu("Asia/Shanghai", fold=fold))
+    result = resolve_civil_time(wall, IanaTimezone("Asia/Shanghai", fold=fold))
     assert result.utc == datetime(1988, 9, 10, hour, 30, tzinfo=UTC)
-    assert result.bendishike == wall
+    assert result.local_time == wall
     assert result.offset == timedelta(hours=offset)
-    assert isinstance(result.shiqu, IanaShiqu)
-    assert result.fold == result.shiqu.fold == fold
+    assert isinstance(result.zone, IanaTimezone)
+    assert result.fold == result.zone.fold == fold
 
 
 @pytest.mark.parametrize(
@@ -59,29 +59,29 @@ def test_both_real_shanghai_overlap_instants() -> None:
 @pytest.mark.parametrize("fold", [None, 0, 1])
 def test_gap_is_not_shifted(key: str, wall: datetime, fold: int | None) -> None:
   with pytest.raises(NonexistentTimeError):
-    resolve_minyong_shike(wall, IanaShiqu(key, fold))
+    resolve_civil_time(wall, IanaTimezone(key, fold))
 
 
 def test_python_documentation_overlap_golden() -> None:
   # Python3.11 zoneinfo文档 Using ZoneInfo：洛杉矶2020-11-01 01:00的两个偏移。
   # https://docs.python.org/3.11/library/zoneinfo.html#using-zoneinfo
   wall = datetime(2020, 11, 1, 1)
-  a = resolve_minyong_shike(wall, IanaShiqu("America/Los_Angeles", 0))
-  b = resolve_minyong_shike(wall, IanaShiqu("America/Los_Angeles", 1))
+  a = resolve_civil_time(wall, IanaTimezone("America/Los_Angeles", 0))
+  b = resolve_civil_time(wall, IanaTimezone("America/Los_Angeles", 1))
   assert a.utc == datetime(2020, 11, 1, 8, tzinfo=UTC)
   assert b.utc == datetime(2020, 11, 1, 9, tzinfo=UTC)
 
 
 def test_ordinary_time_does_not_accept_spurious_fold() -> None:
   wall = datetime(2000, 1, 1, 12)
-  a = resolve_minyong_shike(wall, IanaShiqu("Asia/Shanghai"))
-  b = resolve_minyong_shike(wall, IanaShiqu("Asia/Shanghai", 0))
+  a = resolve_civil_time(wall, IanaTimezone("Asia/Shanghai"))
+  b = resolve_civil_time(wall, IanaTimezone("Asia/Shanghai", 0))
   assert a.utc == b.utc
   assert a.fold == 0
-  assert isinstance(a.shiqu, IanaShiqu)
-  assert a.shiqu.fold is None
+  assert isinstance(a.zone, IanaTimezone)
+  assert a.zone.fold is None
   with pytest.raises(ValueError, match="fold"):
-    resolve_minyong_shike(wall, IanaShiqu("Asia/Shanghai", 1))
+    resolve_civil_time(wall, IanaTimezone("Asia/Shanghai", 1))
 
 
 def test_explicit_offset_is_not_replaced_by_region_rules(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -89,9 +89,9 @@ def test_explicit_offset_is_not_replaced_by_region_rules(monkeypatch: pytest.Mon
     raise RuntimeError("固定偏移不得读时区文件")
 
   monkeypatch.setattr(implementation, "_load_zone", forbidden)
-  result = resolve_minyong_shike(datetime(1988, 7, 1, 12), GudingShiqu(timedelta(hours=8)))
+  result = resolve_civil_time(datetime(1988, 7, 1, 12), FixedOffset(timedelta(hours=8)))
   assert result.utc == datetime(1988, 7, 1, 4, tzinfo=UTC)
-  assert result.shuju is None
+  assert result.data is None
 
 
 def test_package_data_wins_over_poisoned_system_data(tmp_path: Path) -> None:
@@ -105,7 +105,7 @@ def test_package_data_wins_over_poisoned_system_data(tmp_path: Path) -> None:
     wall = datetime(1988, 7, 1, 12)
     assert wall.replace(tzinfo=zoneinfo.ZoneInfo("Asia/Shanghai")).utcoffset() == timedelta(0)
     before = zoneinfo.TZPATH
-    result = resolve_minyong_shike(wall, IanaShiqu("Asia/Shanghai"))
+    result = resolve_civil_time(wall, IanaTimezone("Asia/Shanghai"))
     assert result.offset == timedelta(hours=9)
     assert before == zoneinfo.TZPATH
   finally:
@@ -116,13 +116,13 @@ def test_package_data_wins_over_poisoned_system_data(tmp_path: Path) -> None:
 def test_missing_data_fails_without_system_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
   monkeypatch.setitem(sys.modules, "tzdata", None)
   with pytest.raises(ModuleNotFoundError):
-    resolve_minyong_shike(datetime(2000, 1, 1), IanaShiqu("Asia/Shanghai"))
+    resolve_civil_time(datetime(2000, 1, 1), IanaTimezone("Asia/Shanghai"))
 
 
 @pytest.mark.parametrize("key", ["Does/NotExist", "Asia", "leapseconds"])
 def test_unknown_zone(key: str) -> None:
   with pytest.raises(zoneinfo.ZoneInfoNotFoundError):
-    resolve_minyong_shike(datetime(2000, 1, 1), IanaShiqu(key))
+    resolve_civil_time(datetime(2000, 1, 1), IanaTimezone(key))
 
 
 @pytest.mark.parametrize(
@@ -140,13 +140,13 @@ def test_unknown_zone(key: str) -> None:
 )
 def test_iana_path_validation(key: str) -> None:
   with pytest.raises(ValueError):
-    IanaShiqu(key)
+    IanaTimezone(key)
 
 
 @pytest.mark.parametrize("key", [None, 8, ["UTC"]])
 def test_iana_type_validation(key: Any) -> None:
   with pytest.raises(TypeError):
-    IanaShiqu(key)
+    IanaTimezone(key)
 
 
 @pytest.mark.parametrize(
@@ -154,47 +154,47 @@ def test_iana_type_validation(key: Any) -> None:
 )
 def test_fold_validation(fold: Any, error: type[Exception]) -> None:
   with pytest.raises(error):
-    IanaShiqu("UTC", fold)
+    IanaTimezone("UTC", fold)
 
 
 @pytest.mark.parametrize("offset", [timedelta(days=1), -timedelta(days=1)])
 def test_offset_range(offset: timedelta) -> None:
   with pytest.raises(ValueError):
-    GudingShiqu(offset)
+    FixedOffset(offset)
 
 
 @pytest.mark.parametrize("offset", [8, "08:00", None])
 def test_offset_type(offset: Any) -> None:
   with pytest.raises(TypeError):
-    GudingShiqu(offset)
+    FixedOffset(offset)
 
 
 @pytest.mark.parametrize("wall", ["2000-01-01", None])
 def test_wall_type(wall: Any) -> None:
   with pytest.raises(TypeError):
-    resolve_minyong_shike(wall, GudingShiqu(timedelta(0)))
+    resolve_civil_time(wall, FixedOffset(timedelta(0)))
 
 
 @pytest.mark.parametrize("wall", [datetime(2000, 1, 1, tzinfo=UTC), datetime(2000, 1, 1, fold=1)])
 def test_wall_cannot_hide_its_own_choice(wall: datetime) -> None:
   with pytest.raises(ValueError):
-    resolve_minyong_shike(wall, IanaShiqu("UTC"))
+    resolve_civil_time(wall, IanaTimezone("UTC"))
 
 
 def test_timezone_type() -> None:
   invalid: Any = "UTC"
   with pytest.raises(TypeError):
-    resolve_minyong_shike(datetime(2000, 1, 1), invalid)
+    resolve_civil_time(datetime(2000, 1, 1), invalid)
 
 
 def test_utc_epoch_and_datetime_overflow() -> None:
   with pytest.raises(ValueError, match="1972"):
-    resolve_minyong_shike(datetime(1972, 1, 1), GudingShiqu(timedelta(hours=8)))
-  assert resolve_minyong_shike(datetime(1972, 1, 1), IanaShiqu("UTC")).utc.year == 1972
+    resolve_civil_time(datetime(1972, 1, 1), FixedOffset(timedelta(hours=8)))
+  assert resolve_civil_time(datetime(1972, 1, 1), IanaTimezone("UTC")).utc.year == 1972
   with pytest.raises(ValueError, match="支持范围"):
-    resolve_minyong_shike(datetime(9999, 12, 31, 23), GudingShiqu(timedelta(hours=-8)))
+    resolve_civil_time(datetime(9999, 12, 31, 23), FixedOffset(timedelta(hours=-8)))
   with pytest.raises(ValueError, match="支持范围"):
-    resolve_minyong_shike(datetime(9999, 12, 31, 23), IanaShiqu("Etc/GMT+8"))
+    resolve_civil_time(datetime(9999, 12, 31, 23), IanaTimezone("Etc/GMT+8"))
 
 
 @pytest.mark.parametrize(
@@ -202,18 +202,18 @@ def test_utc_epoch_and_datetime_overflow() -> None:
 )
 def test_data_version_validation(version_value: Any, error: type[Exception]) -> None:
   with pytest.raises(error):
-    ShiquShuju(version_value, "2026e")
+    TimezoneData(version_value, "2026e")
   with pytest.raises(error):
-    ShiquShuju("2026.5", version_value)
+    TimezoneData("2026.5", version_value)
 
 
 def test_result_is_frozen_and_consistent() -> None:
-  value = resolve_minyong_shike(datetime(2000, 1, 1, 12), IanaShiqu("Asia/Shanghai"))
+  value = resolve_civil_time(datetime(2000, 1, 1, 12), IanaTimezone("Asia/Shanghai"))
   for instance, field, replacement in (
     (value, "fold", 1),
-    (value.shiqu, "key", "UTC"),
-    (value.shuju, "banben", "other"),
-    (GudingShiqu(timedelta(0)), "offset", timedelta(hours=8)),
+    (value.zone, "key", "UTC"),
+    (value.data, "package_version", "other"),
+    (FixedOffset(timedelta(0)), "offset", timedelta(hours=8)),
   ):
     with pytest.raises(FrozenInstanceError):
       setattr(instance, field, replacement)
@@ -222,13 +222,13 @@ def test_result_is_frozen_and_consistent() -> None:
     ({"utc": datetime(2000, 1, 1)}, ValueError),
     ({"utc": datetime(1900, 1, 1, tzinfo=UTC)}, ValueError),
     ({"offset": timedelta(hours=1)}, ValueError),
-    ({"shiqu": "UTC"}, TypeError),
+    ({"zone": "UTC"}, TypeError),
     ({"fold": True}, ValueError),
-    ({"shuju": None}, TypeError),
-    ({"shiqu": IanaShiqu("Asia/Shanghai", 1)}, ValueError),
-    ({"shiqu": GudingShiqu(value.offset)}, ValueError),
+    ({"data": None}, TypeError),
+    ({"zone": IanaTimezone("Asia/Shanghai", 1)}, ValueError),
+    ({"zone": FixedOffset(value.offset)}, ValueError),
   )
   for changes, error in cases:
     with pytest.raises(error):
       replace(value, **changes)
-  assert isinstance(value, MinyongShike)
+  assert isinstance(value, ResolvedTime)

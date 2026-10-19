@@ -13,7 +13,7 @@
 src/ziwei/
   birth.py          原始出生记录与解析后的计算输入
   config.py         闰月、子时、换年口径与流派选择
-  shiqu.py          固定偏移、IANA 消歧与实际时区数据来源
+  timezone.py       固定偏移、IANA 消歧与实际时区数据来源
   calendar.py       celestial-calendar 的具体适配
   ganzhi.py         天干、地支、六十甲子、纳音与五虎遁
   palaces.py        命宫、身宫、十二宫与宫干
