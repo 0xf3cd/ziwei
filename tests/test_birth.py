@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from ziwei.birth import (
+  BirthRecord,
   CalculationInput,
   Gender,
   GregorianBirthRecord,
@@ -255,15 +256,29 @@ def test_unknown_original_time_cannot_become_known(shichen: Dizhi) -> None:
         partial.require_complete()
 
 
-def test_parsed_values_do_not_require_raw_calendar_equality() -> None:
-  record = lunar_record(year=2000, month=12, day=30, shichen=Dizhi.子)
+@pytest.mark.parametrize(
+  "record",
+  [
+    lunar_record(year=2000, month=12, day=30, shichen=Dizhi.子),
+    gregorian_record(birth_time=time(23, 30)),
+  ],
+  ids=["lunar", "gregorian"],
+)
+@pytest.mark.parametrize("shichen", [None, Dizhi.丑])
+def test_parsed_values_do_not_require_raw_calendar_equality(
+  record: BirthRecord, shichen: Dizhi | None
+) -> None:
   value = calculation_input(
-    record=record, lunar_year=2001, month=1, day=1, is_leap_month=False, shichen=Dizhi.丑
+    record=record, lunar_year=2001, month=1, day=1, is_leap_month=False, shichen=shichen
   )
   assert value.record is record
   assert (value.lunar_year, value.month, value.day) == (2001, 1, 1)
-  assert value.shichen is Dizhi.丑
-  value.require_complete()
+  assert value.shichen is shichen
+  if shichen is None:
+    with pytest.raises(ValueError, match="完整命盘"):
+      value.require_complete()
+  else:
+    value.require_complete()
 
 
 @pytest.mark.parametrize(
