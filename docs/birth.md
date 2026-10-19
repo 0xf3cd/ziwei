@@ -70,7 +70,7 @@
 
 IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，也不修改全局搜索路径。
 `moment.data` 记录实际包版本 `package_version` 与 IANA 发布版本 `iana_version`，两者不是同一个版本号；
-固定偏移结果的 `data` 为 `None`。未知标识抛 `ZoneInfoNotFoundError`，缺包不回落系统库。
+固定偏移结果的 `data` 为 `None`。未知标识抛 `ZoneInfoNotFoundError`，缺包抛 `ModuleNotFoundError`，不回落系统库。
 文件读取发生在 `resolve_time()` 或 `resolve_civil_time()` 调用时，导入包和构造原始记录不读时区文件。
 
 原始历史日期可以保存；民用时刻解析只支持 UTC 不早于 1972-01-01。
@@ -135,10 +135,10 @@ True
 不采用该台的换年时刻去替调用方选择正月初一或立春。
 
 独立 golden 据交通部中央气象署编印[《天文日曆 2024》](https://www.cwa.gov.tw/Data/service/notice/download/Publish_20231127145652.pdf)，
-2023年11月出版，印刷第6页（PDF第11页）的干支顺序表；同书PDF第2页年历抬头提供2024甲辰锚。
+2023年11月出版，印刷第6页（PDF第11页）的“干支順序表”；同书PDF第2页年历抬头提供2024甲辰锚。
 这里取表列事实作测试，不转载该书正文或页面图像。
 
-天干阴阳分类见《五行大義》卷二“第五論配支幹”，并与《選擇要略》上“十干所屬陰陽”互核：
+天干阴阳分类见《五行大義》卷二“第五論配支幹”，另见《選擇要略》上“十干所屬陰陽”：
 已读的维基文库电子录文分别为[修订7915687](https://zh.wikisource.org/w/index.php?title=%E4%BA%94%E8%A1%8C%E5%A4%A7%E7%BE%A9/2&oldid=7915687)
 与[修订2413684](https://zh.wikisource.org/w/index.php?title=%E9%81%B8%E6%93%87%E8%A6%81%E7%95%A5/%E4%B8%8A&oldid=2413684)。
 只取基础分类，不引入其中其他术数的查法或吉凶解释；所据影印刊本与页码未核，不作纸本版本声称。

@@ -1,6 +1,5 @@
 """原始出生记录与解析后计算输入；本模块不转换公历和农历。"""
 
-import math
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from enum import StrEnum
@@ -37,9 +36,9 @@ class TimePrecision(StrEnum):
 
 
 def shichen_from_time(clock: time) -> Dizhi:
-  """按无时区民用钟面取时辰，区间左闭右开；不改变日期或应用换日口径。
+  """按无时区民用钟面取时辰；不改变日期或应用换日口径。
 
-  依据香港天文台《天干和地支》表三，子时跨23:00至次日01:00。
+  时辰范围取香港天文台《天干和地支》表三，子时跨23:00至次日01:00；本接口采用左闭右开区间。
   """
   if type(clock) is not time:
     raise TypeError("钟点须为 time")
@@ -52,7 +51,7 @@ def _check_metadata(longitude_deg: float | None, place: str | None, source: str 
   if longitude_deg is not None:
     if isinstance(longitude_deg, bool) or not isinstance(longitude_deg, int | float):
       raise TypeError("经度须为数值或 None")
-    if not math.isfinite(longitude_deg) or not -180 <= longitude_deg <= 180:
+    if not -180 <= longitude_deg <= 180:
       raise ValueError("经度须为-180至180之间的有限值，东经为正")
   for value in (place, source):
     if value is not None and not isinstance(value, str):
@@ -77,7 +76,7 @@ def _check_lunar_date(
 class GregorianBirthRecord:
   """原始公历日期、钟点、精度与时区；不携带派生的年干支。
 
-  birth_time=None 表示时辰未知，精度须为日。经度仅保存，不在此执行真太阳时换算。
+  birth_time=None 表示钟点未知，精度须为日。经度仅保存，不在此执行真太阳时换算。
   """
 
   birth_date: date
@@ -159,6 +158,7 @@ class CalculationInput:
 
   ganzhi_year 是解析层按所选换年口径得到的纪年编号，不一定等于 lunar_year。
   原始记录和实际口径随值保存；阴阳及年干支由该编号派生，不维护可互相矛盾的副本。
+  原始时辰未知时，解析时辰不得变为已知。
   """
 
   record: BirthRecord
@@ -171,9 +171,11 @@ class CalculationInput:
   config: ChartConfig
 
   def __post_init__(self) -> None:
-    if not isinstance(self.record, GregorianBirthRecord | LunarBirthRecord):
+    if not isinstance(self.record, BirthRecord):
       raise TypeError("原始记录须为公历或农历出生记录")
     _check_lunar_date(self.lunar_year, self.month, self.day, self.is_leap_month, self.shichen)
+    if self.record.shichen is None and self.shichen is not None:
+      raise ValueError("原始记录的未知时辰不得变为已知")
     year_ganzhi(self.ganzhi_year)
     if not isinstance(self.config, ChartConfig):
       raise TypeError("口径须为显式 ChartConfig")

@@ -48,6 +48,40 @@ def test_both_real_shanghai_overlap_instants() -> None:
 
 
 @pytest.mark.parametrize(
+  "wall, offsets",
+  [
+    (datetime(1988, 4, 17, 1, 59, 59, 999999), (8,)),
+    (datetime(1988, 4, 17, 2), ()),
+    (datetime(1988, 4, 17, 2, 59, 59, 999999), ()),
+    (datetime(1988, 4, 17, 3), (9,)),
+    (datetime(1988, 9, 11, 0, 59, 59, 999999), (9,)),
+    (datetime(1988, 9, 11, 1), (9, 8)),
+    (datetime(1988, 9, 11, 1, 59, 59, 999999), (9, 8)),
+    (datetime(1988, 9, 11, 2), (8,)),
+  ],
+)
+@pytest.mark.parametrize("fold", [None, 0, 1])
+def test_shanghai_transition_boundaries(
+  wall: datetime, offsets: tuple[int, ...], fold: int | None
+) -> None:
+  error: type[ValueError] | None = None
+  if not offsets:
+    error = NonexistentTimeError
+  elif len(offsets) == 2 and fold is None:
+    error = AmbiguousTimeError
+  elif len(offsets) == 1 and fold == 1:
+    error = ValueError
+  if error is not None:
+    with pytest.raises(error) as caught:
+      resolve_civil_time(wall, IanaTimezone("Asia/Shanghai", fold))
+    assert type(caught.value) is error
+  else:
+    result = resolve_civil_time(wall, IanaTimezone("Asia/Shanghai", fold))
+    assert result.offset == timedelta(hours=offsets[fold or 0])
+    assert result.fold == (fold or 0)
+
+
+@pytest.mark.parametrize(
   "key, wall",
   [
     ("Asia/Shanghai", datetime(1988, 4, 17, 2, 30)),
@@ -126,6 +160,29 @@ def test_unknown_zone(key: str) -> None:
 
 
 @pytest.mark.parametrize(
+  "is_file, error",
+  [(False, zoneinfo.ZoneInfoNotFoundError), (True, PermissionError)],
+  ids=["directory", "unreadable-file"],
+)
+def test_zone_resource_errors_are_distinct(
+  monkeypatch: pytest.MonkeyPatch, is_file: bool, error: type[Exception]
+) -> None:
+  class Resource:
+    def joinpath(self, *parts: str) -> "Resource":
+      return self
+
+    def is_file(self) -> bool:
+      return is_file
+
+    def open(self, mode: str) -> None:
+      raise PermissionError("资源不可作为时区文件打开")
+
+  monkeypatch.setattr(implementation, "files", lambda package: Resource())
+  with pytest.raises(error):
+    resolve_civil_time(datetime(2000, 1, 1), IanaTimezone("Asia"))
+
+
+@pytest.mark.parametrize(
   "key",
   [
     "",
@@ -141,6 +198,13 @@ def test_unknown_zone(key: str) -> None:
 def test_iana_path_validation(key: str) -> None:
   with pytest.raises(ValueError):
     IanaTimezone(key)
+
+
+def test_package_timezone_keys_pass_identifier_validation() -> None:
+  keys = files("tzdata").joinpath("zones").read_text(encoding="utf-8").splitlines()
+  assert keys
+  for key in keys:
+    assert IanaTimezone(key).key == key
 
 
 @pytest.mark.parametrize("key", [None, 8, ["UTC"]])

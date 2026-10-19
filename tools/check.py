@@ -231,7 +231,7 @@ def main() -> None:
     ("-m", "ruff", "format", "--check", "."),
     ("-m", "mypy"),
     ("-m", "pytest", "--cov", "--cov-report=term-missing"),
-    # pytest 在 -O 下仍重写测试断言；此提示针对其他模块。
+    # pytest 在 -O 下仍重写测试断言；这里只忽略其他模块的断言禁用警告。
     (
       "-O",
       "-m",

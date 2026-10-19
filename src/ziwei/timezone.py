@@ -26,6 +26,13 @@ class IanaTimezone:
         raise ValueError("fold 只能为0或1")
 
 
+def _check_offset(offset: timedelta) -> None:
+  if type(offset) is not timedelta:
+    raise TypeError("固定偏移须为 timedelta")
+  if not -timedelta(days=1) < offset < timedelta(days=1):
+    raise ValueError("固定偏移的绝对值须小于24小时")
+
+
 @dataclass(frozen=True, slots=True)
 class FixedOffset:
   """显式固定偏移，绝对值须小于24小时；不替调用方套用地区夏令时。"""
@@ -33,10 +40,7 @@ class FixedOffset:
   offset: timedelta
 
   def __post_init__(self) -> None:
-    if type(self.offset) is not timedelta:
-      raise TypeError("固定偏移须为 timedelta")
-    if not -timedelta(days=1) < self.offset < timedelta(days=1):
-      raise ValueError("固定偏移的绝对值须小于24小时")
+    _check_offset(self.offset)
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,8 +86,8 @@ class ResolvedTime:
     if self.utc.tzinfo is not UTC or self.utc.fold != 0:
       raise ValueError("UTC 时刻须显式使用 timezone.utc")
     if self.utc < datetime(1972, 1, 1, tzinfo=UTC):
-      raise ValueError("1972年前的时刻须另定时标合同")
-    FixedOffset(self.offset)
+      raise ValueError("UTC 早于1972-01-01的时刻须另定时标合同")
+    _check_offset(self.offset)
     if type(self.fold) is not int or self.fold not in (0, 1):
       raise ValueError("实际 fold 须为0或1，不接受 bool")
     if not isinstance(self.zone, IanaTimezone | FixedOffset):
@@ -111,7 +115,10 @@ def _load_zone(key: str) -> tuple[ZoneInfo, TimezoneData]:
   import tzdata  # type: ignore[import-untyped]
 
   try:
-    with files("tzdata.zoneinfo").joinpath(*key.split("/")).open("rb") as stream:
+    resource = files("tzdata.zoneinfo").joinpath(*key.split("/"))
+    if not resource.is_file():
+      raise ZoneInfoNotFoundError(key)
+    with resource.open("rb") as stream:
       zone = ZoneInfo.from_file(stream, key=key)
   except (FileNotFoundError, IsADirectoryError, ValueError) as error:
     raise ZoneInfoNotFoundError(key) from error

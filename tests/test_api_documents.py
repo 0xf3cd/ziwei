@@ -35,6 +35,8 @@ def test_rendered_api_signatures(api_tree: Path) -> None:
     '<p>id="ziwei.sample.Value"</p>',
     '<dt id="ziwei.sample.Value"></dt><dt id="ziwei.sample.resolve"></dt>',
     '<div id="ziwei.sample.Value"></div>',
+    '<span id="ziwei.sample.Value"></span><a id="ziwei.sample.Value.check"></a>'
+    '<p id="ziwei.sample.resolve"></p>',
   ],
 )
 def test_plain_directives_or_missing_methods_are_rejected(api_tree: Path, content: str) -> None:

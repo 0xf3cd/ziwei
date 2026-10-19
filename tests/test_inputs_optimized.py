@@ -10,12 +10,14 @@ PUBLIC_CHECKS = r"""
 from datetime import date, datetime, time, timedelta
 from ziwei.birth import GregorianBirthRecord, LunarBirthRecord, CalculationInput, TimePrecision, Gender
 from ziwei.config import ChartConfig, LeapMonthPolicy, DayRollover, YearBoundary
-from ziwei.ganzhi import Ganzhi, year_ganzhi
+from ziwei.ganzhi import Dizhi, Ganzhi, year_ganzhi
 from ziwei.timezone import IanaTimezone, FixedOffset, resolve_civil_time
 config = ChartConfig(leap_month_policy=LeapMonthPolicy.全月归本月,
                      day_rollover=DayRollover.晚子时归次日, year_boundary=YearBoundary.立春)
 record = LunarBirthRecord(year=2000, month=4, day=1, is_leap_month=False,
                           shichen=None, gender=Gender.未知)
+unknown_time = LunarBirthRecord(year=2000, month=4, day=1, is_leap_month=False,
+                               shichen=None, gender=Gender.男)
 cases = [
   lambda: year_ganzhi(True), lambda: year_ganzhi(0),
   lambda: Ganzhi.from_str('甲丑'),
@@ -32,6 +34,10 @@ cases = [
                           shichen=None, gender=Gender.未知),
   lambda: CalculationInput(record=record, lunar_year=2000, month=4, day=1, is_leap_month=False,
                            shichen=None, ganzhi_year=2000, config=config).require_complete(),
+  lambda: CalculationInput(record=unknown_time, lunar_year=2000, month=4, day=1, is_leap_month=False,
+                           shichen=Dizhi.子, ganzhi_year=2000, config=config),
+  lambda: LunarBirthRecord(year=2000, month=4, day=1, is_leap_month=False,
+                          shichen=None, gender=Gender.男, longitude_deg=10**400),
 ]
 for index, action in enumerate(cases):
   try:
@@ -56,7 +62,7 @@ def test_public_validation_without_rewritten_assertions(
     check=False,
   )
   assert result.returncode == 0, result.stderr
-  assert "checked=12" in result.stdout
+  assert "checked=14" in result.stdout
 
 
 def test_import_has_no_calendar_or_timezone_data_side_effects(tmp_path: Path) -> None:

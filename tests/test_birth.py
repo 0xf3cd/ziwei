@@ -162,6 +162,8 @@ def test_unknown_and_historical_originals_are_preserved() -> None:
     ({"longitude_deg": float("inf")}, ValueError),
     ({"longitude_deg": 180.1}, ValueError),
     ({"longitude_deg": -180.1}, ValueError),
+    ({"longitude_deg": 10**400}, ValueError),
+    ({"longitude_deg": -(10**400)}, ValueError),
     ({"longitude_deg": True}, TypeError),
     ({"longitude_deg": "120"}, TypeError),
     ({"place": ["合成省"]}, TypeError),
@@ -205,6 +207,12 @@ def test_lunar_nominal_types(changes: dict[str, Any]) -> None:
     lunar_record(**changes)
 
 
+@pytest.mark.parametrize("longitude", [10**400, -(10**400)], ids=["positive", "negative"])
+def test_lunar_rejects_unbounded_longitude(longitude: int) -> None:
+  with pytest.raises(ValueError, match="经度"):
+    lunar_record(longitude_deg=longitude)
+
+
 def test_parsed_contract_and_independent_year_choice() -> None:
   value = calculation_input()
   assert value.lunar_year == 2000
@@ -227,6 +235,35 @@ def test_partial_parsed_inputs_do_not_gain_defaults() -> None:
     )
     with pytest.raises(ValueError, match="完整命盘"):
       value.require_complete()
+
+
+@pytest.mark.parametrize("shichen", [Dizhi.子, Dizhi.午])
+def test_unknown_original_time_cannot_become_known(shichen: Dizhi) -> None:
+  originals = (
+    gregorian_record(birth_time=None, time_precision=TimePrecision.日),
+    lunar_record(shichen=None),
+  )
+  for leap_month, day, year in product(LeapMonthPolicy, DayRollover, YearBoundary):
+    choices = ChartConfig(leap_month_policy=leap_month, day_rollover=day, year_boundary=year)
+    for record in originals:
+      with pytest.raises(ValueError, match="未知时辰"):
+        calculation_input(record=record, shichen=shichen, config=choices)
+      partial = calculation_input(record=record, shichen=None, config=choices)
+      assert partial.record is record
+      assert partial.shichen is None
+      with pytest.raises(ValueError, match="完整命盘"):
+        partial.require_complete()
+
+
+def test_parsed_values_do_not_require_raw_calendar_equality() -> None:
+  record = lunar_record(year=2000, month=12, day=30, shichen=Dizhi.子)
+  value = calculation_input(
+    record=record, lunar_year=2001, month=1, day=1, is_leap_month=False, shichen=Dizhi.丑
+  )
+  assert value.record is record
+  assert (value.lunar_year, value.month, value.day) == (2001, 1, 1)
+  assert value.shichen is Dizhi.丑
+  value.require_complete()
 
 
 @pytest.mark.parametrize(

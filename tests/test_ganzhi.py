@@ -8,7 +8,7 @@ import pytest
 
 from ziwei.ganzhi import JIAZI, YEAR_GANZHI, Dizhi, Ganzhi, Tiangan, Yinyang, year_ganzhi
 
-# 中央气象署《天文日曆2024》印刷第6页（PDF第11页）的干支順序表。
+# 中央气象署《天文日曆2024》印刷第6页（PDF第11页）的“干支順序表”。
 # https://www.cwa.gov.tw/Data/service/notice/download/Publish_20231127145652.pdf
 GOLDEN = (
   "甲子",

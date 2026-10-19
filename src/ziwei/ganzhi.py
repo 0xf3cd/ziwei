@@ -1,4 +1,4 @@
-"""干支值与六十甲子表；出处及使用限度见文档的干支来源节。"""
+"""干支值与六十甲子表。"""
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -167,7 +167,7 @@ JIAZI: Final[tuple[Ganzhi, ...]] = tuple(
 )
 """以甲子为首的六十甲子，不另维护第二份年干支序列。"""
 
-# 纪年锚取香港天文台1984年对照表首行，不代表该民用年内任一出生都属甲子年。
+# 纪年锚取香港天文台1984年对照表首行；出生的纪年归属由历法解析层决定。
 # https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T1984c.txt
 YEAR_GANZHI: Final[tuple[tuple[int, Ganzhi], ...]] = tuple(
   (1984 + index, ganzhi) for index, ganzhi in enumerate(JIAZI)
@@ -185,9 +185,3 @@ def year_ganzhi(ganzhi_year: int) -> Ganzhi:
   if not 1 <= ganzhi_year <= 9999:
     raise ValueError("干支纪年编号须在1至9999之间")
   return YEAR_GANZHI[(ganzhi_year - YEAR_GANZHI[0][0]) % len(YEAR_GANZHI)][1]
-
-
-阴阳 = Yinyang
-天干 = Tiangan
-地支 = Dizhi
-干支 = Ganzhi
