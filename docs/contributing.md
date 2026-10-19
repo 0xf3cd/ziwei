@@ -22,7 +22,8 @@ CI 在 Linux 3.11／3.14 和 macOS／Windows 3.14 上运行同一命令。
 
 该命令检查 Ruff lint 与两空格格式、严格 mypy、普通与优化模式下的 pytest、文档本地链接、
 严格 HTML／doctest 全量构建、sdist 内容及隔离安装的 wheel。
-API 检查比对源码中的公开类、函数和方法与实际 HTML 签名，拒绝被渲染成正文的指令。
+API 检查比对源码中的公开类、函数、方法及显式类型别名与实际 HTML 签名，拒绝被渲染成正文的指令。
+知识参考页从内置记录与配置定义生成，检查字段、口径表配对及稳定锚点；遗漏成员或指向未知记录都须失败。
 标准库类型链接使用随文档保存的离线 inventory，不在构建时下载。
 `python -m build` 经 sdist 构建 wheel。sdist 须带全源码、测试、工具、文档、锁文件与协作约定，
 不得夹带 `.review/`；构建前删除 `src/*.egg-info`，旧的文件清单会掩盖 `MANIFEST.in` 的变化。
@@ -31,7 +32,7 @@ API 检查比对源码中的公开类、函数和方法与实际 HTML 签名，�
 退出时删除。构建元数据和工具缓存可能保留在仓内已忽略的目录中。
 
 工具版本由 `uv.lock` 锁定：Python 3.11 使用 Sphinx 8.2.3，较新 Python 使用 Sphinx 9.1.0。
-覆盖率报告用于定位遗漏。当前测试覆盖开发检查和出生输入边界，尚无安星算法可供盘例认证。
+覆盖率报告用于定位遗漏。当前测试覆盖开发检查、出生输入边界与独立知识目录，尚无安星算法可供盘例认证。
 
 本地格式化运行 `uv run ruff format .`。任一命令失败即停止，修复原因后重跑。
 依赖变更须更新锁文件并通过两个 Python 端点；忽略规则或警告时应限制范围并说明原因。
@@ -39,7 +40,7 @@ API 检查比对源码中的公开类、函数和方法与实际 HTML 签名，�
 若要保留 HTML 供检查，可构建到已忽略的 `build/` 目录：
 
 ```sh
-uv run python -m sphinx -E -a -n -W -b html -c docs . build/docs
+uv run --locked python -m sphinx -E -a -n -W -b html -c docs . build/docs
 ```
 
 打开 `build/docs/docs/index.html`。

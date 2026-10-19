@@ -24,6 +24,7 @@ from ziwei.knowledge.model import (
   _text,
 )
 
+#: 目录查询返回的记录值类型。
 Record: TypeAlias = Concept | RuleVariant | Source | Citation | KnowledgeEntry
 _R = TypeVar("_R", bound=Record)
 
@@ -35,7 +36,11 @@ def _filter_enum(value: StrEnum | None, expected: type[StrEnum]) -> None:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Catalog:
-  """构造时拒绝重复标识与悬空引用；查询不推断规则或命盘适用性。"""
+  """不可变目录，构造时拒绝重复标识与悬空引用。
+
+  get按标识返回单条记录；find未命中返回空元组，列表查询按目录顺序返回。
+  查询不推断规则或命盘适用性。
+  """
 
   version: str
   concepts: tuple[Concept, ...]
@@ -134,7 +139,7 @@ class Catalog:
     )
 
   def find(self, name: str) -> tuple[Concept | RuleVariant, ...]:
-    """按完整名称或显式别名查找；忽略首尾空白和大小写，歧义返回全部匹配。"""
+    """按完整名称或显式别名查找，忽略首尾空白和大小写；歧义返回全部匹配，未命中返回空元组。"""
     _text(name, "查询名称")
     key = name.strip().casefold()
     items: tuple[Concept | RuleVariant, ...] = (*self.concepts, *self.variants)

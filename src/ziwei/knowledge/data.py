@@ -18,7 +18,7 @@ from ziwei.knowledge.model import (
   TextLayer,
 )
 
-CATALOG_VERSION = "2026.10.19.2"
+CATALOG_VERSION = "2026.10.19.3"
 """语料版本，与开发包版本分别记录。"""
 
 CONCEPTS = (

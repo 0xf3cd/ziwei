@@ -225,7 +225,9 @@ raise SystemExit(main(['-E', '-a', '-n', '-W', '-q', '-b', 'html', '-c',
 def test_generation_reads_actual_definitions(html: Path, monkeypatch: pytest.MonkeyPatch) -> None:
   catalog = load_catalog()
   monkeypatch.setattr(
-    config, "LeapMonthPolicy", StrEnum("LeapMonthPolicy", {"EXAMPLE": "测试替代口径"})
+    config,
+    "POLICY_ENUMS",
+    (StrEnum("LeapMonthPolicy", {"EXAMPLE": "测试替代口径"}), *config.POLICY_ENUMS[1:]),
   )
   monkeypatch.setattr(ganzhi, "JIAZI", tuple(reversed(ganzhi.JIAZI)))
   generated = render_catalog(catalog)

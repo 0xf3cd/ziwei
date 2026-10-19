@@ -95,7 +95,7 @@ def catalog() -> Catalog:
 
 def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   catalog = load_catalog()
-  assert catalog.version == "2026.10.19.2"
+  assert catalog.version == "2026.10.19.3"
   assert {item.kind for item in catalog.concepts} == set(ConceptKind)
   assert len({item.id for item in catalog.records}) == len(catalog.records)
   assert catalog.find("天馬") == catalog.find("tianma")
@@ -397,7 +397,6 @@ def test_invalid_variants(catalog: Catalog, field: str, value: Any, error: type[
     ("alternatives", ("只有一读",), ValueError),
     ("premise_status", PremiseStatus.待定, ValueError),
     ("curation", CurationStatus.待整理, ValueError),
-    ("layer", "仓内说明", TypeError),
     ("display", "可默认展示", TypeError),
     ("recheck", [], TypeError),
     ("tracking_url", [], TypeError),
@@ -620,14 +619,13 @@ def test_all_catalog_sequences_and_variant_relations_are_isolated(catalog: Catal
     assert isinstance(getattr(copied_variant, name), tuple)
 
 
-def test_record_text_layers_are_independent(catalog: Catalog) -> None:
+def test_source_and_citation_text_layers_are_independent(catalog: Catalog) -> None:
   source = replace(catalog.sources[0], layer=TextLayer.今人说明)
   citation = replace(catalog.citations[0], layer=TextLayer.注释)
-  entry = replace(catalog.entries[0], layer=TextLayer.仓内说明)
+  entry = catalog.entries[0]
   mixed = replace(catalog, sources=(source,), citations=(citation,), entries=(entry,))
   assert mixed.references(entry.id)[0].layer is TextLayer.注释
   assert mixed.sources[0].layer is TextLayer.今人说明
-  assert mixed.entries[0].layer is TextLayer.仓内说明
 
 
 @pytest.mark.parametrize(

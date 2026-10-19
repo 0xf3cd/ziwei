@@ -10,7 +10,7 @@ from enum import StrEnum
 from typing import Literal, TypeVar
 from urllib.parse import urlsplit
 
-from ziwei.config import DayRollover, LeapMonthPolicy, YearBoundary
+from ziwei.config import PolicyOption
 
 _T = TypeVar("_T")
 
@@ -155,7 +155,7 @@ class Concept:
   kind: ConceptKind
   aliases: tuple[str, ...] = ()
   related_ids: tuple[str, ...] = ()
-  options: tuple[LeapMonthPolicy | DayRollover | YearBoundary, ...] = ()
+  options: tuple[PolicyOption, ...] = ()
 
   def __post_init__(self) -> None:
     _identifier(self.id, "concept")
@@ -164,9 +164,7 @@ class Concept:
     object.__setattr__(self, "aliases", _strings(self.aliases, "别名"))
     object.__setattr__(self, "related_ids", _strings(self.related_ids, "关联概念", "concept"))
     options = _freeze(self.options, StrEnum, "关联口径")
-    if any(
-      not isinstance(option, LeapMonthPolicy | DayRollover | YearBoundary) for option in options
-    ):
+    if any(not isinstance(option, PolicyOption) for option in options):
       raise TypeError("关联口径须为已实现的口径枚举成员")
     if len(set(options)) != len(options):
       raise ValueError("关联口径不可重复")
@@ -188,7 +186,7 @@ class RuleVariant:
   aliases: tuple[str, ...] = ()
   school_ids: tuple[str, ...] = ()
   conditions: tuple[str, ...] = ()
-  option: LeapMonthPolicy | DayRollover | YearBoundary | None = None
+  option: PolicyOption | None = None
 
   def __post_init__(self) -> None:
     _identifier(self.id, "variant")
@@ -201,9 +199,7 @@ class RuleVariant:
       raise ValueError("变体须关联概念")
     object.__setattr__(self, "aliases", _strings(self.aliases, "别名"))
     object.__setattr__(self, "conditions", _strings(self.conditions, "条件"))
-    if self.option is not None and not isinstance(
-      self.option, LeapMonthPolicy | DayRollover | YearBoundary
-    ):
+    if self.option is not None and not isinstance(self.option, PolicyOption):
       raise TypeError("option须为已实现的口径枚举成员")
 
 
@@ -269,7 +265,7 @@ class Citation:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class KnowledgeEntry:
-  """有前提的陈述。chart_match恒为未评估，不接收或判断命盘。"""
+  """整理者的有条件陈述；逐字引文放Citation。chart_match恒为未评估，不判断命盘。"""
 
   id: str
   statement: str
@@ -283,7 +279,6 @@ class KnowledgeEntry:
   limits: str
   exceptions: tuple[str, ...] = ()
   alternatives: tuple[str, ...] = ()
-  layer: TextLayer = TextLayer.EDITORIAL
   recheck: str = ""
   tracking_url: str = ""
   chart_match: Literal["未评估"] = field(default="未评估", init=False)
@@ -296,7 +291,6 @@ class KnowledgeEntry:
       (self.premise_status, PremiseStatus),
       (self.display, DisplayEligibility),
       (self.curation, CurationStatus),
-      (self.layer, TextLayer),
     ):
       _enum(value, expected)
     for name, prefix in (

@@ -1,13 +1,20 @@
 """三个独立口径均需显式给出。"""
 
 import json
-from dataclasses import FrozenInstanceError, asdict
+from dataclasses import FrozenInstanceError, asdict, fields
 from itertools import product
-from typing import Any
+from typing import Any, get_args, get_type_hints
 
 import pytest
 
-from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
+from ziwei.config import (
+  POLICY_ENUMS,
+  ChartConfig,
+  DayRollover,
+  LeapMonthPolicy,
+  PolicyOption,
+  YearBoundary,
+)
 
 
 def test_all_independent_combinations() -> None:
@@ -30,6 +37,14 @@ def test_all_independent_combinations() -> None:
     field = "year_boundary"
     with pytest.raises(FrozenInstanceError):
       setattr(config, field, YearBoundary.立春)
+
+
+def test_policy_registry_matches_the_config_fields_and_type_alias() -> None:
+  annotations = get_type_hints(ChartConfig)
+  assert get_args(PolicyOption) == POLICY_ENUMS
+  assert tuple(annotations[field.name] for field in fields(ChartConfig)) == POLICY_ENUMS
+  for enumeration in POLICY_ENUMS:
+    assert all(isinstance(option, PolicyOption) for option in enumeration)
 
 
 @pytest.mark.parametrize("missing", ["leap_month_policy", "day_rollover", "year_boundary"])

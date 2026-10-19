@@ -47,7 +47,7 @@ def render_catalog(catalog: Catalog) -> str:
         parts.append(f"<dt>{member.name}</dt><dd>{rendered}</dd>")
       parts.append("</dl></section>")
   parts.append('<section id="implemented-policies"><h2>已实现的口径选项</h2><table>')
-  for enumeration in (config.LeapMonthPolicy, config.DayRollover, config.YearBoundary):
+  for enumeration in config.POLICY_ENUMS:
     for option in enumeration:
       parts.append(f"<tr><td>{enumeration.__name__}</td><td>{escape(option.value)}</td></tr>")
   parts.append("</table></section>")
@@ -152,7 +152,7 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
       raise ValueError(f"Knowledge HTML lost or changed fields: {record.id}")
   options = [
     (enumeration.__name__, option.value)
-    for enumeration in (config.LeapMonthPolicy, config.DayRollover, config.YearBoundary)
+    for enumeration in config.POLICY_ENUMS
     for option in enumeration
   ]
   if parser.rows.get("implemented-policies") != options:
