@@ -14,6 +14,9 @@ import pytest
 import ziwei
 from tools import installed_check
 from ziwei.birth import GregorianBirthRecord
+from ziwei.knowledge import load_catalog
+from ziwei.knowledge.catalog import Catalog
+from ziwei.knowledge.model import PremiseStatus
 from ziwei.timezone import TimezoneData
 
 
@@ -116,3 +119,35 @@ def test_input_consumer_rejects_faulty_results(kind: str, monkeypatch: pytest.Mo
   monkeypatch.setattr(GregorianBirthRecord, "resolve_time", faulty)
   with pytest.raises(ValueError, match=r"Timezone|timezone"):
     installed_check.check_inputs()
+
+
+@pytest.mark.parametrize("kind", ["aliases", "pending", "alternatives", "quote"])
+def test_knowledge_consumer_rejects_missing_or_changed_corpus(
+  kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  if kind == "aliases":
+    catalog = Catalog(
+      version="empty", concepts=(), variants=(), sources=(), citations=(), entries=()
+    )
+  elif kind in ("pending", "alternatives"):
+    catalog = replace(
+      catalog,
+      entries=tuple(
+        replace(item, premise_status=PremiseStatus.已明确)
+        if kind == "pending"
+        else replace(item, alternatives=())
+        for item in catalog.entries
+      ),
+    )
+  else:
+    catalog = replace(
+      catalog,
+      citations=tuple(
+        replace(item, quote="错误原文") if item.id == "citation.quanshu.tianma-anchor" else item
+        for item in catalog.citations
+      ),
+    )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match="knowledge"):
+    installed_check.check_knowledge()

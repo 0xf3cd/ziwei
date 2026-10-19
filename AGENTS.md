@@ -35,7 +35,7 @@ JSON 中的领域值用中文。
 
 支持 Python 3.11–3.14。先 `uv sync --locked`，再 `uv run --locked python tools/check.py` 运行与 CI
 相同的检查。配置与工具版本钉在 `pyproject.toml` 与 `uv.lock`；更新依赖时同时修改两者，并在
-最低与最高 Python 版本各验一次。开发包目前没有排盘或知识查询 API。
+最低与最高 Python 版本各验一次。开发包提供独立知识查询，尚无排盘 API。
 
 ## 知识与文档
 

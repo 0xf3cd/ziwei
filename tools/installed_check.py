@@ -10,6 +10,8 @@ import ziwei
 from ziwei.birth import CalculationInput, Gender, GregorianBirthRecord, TimePrecision
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.ganzhi import Dizhi
+from ziwei.knowledge import load_catalog
+from ziwei.knowledge.model import PremiseStatus
 from ziwei.timezone import AmbiguousTimeError, IanaTimezone, NonexistentTimeError
 
 
@@ -77,12 +79,26 @@ def main(expected_version: str) -> None:
     raise ValueError("Installed version differs from the built version")
   if not origin.with_name("py.typed").is_file():
     raise ValueError("Installed package is missing py.typed")
+  check_knowledge()
   check_inputs()
   if any(
     name == "celestial_calendar" or name.startswith("celestial_calendar.") for name in sys.modules
   ):
     raise ValueError("Import initialized the calendar adapter")
   print(f"Installed ziwei {metadata.version}; optimized={sys.flags.optimize}")
+
+
+def check_knowledge() -> None:
+  """消费安装包中的语料、别名、前提与原文引用，不只检查导入成功。"""
+  catalog = load_catalog()
+  if not catalog.version or not catalog.find("天馬") or len(catalog.find("庚干四化")) != 3:
+    raise ValueError("Installed knowledge corpus or aliases are incomplete")
+  pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
+  if not pending or any(item.chart_match != "未评估" or not item.alternatives for item in pending):
+    raise ValueError("Installed knowledge lost unresolved premises")
+  references = catalog.references("entry.tianma.year-branch")
+  if not references or references[0].quote != "论本生年支":
+    raise ValueError("Installed knowledge citation differs from its source")
 
 
 if __name__ == "__main__":

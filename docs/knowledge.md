@@ -4,6 +4,46 @@
 
 本仓同时服务排盘与知识学习。查询知识不应要求先有命盘、出生资料或已加载的 celestial 原生库。
 
+## 查询目录与出处
+
+当前提供独立知识查询，不实现安星表或命盘匹配。目录加载只构造不可变记录，不读取出生资料、
+时区数据或原生历法库。完整记录与稳定链接见[知识参考](knowledge-reference.md)，签名见[API](api.md#独立知识目录)。
+
+```{doctest}
+>>> from ziwei.knowledge import load_catalog
+>>> from ziwei.knowledge.model import PremiseStatus, DisplayEligibility, SourceStatus
+>>> catalog = load_catalog()
+>>> catalog.find("天馬")[0].id
+'concept.star.tianma'
+>>> [item.id for item in catalog.find("庚干四化")]
+['variant.sihua.geng-wikisource', 'variant.sihua.geng-jiuqian-quanshu', 'variant.sihua.geng-jiuqian-zhongzhou']
+>>> pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
+>>> pending[0].alternatives
+('由农历月序对应月支', '由节令月建确定月支')
+>>> pending[0].chart_match
+'未评估'
+>>> reference = catalog.references("entry.tianma.year-branch")[0]
+>>> reference.quote
+'论本生年支'
+>>> catalog.get(reference.source_id).status is SourceStatus.已核
+True
+>>> catalog.filter_entries(default_only=True)
+()
+```
+
+`find()`查完整名称及显式别名，忽略首尾空白与大小写，歧义返回全部匹配，不静默取第一条。
+`list_concepts()`可按种类过滤；`list_variants()`可按概念或流派过滤。`filter_entries()`的条件取交集，
+`filter_sources()`可按核验状态、支持层次或谱系键过滤。未知标识抛`KeyError`，错类引用或无效值显式失败。
+记录和目录会把输入序列复制成元组；修改调用方原列表不会改动已经构造的目录。
+
+当前内置条目均暂不进入默认展示：有的只核到电子录文或转录页，有的前提尚待裁定，
+尚未完成安星规则的来源准入。`filter_entries()`默认检索全部条目，所以仍能比较分歧与查看待决材料。
+即使调用方构造了符合默认展示条件的条目，`chart_match`仍恒为未评估；目录不接收或判定命盘。
+
+例如，[月支天马](knowledge-reference.md#entry.tianma.month-branch)保留两种未裁的月支读法；
+[晚子时归次日](knowledge-reference.md#entry.day-rollover.late-zi)登记项目已有选项，但不编造其外部出处。
+待决条目的稳定标识与翻案动作保存在目录本身，跟踪URL指向原始讨论；issue关闭不表示争议已经解决。
+
 ## 记录与归属
 
 概念、规则变体、来源与知识条目使用稳定、与语言无关的标识。这些是记录职责，
@@ -18,6 +58,11 @@
 
 可执行常量与规则表归领域实现。知识条目链接规则标识，生成的参考表读取可执行定义。
 解释文字说明原因与范围，不再维护第二份安星表。
+
+当前schema中，`Source`保存版本、谱系、权利与总体支持范围；`Citation`保存具体定位、原引文、
+支持层次与该处限度。同一本资料的多处引文共享来源，不复制一份版本信息。
+`RuleVariant.option`可链接已经实现的口径枚举；没有安星实现时不伪造函数地址。
+[口径选项及六十甲子参考](knowledge-reference.md#implemented-policies)直接读取现有定义。
 
 原文引述、今人说明、仓内原作说明是不同文本层。同一祖本的多份转抄不构成独立来源；
 措辞逐字相同的两处只算一路。保留原文措辞与定位，记录收录材料的转载权限。
@@ -45,6 +90,21 @@
 
 出处核实不能单独证明适用；检索到相关陈述，也不能证明它适用于当前盘。
 将来的判别器须区分满足、不满足、未知。只验证部分条件时，只能返回部分证据。
+
+来源状态只回答所列版本是否已核：维基文库的固定修订可已核，而它的底本仍可能未确认；
+转录页的文字可已读，但原著版本未核时继续标待核。谱系键仅用于归并同路材料，不计算独立来源数。
+默认展示须由整理者显式指定，且前提明确、整理完成、引文所指来源已核；这些检查仍不证明某张盘满足前提。
+
+### 首批材料的限度
+
+- 维基文库《紫微斗數全書/卷二》固定修订`1963110`，实际正文为简体录文；没有确认其纸本底本。
+  原字如天马句中的“戍”保留不改，不能用相同书名抹平不同四化口诀。
+- golla《紫微斗數精成》与读书网《九千飞星》只作转录线索，原著版次、部分作者归属与转载许可未核。
+  九千所列流派标签只记录为作者说法，不认证整个流派。
+- LifeDNA作者站只证明其页面主张。页面转引古籍的历史论证未回原典，也未实测该站排盘算法。
+
+公开语料只收必要短引和仓内说明，不转载现代全文；没有原文的地方保留空引用及具体检索动作，
+不写成“古籍没有”。这些条目不执行四化、天马或归月换日计算。
 
 ## 首个可用范围
 

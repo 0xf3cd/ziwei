@@ -20,6 +20,10 @@ from zipfile import ZipFile
 
 from markdown_it import MarkdownIt
 
+# 直接运行tools/check.py时，脚本目录而非仓根在sys.path首位。
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tools.knowledge_reference import check_knowledge_reference
+
 ROOT = Path(__file__).resolve().parents[1]
 # sdist 须能重建 wheel 并重跑全部检查：源码、测试、工具、文档、锁文件与约定。
 SOURCE_FILES = (
@@ -104,10 +108,12 @@ class ApiTargets(HTMLParser):
 def check_api_reference(directory: Path, root: Path = ROOT) -> None:
   """要求实现中公开的类、函数及方法出现在生成的 API 签名里。"""
   expected: set[str] = set()
-  for module in (root / "src/ziwei").glob("*.py"):
+  for module in (root / "src/ziwei").rglob("*.py"):
+    parts = module.relative_to(root / "src").with_suffix("").parts
+    namespace = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
     for node in ast.parse(module.read_text(encoding="utf-8")).body:
       if isinstance(node, ast.ClassDef | ast.FunctionDef) and not node.name.startswith("_"):
-        name = f"ziwei.{module.stem}.{node.name}"
+        name = f"{namespace}.{node.name}"
         expected.add(name)
         if isinstance(node, ast.ClassDef):
           expected.update(
@@ -249,6 +255,7 @@ def main() -> None:
     directory = Path(temporary)
     check_examples(sphinx_report(directory))
     check_api_reference(directory / "html")
+    check_knowledge_reference(directory / "html")
     check_distribution(directory)
   print("All checks passed.")
 

@@ -49,3 +49,27 @@ def test_api_gate_cannot_pass_with_no_source(api_tree: Path) -> None:
   (api_tree / "src/ziwei/sample.py").write_text("_internal = 1\n", encoding="utf-8")
   with pytest.raises(ValueError, match="No public API"):
     check_api_reference(api_tree, api_tree)
+
+
+def test_nested_package_and_its_init_are_checked(api_tree: Path) -> None:
+  package = api_tree / "src/ziwei/knowledge"
+  package.mkdir()
+  (package / "__init__.py").write_text("def load_catalog():\n  pass\n", encoding="utf-8")
+  (package / "catalog.py").write_text(
+    "class Catalog:\n  def find(self):\n    pass\n", encoding="utf-8"
+  )
+  path = api_tree / "docs/api.html"
+  base = (
+    '<dt id="ziwei.sample.Value"></dt><dt id="ziwei.sample.Value.check"></dt>'
+    '<dt id="ziwei.sample.resolve"></dt>'
+  )
+  path.write_text(base, encoding="utf-8")
+  with pytest.raises(ValueError, match="knowledge"):
+    check_api_reference(api_tree, api_tree)
+  path.write_text(
+    base + '<dt id="ziwei.knowledge.load_catalog"></dt>'
+    '<dt id="ziwei.knowledge.catalog.Catalog"></dt>'
+    '<dt id="ziwei.knowledge.catalog.Catalog.find"></dt>',
+    encoding="utf-8",
+  )
+  check_api_reference(api_tree, api_tree)

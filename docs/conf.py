@@ -3,6 +3,12 @@
 from importlib import metadata
 from pathlib import Path
 
+from sphinx.application import Sphinx
+from sphinx.environment import BuildEnvironment
+
+from tools.knowledge_reference import KnowledgeTargets, render_catalog
+from ziwei.knowledge import load_catalog
+
 project = "ziwei"
 release = metadata.version("ziwei")
 language = "zh_CN"
@@ -29,3 +35,25 @@ myst_heading_anchors = 6
 nitpicky = True
 html_theme = "alabaster"
 html_title = f"ziwei {release}（开发版）"
+
+
+def insert_knowledge_reference(app: Sphinx, docname: str, source: list[str]) -> None:
+  """仅在参考页展开记录，Markdown源文件不维护第二份语料或规则表。"""
+  if docname == "docs/knowledge-reference":
+    source[0] += "\n" + render_catalog(load_catalog())
+
+
+def register_knowledge_targets(app: Sphinx, env: BuildEnvironment) -> None:
+  """把生成HTML中的实际锚点提供给MyST，不关闭未知引用警告。"""
+  targets = KnowledgeTargets()
+  targets.feed(render_catalog(load_catalog()))
+  slugs = env.metadata.setdefault("docs/knowledge-reference", {}).setdefault("myst_slugs", {})
+  for identifier, tags in targets.targets.items():
+    if tags == ["section"]:
+      slugs[identifier] = (None, identifier, identifier)
+
+
+def setup(app: Sphinx) -> None:
+  """注册定义生成的知识参考页。"""
+  app.connect("source-read", insert_knowledge_reference)
+  app.connect("env-updated", register_knowledge_targets)
