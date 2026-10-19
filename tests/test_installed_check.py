@@ -14,6 +14,9 @@ import pytest
 import ziwei
 from tools import installed_check
 from ziwei.birth import GregorianBirthRecord
+from ziwei.knowledge import load_catalog
+from ziwei.knowledge.catalog import Catalog
+from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
 from ziwei.timezone import TimezoneData
 
 
@@ -116,3 +119,82 @@ def test_input_consumer_rejects_faulty_results(kind: str, monkeypatch: pytest.Mo
   monkeypatch.setattr(GregorianBirthRecord, "resolve_time", faulty)
   with pytest.raises(ValueError, match=r"Timezone|timezone"):
     installed_check.check_inputs()
+
+
+@pytest.mark.parametrize("kind", ["aliases", "pending", "alternatives", "quote", "chart_match"])
+def test_knowledge_consumer_rejects_missing_or_changed_corpus(
+  kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  if kind == "aliases":
+    catalog = Catalog(
+      version="empty", concepts=(), variants=(), sources=(), citations=(), entries=()
+    )
+  elif kind in ("pending", "alternatives"):
+    catalog = replace(
+      catalog,
+      entries=tuple(
+        replace(item, premise_status=PremiseStatus.已明确)
+        if kind == "pending"
+        else replace(item, alternatives=())
+        for item in catalog.entries
+      ),
+    )
+  elif kind == "chart_match":
+    catalog = replace(catalog, entries=tuple(replace(item) for item in catalog.entries))
+    pending = catalog.filter_entries(premise_status=PremiseStatus.待定)[0]
+    object.__setattr__(pending, "chart_match", "已匹配")
+  else:
+    catalog = replace(
+      catalog,
+      citations=tuple(
+        replace(item, quote="错误原文") if item.id == "citation.quanshu.tianma-anchor" else item
+        for item in catalog.citations
+      ),
+    )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match="knowledge"):
+    installed_check.check_knowledge()
+
+
+@pytest.mark.parametrize("defect", ["tianma-alias", "geng-count", "empty-reference"])
+def test_knowledge_consumer_rejects_each_independent_missing_condition(
+  defect: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  if defect == "empty-reference":
+    original_references = Catalog.references
+
+    def references(self: Catalog, identifier: str) -> tuple[Citation, ...]:
+      return (
+        () if identifier == "entry.tianma.year-branch" else original_references(self, identifier)
+      )
+
+    monkeypatch.setattr(Catalog, "references", references)
+  else:
+    original_find = Catalog.find
+    target = "天馬" if defect == "tianma-alias" else "庚干四化"
+
+    def find(self: Catalog, name: str) -> tuple[Concept | RuleVariant, ...]:
+      return () if name == target else original_find(self, name)
+
+    monkeypatch.setattr(Catalog, "find", find)
+  with pytest.raises(ValueError, match="knowledge"):
+    installed_check.check_knowledge()
+
+
+def test_consumers_succeed_in_an_optimized_process(tmp_path: Path) -> None:
+  root = Path(__file__).resolve().parents[1]
+  script = (
+    "import sys; sys.path.insert(0, sys.argv[1]); "
+    "from tools.installed_check import check_knowledge, check_inputs; "
+    "check_knowledge(); check_inputs(); print('optimized-consumers-passed')"
+  )
+  result = subprocess.run(
+    (sys.executable, "-O", "-I", "-c", script, str(root)),
+    cwd=tmp_path,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 0, result.stderr
+  assert "optimized-consumers-passed" in result.stdout

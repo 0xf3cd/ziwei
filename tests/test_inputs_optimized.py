@@ -79,6 +79,10 @@ import ziwei.birth
 import ziwei.config
 import ziwei.ganzhi
 import ziwei.timezone
+from ziwei.knowledge import load_catalog
+catalog = load_catalog()
+if not catalog.find('天馬') or not catalog.references('entry.tianma.year-branch'):
+  raise RuntimeError('independent knowledge lookup failed')
 print('isolated imports passed')
 """
   result = subprocess.run(
@@ -90,3 +94,54 @@ print('isolated imports passed')
   )
   assert result.returncode == 0, result.stderr
   assert "isolated imports passed" in result.stdout
+
+
+@pytest.mark.parametrize("mode", [(), ("-O",)])
+def test_knowledge_is_independent_and_validates_without_asserts(
+  tmp_path: Path, mode: tuple[str, ...]
+) -> None:
+  script = r"""
+import sys
+from importlib.abc import MetaPathFinder
+class Block(MetaPathFinder):
+  def find_spec(self, fullname, path=None, target=None):
+    if fullname.split('.')[0] in ('celestial_calendar', 'tzdata', 'zoneinfo', 'bazi') or fullname in (
+        'ziwei.birth', 'ziwei.timezone', 'ziwei.chart', 'ziwei.calendar'):
+      raise RuntimeError('knowledge tried to initialize a foreign boundary: ' + fullname)
+sys.meta_path.insert(0, Block())
+from dataclasses import replace
+from ziwei.config import DayRollover
+from ziwei.knowledge import load_catalog
+from ziwei.knowledge.model import Concept, ConceptKind
+c = load_catalog()
+if len(c.find('庚干四化')) != 3 or not c.references('entry.tianma.year-branch'):
+  raise RuntimeError('knowledge lookup did not run')
+cases = [
+  lambda: Concept(id='concept.x', name='x', kind='星曜'),
+  lambda: Concept(id='not an id', name='x', kind=ConceptKind.星曜),
+  lambda: replace(c, concepts=(*c.concepts, c.concepts[0])),
+  lambda: replace(c, citations=(replace(c.citations[0], source_id='source.unknown'),)),
+  lambda: c.filter_entries(default_only=1),
+  lambda: replace(c, variants=tuple(
+    replace(item, option=DayRollover.晚子时归次日) if item.id == 'variant.leap-month.current' else item
+    for item in c.variants)),
+  lambda: replace(c.citations[0], layer='原文'),
+]
+for action in cases:
+  try:
+    action()
+  except (TypeError, ValueError, KeyError):
+    pass
+  else:
+    raise RuntimeError('knowledge accepted invalid input')
+print('knowledge isolated and checked=' + str(len(cases)))
+"""
+  result = subprocess.run(
+    (sys.executable, *mode, "-I", "-c", script),
+    cwd=tmp_path,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 0, result.stderr
+  assert "checked=7" in result.stdout

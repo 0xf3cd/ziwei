@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Final, TypeAlias, get_args
 
 
 class LeapMonthPolicy(StrEnum):
@@ -31,6 +32,12 @@ class YearBoundary(StrEnum):
   LICHUN = "立春"
   农历正月初一 = LUNAR_NEW_YEAR
   立春 = LICHUN
+
+
+#: 独立口径枚举成员的并集，不提供默认口径。
+PolicyOption: TypeAlias = LeapMonthPolicy | DayRollover | YearBoundary
+#: 从PolicyOption派生的口径枚举类型，供校验与参考页共用。
+POLICY_ENUMS: Final[tuple[type[StrEnum], ...]] = get_args(PolicyOption)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

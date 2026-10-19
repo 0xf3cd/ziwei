@@ -287,6 +287,9 @@ def test_main_runs_every_gate_in_order(monkeypatch: pytest.MonkeyPatch, tmp_path
   monkeypatch.setattr(check, "sphinx_report", fake_report)
   monkeypatch.setattr(check, "check_examples", lambda report: calls.append(("examples", report)))
   monkeypatch.setattr(check, "check_api_reference", lambda directory: calls.append("api_reference"))
+  monkeypatch.setattr(
+    check, "check_knowledge_reference", lambda directory: calls.append("knowledge_reference")
+  )
   monkeypatch.setattr(check, "check_distribution", lambda directory: calls.append("distribution"))
   monkeypatch.setenv("SCRATCH", str(tmp_path))
   check.main()
@@ -306,6 +309,7 @@ def test_main_runs_every_gate_in_order(monkeypatch: pytest.MonkeyPatch, tmp_path
     "sphinx_report",
     ("examples", "report"),
     "api_reference",
+    "knowledge_reference",
     "distribution",
   ]
 
