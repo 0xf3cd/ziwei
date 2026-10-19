@@ -3,14 +3,18 @@
 import re
 import subprocess
 import sys
-from importlib.metadata import version
+from dataclasses import replace
+from importlib.metadata import distribution, version
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
+from typing import Any
 
 import pytest
 
 import ziwei
 from tools import installed_check
+from ziwei.birth import GongliBirthRecord
+from ziwei.shiqu import ShiquShuju
 
 
 @pytest.fixture
@@ -76,3 +80,39 @@ def test_command_line_entry_validates_under_optimization(tmp_path: Path) -> None
   assert result.returncode != 0
   assert "ValueError" in result.stderr
   assert re.search("outside the consumer environment|Installed version differs", result.stderr)
+
+
+def test_dependency_pin_is_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
+  def wrong_pin(name: str) -> Any:
+    if name == "ziwei":
+      return SimpleNamespace(requires=["tzdata==0.0.0"])
+    return distribution(name)
+
+  monkeypatch.setattr(installed_check, "distribution", wrong_pin)
+  with pytest.raises(ValueError, match="declared pin"):
+    installed_check.check_inputs()
+
+
+@pytest.mark.parametrize(
+  "kind", ["no_provenance", "wrong_package", "wrong_iana", "wrong_offset", "gap", "fold"]
+)
+def test_input_consumer_rejects_faulty_results(kind: str, monkeypatch: pytest.MonkeyPatch) -> None:
+  resolve = GongliBirthRecord.resolve_time
+
+  def faulty(self: GongliBirthRecord) -> Any:
+    if kind in ("gap", "fold") and self.riqi.month == (4 if kind == "gap" else 9):
+      return None
+    result = resolve(self)
+    if kind == "no_provenance":
+      return SimpleNamespace(shuju=None)
+    if kind == "wrong_package":
+      return replace(result, shuju=ShiquShuju("0.0.0", "2026e"))
+    if kind == "wrong_iana":
+      return replace(result, shuju=ShiquShuju(version("tzdata"), "0000a"))
+    if kind == "wrong_offset":
+      return SimpleNamespace(shuju=result.shuju, offset=None)
+    return result
+
+  monkeypatch.setattr(GongliBirthRecord, "resolve_time", faulty)
+  with pytest.raises(ValueError, match=r"Timezone|timezone"):
+    installed_check.check_inputs()

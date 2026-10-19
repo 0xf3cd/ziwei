@@ -158,6 +158,7 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     "tools/helper.sh",
     "tests/test_a.py",
     "docs/conf.py",
+    "docs/python-stdlib.inv",
     "docs/index.md",
     "docs/guide/page.md",
     "docs/notes.txt",
@@ -166,9 +167,13 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     (tmp_path / path).touch()
   members = source_members(tmp_path)
   assert members == tuple(sorted(members))
-  assert {"uv.lock", "src/ziwei/stars/main.py", "docs/guide/page.md", "tests/test_a.py"} <= set(
-    members
-  )
+  assert {
+    "uv.lock",
+    "src/ziwei/stars/main.py",
+    "docs/guide/page.md",
+    "docs/python-stdlib.inv",
+    "tests/test_a.py",
+  } <= set(members)
   assert {"tools/helper.sh", "docs/notes.txt"}.isdisjoint(members)
 
 
@@ -281,6 +286,7 @@ def test_main_runs_every_gate_in_order(monkeypatch: pytest.MonkeyPatch, tmp_path
   monkeypatch.setattr(check, "check_documents", lambda: calls.append("check_documents"))
   monkeypatch.setattr(check, "sphinx_report", fake_report)
   monkeypatch.setattr(check, "check_examples", lambda report: calls.append(("examples", report)))
+  monkeypatch.setattr(check, "check_api_reference", lambda directory: calls.append("api_reference"))
   monkeypatch.setattr(check, "check_distribution", lambda directory: calls.append("distribution"))
   monkeypatch.setenv("SCRATCH", str(tmp_path))
   check.main()
@@ -299,6 +305,7 @@ def test_main_runs_every_gate_in_order(monkeypatch: pytest.MonkeyPatch, tmp_path
     "check_documents",
     "sphinx_report",
     ("examples", "report"),
+    "api_reference",
     "distribution",
   ]
 

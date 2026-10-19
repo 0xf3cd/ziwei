@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.15"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = []
+dependencies = ["tzdata==2026.5"]
 
 [project.urls]
 Repository = "https://github.com/0xf3cd/ziwei"

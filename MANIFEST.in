@@ -1,5 +1,5 @@
 include AGENTS.md uv.lock
-recursive-include docs *.md *.py
+recursive-include docs *.md *.py *.inv
 recursive-include tests *.py
 recursive-include tools *.py
 prune .review

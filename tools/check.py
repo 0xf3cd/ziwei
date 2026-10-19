@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import os
 import re
 import shutil
@@ -12,6 +13,7 @@ import tempfile
 import tomllib
 from collections.abc import Sequence
 from email.parser import Parser
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from zipfile import ZipFile
@@ -35,6 +37,7 @@ SOURCE_PATTERNS = (
   "tests/*.py",
   "docs/**/*.md",
   "docs/**/*.py",
+  "docs/**/*.inv",
 )
 
 
@@ -82,6 +85,43 @@ def check_examples(report: str) -> None:
   section = re.split(r"(?m)^Document: ", report.partition(marker)[2], maxsplit=1)[0]
   if not re.search(r"(?m)^[1-9]\d* tests? in \d+ items?\.$", section):
     raise ValueError("No executed documentation examples in docs/contributing")
+
+
+class ApiTargets(HTMLParser):
+  """收集真正签名元素的标识，不接受渲染成正文的指令文字。"""
+
+  def __init__(self) -> None:
+    super().__init__()
+    self.targets: set[str] = set()
+
+  def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+    if tag == "dt":
+      target = dict(attrs).get("id")
+      if target is not None:
+        self.targets.add(target)
+
+
+def check_api_reference(directory: Path, root: Path = ROOT) -> None:
+  """要求实现中公开的类、函数及方法出现在生成的 API 签名里。"""
+  expected: set[str] = set()
+  for module in (root / "src/ziwei").glob("*.py"):
+    for node in ast.parse(module.read_text(encoding="utf-8")).body:
+      if isinstance(node, ast.ClassDef | ast.FunctionDef) and not node.name.startswith("_"):
+        name = f"ziwei.{module.stem}.{node.name}"
+        expected.add(name)
+        if isinstance(node, ast.ClassDef):
+          expected.update(
+            f"{name}.{member.name}"
+            for member in node.body
+            if isinstance(member, ast.FunctionDef) and not member.name.startswith("_")
+          )
+  if not expected:
+    raise ValueError("No public API definitions found")
+  parser = ApiTargets()
+  parser.feed((directory / "docs/api.html").read_text(encoding="utf-8"))
+  missing = expected - parser.targets
+  if missing:
+    raise ValueError("API HTML is missing signatures: " + ", ".join(sorted(missing)))
 
 
 def source_members(root: Path) -> tuple[str, ...]:
@@ -152,7 +192,7 @@ def check_distribution(directory: Path) -> None:
   environment = directory / "consumer"
   run(("uv", "venv", "--python", sys.executable, str(environment)))
   python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-  run(("uv", "pip", "install", "--python", str(python), "--no-deps", str(wheel)))
+  run(("uv", "pip", "install", "--python", str(python), str(wheel), *metadata["dependencies"]))
   for mode in ((), ("-O",)):
     run(
       (str(python), *mode, "-I", str(ROOT / "tools/installed_check.py"), version),
@@ -208,6 +248,7 @@ def main() -> None:
   ) as temporary:
     directory = Path(temporary)
     check_examples(sphinx_report(directory))
+    check_api_reference(directory / "html")
     check_distribution(directory)
   print("All checks passed.")
 
