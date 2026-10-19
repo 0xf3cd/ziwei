@@ -22,7 +22,9 @@ def _value(value: object, ids: set[str]) -> str:
     return "、".join(_value(item, ids) for item in value) or "（无）"
   if isinstance(value, date):
     return value.isoformat()
-  return "（无）"
+  if value is None:
+    return "（无）"
+  raise TypeError(f"Unsupported knowledge field type: {type(value).__name__}")
 
 
 def render_catalog(catalog: Catalog) -> str:
@@ -63,7 +65,11 @@ class KnowledgeTargets(HTMLParser):
     self.targets: dict[str, list[str]] = {}
     self.text: dict[str, str] = {}
     self.links: list[str] = []
+    self.members: dict[str, list[tuple[str, str]]] = {}
     self._sections: list[str | None] = []
+    self._member_tag: str | None = None
+    self._member_text: list[str] = []
+    self._member_name = ""
 
   def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
     attributes = dict(attrs)
@@ -72,19 +78,45 @@ class KnowledgeTargets(HTMLParser):
       self.targets.setdefault(identifier, []).append(tag)
     if tag == "section":
       self._sections.append(identifier)
+    if tag in ("dt", "dd"):
+      self._member_tag = tag
+      self._member_text = []
     if tag == "a":
       href = attributes.get("href")
       if href is not None:
         self.links.append(href)
 
   def handle_endtag(self, tag: str) -> None:
+    if tag == self._member_tag:
+      text = "".join(self._member_text)
+      if tag == "dt":
+        self._member_name = text
+      elif self._sections and self._sections[-1] is not None:
+        self.members.setdefault(self._sections[-1], []).append((self._member_name, text))
+        self._member_name = ""
+      self._member_tag = None
+      self._member_text = []
     if tag == "section" and self._sections:
       self._sections.pop()
 
   def handle_data(self, data: str) -> None:
+    if self._member_tag is not None:
+      self._member_text.append(data)
     for section in self._sections:
       if section is not None:
         self.text[section] = self.text.get(section, "") + data
+
+
+def _member_text(value: object) -> str:
+  if isinstance(value, str):
+    return value
+  if isinstance(value, date):
+    return value.isoformat()
+  if isinstance(value, tuple):
+    return "、".join(_member_text(item) for item in value) or "（无）"
+  if value is None:
+    return "（无）"
+  raise TypeError(f"Unsupported knowledge field type: {type(value).__name__}")
 
 
 def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -> None:
@@ -97,13 +129,11 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
   for record in catalog.records:
     if parser.targets.get(record.id) != ["section"]:
       raise ValueError(f"Missing or duplicate knowledge target: {record.id}")
-    text = parser.text.get(record.id, "")
-    for member in fields(record):
-      value = getattr(record, member.name)
-      values = value if isinstance(value, tuple) else (value,)
-      for part in values:
-        if isinstance(part, str | date) and str(part) not in text:
-          raise ValueError(f"Knowledge HTML lost {record.id}.{member.name}")
+    expected = [
+      (member.name, _member_text(getattr(record, member.name))) for member in fields(record)
+    ]
+    if parser.members.get(record.id) != expected:
+      raise ValueError(f"Knowledge HTML lost or changed fields: {record.id}")
   for enumeration in (config.LeapMonthPolicy, config.DayRollover, config.YearBoundary):
     for option in enumeration:
       if option.value not in parser.text.get("implemented-policies", ""):

@@ -1,5 +1,6 @@
 """文档构建配置。"""
 
+import re
 from importlib import metadata
 from pathlib import Path
 
@@ -40,7 +41,9 @@ html_title = f"ziwei {release}（开发版）"
 def insert_knowledge_reference(app: Sphinx, docname: str, source: list[str]) -> None:
   """仅在参考页展开记录，Markdown源文件不维护第二份语料或规则表。"""
   if docname == "docs/knowledge-reference":
-    source[0] += "\n" + render_catalog(load_catalog())
+    rendered = render_catalog(load_catalog())
+    fence = "`" * max(3, max((len(run) for run in re.findall(r"`+", rendered)), default=0) + 1)
+    source[0] += f"\n{fence}{{raw}} html\n{rendered}\n{fence}\n"
 
 
 def register_knowledge_targets(app: Sphinx, env: BuildEnvironment) -> None:

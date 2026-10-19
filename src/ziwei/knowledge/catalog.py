@@ -63,6 +63,12 @@ class Catalog:
     for variant in self.variants:
       for target in variant.concept_ids:
         self._require(target, Concept)
+      if variant.option is not None and not any(
+        variant.option is option
+        for identifier in variant.concept_ids
+        for option in self._require(identifier, Concept).options
+      ):
+        raise ValueError("变体口径须属于所关联概念的配置选项")
       for target in variant.school_ids:
         school = self._require(target, Concept)
         if school.kind is not ConceptKind.SCHOOL:
@@ -123,7 +129,7 @@ class Catalog:
     return tuple(
       item
       for item in self.variants
-      if (concept_id is None or concept_id in item.concept_ids)
+      if (concept_id is None or concept_id in (*item.concept_ids, *item.school_ids))
       and (school_id is None or school_id in item.school_ids)
     )
 
@@ -139,7 +145,7 @@ class Catalog:
     )
 
   def references(self, identifier: str) -> tuple[Citation, ...]:
-    """独立查看记录的引用；概念与变体汇集关联条目，按目录顺序去重。"""
+    """汇集条目及其具名变体的概念、流派引用，按目录顺序去重。"""
     record = self.get(identifier)
     if isinstance(record, Source):
       return tuple(item for item in self.citations if item.source_id == identifier)
@@ -147,9 +153,16 @@ class Catalog:
       return (record,)
     ids: set[str] = set()
     for entry in self.entries:
-      if identifier == entry.id or identifier in (*entry.concept_ids, *entry.variant_ids):
+      if identifier == entry.id or identifier in (*self._entry_concepts(entry), *entry.variant_ids):
         ids.update(entry.citation_ids)
     return tuple(item for item in self.citations if item.id in ids)
+
+  def _entry_concepts(self, entry: KnowledgeEntry) -> frozenset[str]:
+    concepts = set(entry.concept_ids)
+    for identifier in entry.variant_ids:
+      variant = self._require(identifier, RuleVariant)
+      concepts.update((*variant.concept_ids, *variant.school_ids))
+    return frozenset(concepts)
 
   def filter_entries(
     self,
@@ -177,7 +190,7 @@ class Catalog:
     return tuple(
       item
       for item in self.entries
-      if (concept_id is None or concept_id in item.concept_ids)
+      if (concept_id is None or concept_id in self._entry_concepts(item))
       and (variant_id is None or variant_id in item.variant_ids)
       and (
         source_id is None
@@ -201,6 +214,8 @@ class Catalog:
     _filter_enum(aspect, EvidenceAspect)
     if lineage_id is not None:
       _identifier(lineage_id, "lineage")
+      if not any(item.lineage_id == lineage_id for item in self.sources):
+        raise KeyError(lineage_id)
     return tuple(
       item
       for item in self.sources

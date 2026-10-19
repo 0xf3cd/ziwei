@@ -18,7 +18,7 @@ from ziwei.knowledge.model import (
   TextLayer,
 )
 
-CATALOG_VERSION = "2026.10.19.1"
+CATALOG_VERSION = "2026.10.19.2"
 """语料版本，与开发包版本分别记录。"""
 
 CONCEPTS = (
@@ -29,12 +29,17 @@ CONCEPTS = (
   Concept(
     id="concept.policy.leap-month",
     name="闰月归属",
-    aliases=("閏月",),
+    aliases=("闰月", "閏月"),
     kind=ConceptKind.口径,
+    options=tuple(LeapMonthPolicy),
     related_ids=("concept.palace.minggong",),
   ),
   Concept(
-    id="concept.policy.day-rollover", name="子时换日", aliases=("子時",), kind=ConceptKind.口径
+    id="concept.policy.day-rollover",
+    name="子时换日",
+    aliases=("子时", "子時"),
+    kind=ConceptKind.口径,
+    options=tuple(DayRollover),
   ),
   Concept(
     id="concept.school.zhongzhou", name="中州派", aliases=("王亭之中州派",), kind=ConceptKind.流派
@@ -89,7 +94,7 @@ VARIANTS = (
   RuleVariant(
     id="variant.tianma.year-branch",
     name="年支天马",
-    aliases=("年馬",),
+    aliases=("年马", "年馬"),
     definition="依出生年支查天马位置。",
     scope="所列电子《全书》的安天马星诀",
     concept_ids=("concept.star.tianma",),
@@ -98,11 +103,11 @@ VARIANTS = (
   RuleVariant(
     id="variant.tianma.month-branch",
     name="月支天马",
-    aliases=("月馬",),
-    definition="网页将天马列在月系诸星；月支的历法口径未定。",
+    aliases=("月马", "月馬"),
+    definition="网页将天马列在月系诸星；生月按实际农历、不看节气，闰月归下月。",
     scope="《精成》网页转录第11项",
     concept_ids=("concept.star.tianma",),
-    conditions=("先确认月支的定义",),
+    conditions=("按该页准备工作的农历生月口径，以正月对应寅宫",),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
   RuleVariant(
@@ -176,8 +181,8 @@ SOURCES = (
     layer=TextLayer.今人说明,
     lineage_id="lineage.jingcheng-golla",
     provenance="只核到网页，未核原书或转录授权。",
-    claims="网页第11项天马按月列出，第12项壬干含左字。",
-    limits="月支的农历或节令定义未明确；不可当作核过原书或独立古籍证据。",
+    claims="准备工作明确生月按农历、不看节气且闰月归下月；第11项天马按月列出，第12项壬干含左字。",
+    limits="网页明确自己的生月口径，但不可当作核过原书或独立古籍证据。",
     rights="仅必要短引，原书与转载许可未确认，不收全文。",
     status=SourceStatus.待核,
     checked_on=date(2026, 10, 19),
@@ -217,6 +222,7 @@ SOURCES = (
 CITATIONS = (
   Citation(
     id="citation.quanshu.geng",
+    layer=TextLayer.原文,
     source_id="source.quanshu-wikisource",
     locator="安禄权科忌四星变化诀/庚句",
     quote="庚日武阴同为首",
@@ -225,6 +231,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.quanshu.ren",
+    layer=TextLayer.原文,
     source_id="source.quanshu-wikisource",
     locator="安禄权科忌四星变化诀/壬句",
     quote="壬梁紫府武宿是",
@@ -233,6 +240,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.quanshu.tianma-anchor",
+    layer=TextLayer.原文,
     source_id="source.quanshu-wikisource",
     locator="安天马星诀/标题后",
     quote="论本生年支",
@@ -241,6 +249,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.quanshu.tianma-text",
+    layer=TextLayer.原文,
     source_id="source.quanshu-wikisource",
     locator="安天马星诀/首句",
     quote="寅午戍人马居申",
@@ -249,6 +258,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.quanshu.leap-next",
+    layer=TextLayer.原文,
     source_id="source.quanshu-wikisource",
     locator="安身命例/闰正月例",
     quote="又若闰月正月生者要在二月内起安身命",
@@ -257,14 +267,25 @@ CITATIONS = (
   ),
   Citation(
     id="citation.jingcheng.tianma",
+    layer=TextLayer.今人说明,
     source_id="source.jingcheng-golla",
     locator="第11项安月系诸星/安天馬星歌訣",
     quote="寅午戌月馬在申",
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="未说明月支的农历或节令口径。",
+    limits="生月口径见同页准备工作；原书版本仍未核。",
+  ),
+  Citation(
+    id="citation.jingcheng.birth-month",
+    layer=TextLayer.今人说明,
+    source_id="source.jingcheng-golla",
+    locator="第1项準備工作/注意；第2项正月起寅的命身宫例",
+    quote="生月以實際農曆為準",
+    aspects=(EvidenceAspect.查法,),
+    limits="同段排除节气并规定闰月归下月；只记录网页的明确口径。",
   ),
   Citation(
     id="citation.jingcheng.ren",
+    layer=TextLayer.今人说明,
     source_id="source.jingcheng-golla",
     locator="第12项安年干係諸星/安四化星歌訣/壬",
     quote="壬、梁紫左武",
@@ -273,6 +294,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.jiuqian.geng-quanshu",
+    layer=TextLayer.今人说明,
     source_id="source.jiuqian-dushu",
     locator="第四十二篇对照表/庚行/全书、闽派列",
     quote="阳武同阴",
@@ -281,6 +303,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.jiuqian.geng-zhongzhou",
+    layer=TextLayer.今人说明,
     source_id="source.jiuqian-dushu",
     locator="第四十二篇对照表/庚行/中州派(王亭之)列",
     quote="阳武府同",
@@ -289,6 +312,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.lifedna.leap-current",
+    layer=TextLayer.今人说明,
     source_id="source.lifedna-flying",
     locator="第2节/三种排法第1项",
     quote="統一算本月",
@@ -297,6 +321,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.lifedna.leap-split",
+    layer=TextLayer.今人说明,
     source_id="source.lifedna-flying",
     locator="第2节/三种排法第3项及自述",
     quote="十六日開始為次月",
@@ -305,6 +330,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.lifedna.day-rollover",
+    layer=TextLayer.今人说明,
     source_id="source.lifedna-flying",
     locator="第3节/早子時與夜子時",
     quote="命盤應分早子與夜子",
@@ -326,7 +352,7 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="一份电子录文不是安星表准入；尚未核底本。",
     recheck="取得该电子录文底本的四化页及版本信息，逐字核庚句。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
   ),
   KnowledgeEntry(
     id="entry.sihua.geng-jiuqian-quanshu",
@@ -340,7 +366,7 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="转引不是原书版本认证。",
     recheck="取得九千所据全书版次及四化页，与转录表庚行核对。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
   ),
   KnowledgeEntry(
     id="entry.sihua.geng-jiuqian-zhongzhou",
@@ -354,7 +380,7 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="未核王亭之原著，不能升级为流派通则。",
     recheck="取得王亭之具版次的安四化星诀页，核庚句与列名。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
   ),
   KnowledgeEntry(
     id="entry.sihua.ren-wikisource",
@@ -368,7 +394,7 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="不以相同书名推断相同文本。",
     recheck="取得底本壬干句的影像与刊本信息，核府字。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
   ),
   KnowledgeEntry(
     id="entry.sihua.ren-jingcheng",
@@ -382,7 +408,7 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="原书作者与版本未核。",
     recheck="取得精成原书版权页与四化页，核壬句左字。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
   ),
   KnowledgeEntry(
     id="entry.tianma.year-branch",
@@ -396,22 +422,21 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="此条目不含可执行安星表。",
     recheck="取得该录文底本天马段，核年支标题及戍字，并补独立成文的查法证据。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
   KnowledgeEntry(
     id="entry.tianma.month-branch",
-    statement="精成转录把天马列入月系诸星，但未明确月支如何取得。",
+    statement="精成网页将天马列入月系诸星；准备工作明确按农历生月，不看节气，闰月归下月。",
     concept_ids=("concept.star.tianma",),
     variant_ids=("variant.tianma.month-branch",),
-    citation_ids=("citation.jingcheng.tianma",),
-    premises=("须先确定月支的历法口径",),
-    premise_status=PremiseStatus.待定,
+    citation_ids=("citation.jingcheng.tianma", "citation.jingcheng.birth-month"),
+    premises=("采用该网页明确写出的农历生月口径，正月对应寅宫",),
+    premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
-    curation=CurationStatus.待整理,
-    alternatives=("由农历月序对应月支", "由节令月建确定月支"),
-    limits="两读未裁，不自行选一种生成规则。",
-    recheck="查精成原书对出生月及月支的定义，并核一张出生月跨节气的例盘。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    curation=CurationStatus.已整理,
+    limits="网页口径已明确，原书版本仍未核；不替本项目选择默认口径。",
+    recheck="取得精成原书的准备工作与月系天马段，核网页转录是否忠于该版本。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
   KnowledgeEntry(
     id="entry.leap-month.current",
@@ -453,6 +478,21 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="未核其所引古籍，不把网站主张称作历法必然。",
     recheck="回核该站所引古籍原段是否实际讨论紫微安星归月。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+  ),
+  KnowledgeEntry(
+    id="entry.leap-month.month-stars-scope",
+    statement="电子全书安身命例直接说明闰月身命归下月；把该例用于其他月系星前，须确认其适用范围。",
+    concept_ids=("concept.policy.leap-month",),
+    variant_ids=("variant.leap-month.next",),
+    citation_ids=("citation.quanshu.leap-next",),
+    premises=("拟把安身命段的闰月例用于命宫、身宫以外的月系安星",),
+    premise_status=PremiseStatus.待定,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.待整理,
+    alternatives=("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星"),
+    limits="这是跨段应用前的未决范围，不否认该段已明确的身命归月，也不是两种已准入规则。",
+    recheck="取得同版其他月系星的闰月例，核安身命例的归月是否被沿用；不由身命段自行外推。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
   ),
   KnowledgeEntry(

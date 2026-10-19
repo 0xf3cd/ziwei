@@ -8,6 +8,8 @@
 
 当前提供独立知识查询，不实现安星表或命盘匹配。目录加载只构造不可变记录，不读取出生资料、
 时区数据或原生历法库。完整记录与稳定链接见[知识参考](knowledge-reference.md)，签名见[API](api.md#独立知识目录)。
+加载入口为`ziwei.knowledge.load_catalog`，每次调用新建目录；记录与枚举从`ziwei.knowledge.model`导入，
+目录类型从`ziwei.knowledge.catalog`导入。这些模块路径均为公开API。
 
 ```{doctest}
 >>> from ziwei.knowledge import load_catalog
@@ -19,7 +21,7 @@
 ['variant.sihua.geng-wikisource', 'variant.sihua.geng-jiuqian-quanshu', 'variant.sihua.geng-jiuqian-zhongzhou']
 >>> pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
 >>> pending[0].alternatives
-('由农历月序对应月支', '由节令月建确定月支')
+('闰月例只约束命宫与身宫', '闰月例同时约束其他月系星')
 >>> pending[0].chart_match
 '未评估'
 >>> reference = catalog.references("entry.tianma.year-branch")[0]
@@ -34,13 +36,15 @@ True
 `find()`查完整名称及显式别名，忽略首尾空白与大小写，歧义返回全部匹配，不静默取第一条。
 `list_concepts()`可按种类过滤；`list_variants()`可按概念或流派过滤。`filter_entries()`的条件取交集，
 `filter_sources()`可按核验状态、支持层次或谱系键过滤。未知标识抛`KeyError`，错类引用或无效值显式失败。
+概念过滤和引用查询同时包含条目直接关联的概念、其具名变体的概念与流派；不递归展开概念之间的相关链接。
 记录和目录会把输入序列复制成元组；修改调用方原列表不会改动已经构造的目录。
 
 当前内置条目均暂不进入默认展示：有的只核到电子录文或转录页，有的前提尚待裁定，
 尚未完成安星规则的来源准入。`filter_entries()`默认检索全部条目，所以仍能比较分歧与查看待决材料。
 即使调用方构造了符合默认展示条件的条目，`chart_match`仍恒为未评估；目录不接收或判定命盘。
 
-例如，[月支天马](knowledge-reference.md#entry.tianma.month-branch)保留两种未裁的月支读法；
+例如，[月支天马](knowledge-reference.md#entry.tianma.month-branch)按所见网页的农历生月口径登记；
+[闰月例的跨段适用范围](knowledge-reference.md#entry.leap-month.month-stars-scope)仍保留两读，未据此扩展规则。
 [晚子时归次日](knowledge-reference.md#entry.day-rollover.late-zi)登记项目已有选项，但不编造其外部出处。
 待决条目的稳定标识与翻案动作保存在目录本身，跟踪URL指向原始讨论；issue关闭不表示争议已经解决。
 
@@ -60,8 +64,9 @@ True
 解释文字说明原因与范围，不再维护第二份安星表。
 
 当前schema中，`Source`保存版本、谱系、权利与总体支持范围；`Citation`保存具体定位、原引文、
-支持层次与该处限度。同一本资料的多处引文共享来源，不复制一份版本信息。
+支持层次、该处文本层与限度；同一来源的原文与注文可分别标记。同一本资料的多处引文共享来源，不复制一份版本信息。
 `RuleVariant.option`可链接已经实现的口径枚举；没有安星实现时不伪造函数地址。
+口径概念的`options`从配置定义取值；目录拒绝把变体链接到该概念之外的配置选项。
 [口径选项及六十甲子参考](knowledge-reference.md#implemented-policies)直接读取现有定义。
 
 原文引述、今人说明、仓内原作说明是不同文本层。同一祖本的多份转抄不构成独立来源；

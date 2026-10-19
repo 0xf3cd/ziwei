@@ -1,5 +1,9 @@
 """参考页必须有真实锚点、完整正文与来自定义的表值。"""
 
+import re
+import shutil
+import subprocess
+import sys
 from dataclasses import replace
 from enum import StrEnum
 from html import escape
@@ -10,7 +14,13 @@ from typing import Any, cast
 import pytest
 
 from docs import conf
-from tools.knowledge_reference import KnowledgeTargets, check_knowledge_reference, render_catalog
+from tools.knowledge_reference import (
+  KnowledgeTargets,
+  _member_text,
+  _value,
+  check_knowledge_reference,
+  render_catalog,
+)
 from ziwei import config, ganzhi
 from ziwei.knowledge import load_catalog
 
@@ -81,6 +91,113 @@ def test_unknown_reference_or_wrong_page_rejected(html: Path, href: str) -> None
   (html / "docs/guide.html").write_text(f'<a href="{href}">坏引用</a>', encoding="utf-8")
   with pytest.raises(ValueError, match="Unknown knowledge reference"):
     check_knowledge_reference(html)
+
+
+@pytest.mark.parametrize(
+  "identifier,member",
+  [
+    ("variant.leap-month.current", "definition"),
+    ("variant.leap-month.current", "option"),
+    ("source.lifedna-flying", "checked_on"),
+    ("source.jingcheng-golla", "checked_on"),
+    ("source.lifedna-flying", "authors"),
+    ("concept.wuxingju", "kind"),
+    ("concept.sihua.shengnian", "kind"),
+    ("concept.sihua.shengnian", "aliases"),
+    ("entry.tianma.month-branch", "id"),
+  ],
+)
+def test_gate_rejects_missing_field_even_when_value_remains(
+  html: Path, identifier: str, member: str
+) -> None:
+  page = html / "docs/knowledge-reference.html"
+  text = page.read_text(encoding="utf-8")
+  start = text.index(f'<section id="{identifier}">')
+  end = text.index("</section>", start)
+  section, count = re.subn(
+    rf"<dt>{member}</dt><dd>.*?</dd>\n?", "", text[start:end], count=1, flags=re.S
+  )
+  assert count == 1
+  page.write_text(text[:start] + section + text[end:], encoding="utf-8")
+  with pytest.raises(ValueError, match="lost or changed fields"):
+    check_knowledge_reference(html)
+
+
+@pytest.mark.parametrize("defect", ["swap", "rename", "duplicate", "none"])
+def test_gate_rejects_wrong_field_association(html: Path, defect: str) -> None:
+  page = html / "docs/knowledge-reference.html"
+  text = page.read_text(encoding="utf-8")
+  if defect == "swap":
+    text = (
+      text.replace("<dt>premises</dt>", "<dt>@@</dt>")
+      .replace("<dt>exceptions</dt>", "<dt>premises</dt>")
+      .replace("<dt>@@</dt>", "<dt>exceptions</dt>")
+    )
+  elif defect == "rename":
+    text = text.replace("<dt>status</dt>", "<dt>layer</dt>")
+  elif defect == "duplicate":
+    text = text.replace("<dt>name</dt>", "<dt>name</dt><dd>重复</dd><dt>name</dt>", 1)
+  else:
+    text = text.replace("<dt>option</dt><dd>（无）</dd>", "<dt>option</dt><dd></dd>", 1)
+  page.write_text(text, encoding="utf-8")
+  with pytest.raises(ValueError, match="lost or changed fields"):
+    check_knowledge_reference(html)
+
+
+@pytest.mark.parametrize("value", [True, 1, object()])
+def test_unknown_field_types_are_not_silently_rendered_as_none(value: object) -> None:
+  with pytest.raises(TypeError, match="Unsupported knowledge field type"):
+    _value(value, set())
+  with pytest.raises(TypeError, match="Unsupported knowledge field type"):
+    _member_text(value)
+
+
+@pytest.mark.parametrize(
+  "quote",
+  [
+    "前段\n\n後段",
+    "*前段* <>&\n\n    後段  ",
+    "前段\n\n```\n````\n\n後段",
+  ],
+)
+def test_multiline_quote_survives_the_real_sphinx_pipeline(tmp_path: Path, quote: str) -> None:
+  root = Path(__file__).resolve().parents[1]
+  source = tmp_path / "source"
+  (source / "docs").mkdir(parents=True)
+  for name in ("conf.py", "python-stdlib.inv"):
+    shutil.copyfile(root / "docs" / name, source / "docs" / name)
+  (source / "docs/index.md").write_text(
+    "# 入口\n\n```{toctree}\nknowledge-reference\n```\n", encoding="utf-8"
+  )
+  (source / "docs/knowledge-reference.md").write_text("# 参考\n", encoding="utf-8")
+  script = r"""
+import sys
+from pathlib import Path
+from dataclasses import replace
+root, source, output, quote = sys.argv[1:]
+sys.path[:0] = [root, str(Path(root) / 'src')]
+from ziwei.knowledge import data
+data.CITATIONS = (replace(data.CITATIONS[0], quote=quote), *data.CITATIONS[1:])
+from sphinx.cmd.build import main
+raise SystemExit(main(['-E', '-a', '-n', '-W', '-q', '-b', 'html', '-c',
+                      str(Path(source) / 'docs'), source, output]))
+"""
+  output = tmp_path / "html"
+  result = subprocess.run(
+    (sys.executable, "-I", "-c", script, str(root), str(source), str(output), quote),
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 0, result.stdout + result.stderr
+  catalog = load_catalog()
+  catalog = replace(
+    catalog, citations=(replace(catalog.citations[0], quote=quote), *catalog.citations[1:])
+  )
+  check_knowledge_reference(output, catalog)
+  parser = KnowledgeTargets()
+  parser.feed((output / "docs/knowledge-reference.html").read_text(encoding="utf-8"))
+  assert dict(parser.members[catalog.citations[0].id])["quote"] == quote
 
 
 def test_generation_reads_actual_definitions(html: Path, monkeypatch: pytest.MonkeyPatch) -> None:

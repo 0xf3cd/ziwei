@@ -28,7 +28,11 @@ from ziwei.knowledge.model import (
 @pytest.fixture
 def catalog() -> Catalog:
   concept = Concept(
-    id="concept.synthetic", name="合成概念", aliases=("别名", "Alias"), kind=ConceptKind.口径
+    id="concept.synthetic",
+    name="合成概念",
+    aliases=("别名", "Alias"),
+    kind=ConceptKind.口径,
+    options=(LeapMonthPolicy.全月归本月,),
   )
   school = Concept(id="concept.school.synthetic", name="合成流派", kind=ConceptKind.流派)
   variant = RuleVariant(
@@ -60,6 +64,7 @@ def catalog() -> Catalog:
   )
   citation = Citation(
     id="citation.synthetic",
+    layer=TextLayer.原文,
     source_id=source.id,
     locator="合成定位",
     quote="合成原文",
@@ -90,15 +95,27 @@ def catalog() -> Catalog:
 
 def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   catalog = load_catalog()
-  assert catalog.version == "2026.10.19.1"
+  assert catalog.version == "2026.10.19.2"
   assert {item.kind for item in catalog.concepts} == set(ConceptKind)
   assert len({item.id for item in catalog.records}) == len(catalog.records)
   assert catalog.find("天馬") == catalog.find("tianma")
   assert len(catalog.find("庚干四化")) == 3
   assert catalog.filter_entries(default_only=True) == ()
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
-  assert [item.id for item in pending] == ["entry.tianma.month-branch"]
-  assert pending[0].alternatives == ("由农历月序对应月支", "由节令月建确定月支")
+  assert [item.id for item in pending] == ["entry.leap-month.month-stars-scope"]
+  assert pending[0].alternatives == ("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星")
+  month = catalog.get("entry.tianma.month-branch")
+  assert isinstance(month, KnowledgeEntry)
+  assert month.premise_status is PremiseStatus.已明确
+  assert month.alternatives == ()
+  assert "不看节气" in month.statement
+  for simplified, traditional in (
+    ("闰月", "閏月"),
+    ("子时", "子時"),
+    ("年马", "年馬"),
+    ("月马", "月馬"),
+  ):
+    assert catalog.find(simplified) == catalog.find(traditional)
   assert all(item.chart_match == "未评估" for item in catalog.entries)
   assert all(item.recheck and item.tracking_url for item in catalog.entries)
   assert {item.status for item in catalog.sources} == {SourceStatus.已核, SourceStatus.待核}
@@ -129,7 +146,7 @@ def test_queries_preserve_alias_ambiguity_and_intersection(catalog: Catalog) -> 
     catalog.list_variants(concept_id="concept.synthetic", school_id="concept.school.synthetic")
     == catalog.variants
   )
-  assert catalog.list_variants(concept_id="concept.school.synthetic") == ()
+  assert catalog.list_variants(concept_id="concept.school.synthetic") == catalog.variants
   assert catalog.filter_entries() == catalog.entries
   assert (
     catalog.filter_entries(
@@ -143,7 +160,7 @@ def test_queries_preserve_alias_ambiguity_and_intersection(catalog: Catalog) -> 
     )
     == catalog.entries
   )
-  assert catalog.filter_entries(concept_id="concept.school.synthetic") == ()
+  assert catalog.filter_entries(concept_id="concept.school.synthetic") == catalog.entries
   assert catalog.filter_entries(display=DisplayEligibility.暂不默认展示) == ()
   assert catalog.filter_entries(premise_status=PremiseStatus.待定) == ()
   assert catalog.filter_entries(curation=CurationStatus.待整理) == ()
@@ -156,7 +173,8 @@ def test_queries_preserve_alias_ambiguity_and_intersection(catalog: Catalog) -> 
   )
   assert catalog.filter_sources(status=SourceStatus.待核) == ()
   assert catalog.filter_sources(aspect=EvidenceAspect.规则) == ()
-  assert catalog.filter_sources(lineage_id="lineage.other") == ()
+  with pytest.raises(KeyError, match=r"lineage\.other"):
+    catalog.filter_sources(lineage_id="lineage.other")
 
 
 @pytest.mark.parametrize(
@@ -179,7 +197,7 @@ def test_references_deduplicate_in_catalog_order(catalog: Catalog) -> None:
   second = replace(first, id="entry.second")
   both = replace(catalog, entries=(first, second))
   assert both.references("concept.synthetic") == catalog.citations
-  assert both.references("concept.school.synthetic") == ()
+  assert both.references("concept.school.synthetic") == catalog.citations
   assert both.filter_entries(source_id="source.synthetic") == (first, second)
 
 
@@ -428,6 +446,24 @@ def test_default_eligibility_needs_explicit_verified_citations(catalog: Catalog)
     replace(catalog, sources=(replace(catalog.sources[0], status=SourceStatus.待核),))
 
 
+def test_variant_option_must_belong_to_its_concept(catalog: Catalog) -> None:
+  variant = catalog.variants[0]
+  with pytest.raises(ValueError, match="所关联概念"):
+    replace(catalog, variants=(replace(variant, option=DayRollover.晚子时归次日),))
+  with pytest.raises(ValueError, match="所关联概念"):
+    replace(catalog, concepts=(replace(catalog.concepts[0], options=()), catalog.concepts[1]))
+  with pytest.raises(ValueError, match="只有口径"):
+    replace(catalog.concepts[0], kind=ConceptKind.星曜)
+  with pytest.raises(ValueError, match="不可重复"):
+    replace(catalog.concepts[0], options=(LeapMonthPolicy.全月归本月,) * 2)
+  with pytest.raises(TypeError, match="口径枚举"):
+    replace(catalog.concepts[0], options=(ConceptKind.口径,))  # type: ignore[arg-type]
+  options = [LeapMonthPolicy.全月归本月]
+  concept = replace(catalog.concepts[0], options=options)  # type: ignore[arg-type]
+  options.clear()
+  assert concept.options == (LeapMonthPolicy.全月归本月,)
+
+
 def test_dangling_citation_is_rejected_even_without_entries(catalog: Catalog) -> None:
   with pytest.raises(KeyError):
     replace(
@@ -466,6 +502,21 @@ def test_quotes_are_not_normalized(catalog: Catalog) -> None:
   quote = "  舊字『戍』，\n原標記 * 不變。  "
   citation = replace(catalog.citations[0], quote=quote)
   assert replace(catalog, citations=(citation,)).references("entry.synthetic")[0].quote == quote
+
+
+def test_one_source_can_distinguish_original_text_and_commentary(catalog: Catalog) -> None:
+  original = catalog.citations[0]
+  annotation = replace(original, id="citation.annotation", layer=TextLayer.注释)
+  entry = replace(catalog.entries[0], citation_ids=(original.id, annotation.id))
+  mixed = replace(catalog, citations=(original, annotation), entries=(entry,))
+  assert mixed.references(entry.id) == (original, annotation)
+  assert [citation.layer for citation in mixed.references(entry.id)] == [
+    TextLayer.原文,
+    TextLayer.注释,
+  ]
+  assert mixed.sources[0].layer is TextLayer.原文
+  with pytest.raises(TypeError):
+    replace(original, layer="注释")  # type: ignore[arg-type]
 
 
 def test_empty_catalog_is_valid_but_does_not_resolve(catalog: Catalog) -> None:

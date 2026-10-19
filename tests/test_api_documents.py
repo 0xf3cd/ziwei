@@ -1,5 +1,6 @@
 """拒绝被渲染成正文的 API 指令及缺失的签名。"""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -72,4 +73,29 @@ def test_nested_package_and_its_init_are_checked(api_tree: Path) -> None:
     '<dt id="ziwei.knowledge.catalog.Catalog.find"></dt>',
     encoding="utf-8",
   )
+  check_api_reference(api_tree, api_tree)
+
+
+@pytest.mark.parametrize(
+  "module,namespace",
+  [
+    ("knowledge/__init__.py", "ziwei.knowledge"),
+    ("__init__.py", "ziwei"),
+  ],
+)
+def test_init_api_is_required_without_another_nested_module(
+  api_tree: Path, module: str, namespace: str
+) -> None:
+  source = api_tree / "src/ziwei" / module
+  source.parent.mkdir(parents=True, exist_ok=True)
+  source.write_text("def lookup():\n  pass\n", encoding="utf-8")
+  page = api_tree / "docs/api.html"
+  base = (
+    '<dt id="ziwei.sample.Value"></dt><dt id="ziwei.sample.Value.check"></dt>'
+    '<dt id="ziwei.sample.resolve"></dt>'
+  )
+  page.write_text(base, encoding="utf-8")
+  with pytest.raises(ValueError, match=re.escape(namespace)):
+    check_api_reference(api_tree, api_tree)
+  page.write_text(base + f'<dt id="{namespace}.lookup"></dt>', encoding="utf-8")
   check_api_reference(api_tree, api_tree)

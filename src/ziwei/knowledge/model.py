@@ -36,10 +36,12 @@ class TextLayer(StrEnum):
   """区分原文、译文、今人说明与仓内撰写的陈述。"""
 
   ORIGINAL = "原文"
+  COMMENTARY = "注释"
   TRANSLATION = "译文"
   MODERN = "今人说明"
   EDITORIAL = "仓内说明"
   原文 = ORIGINAL
+  注释 = COMMENTARY
   译文 = TRANSLATION
   今人说明 = MODERN
   仓内说明 = EDITORIAL
@@ -153,6 +155,7 @@ class Concept:
   kind: ConceptKind
   aliases: tuple[str, ...] = ()
   related_ids: tuple[str, ...] = ()
+  options: tuple[LeapMonthPolicy | DayRollover | YearBoundary, ...] = ()
 
   def __post_init__(self) -> None:
     _identifier(self.id, "concept")
@@ -160,6 +163,16 @@ class Concept:
     _enum(self.kind, ConceptKind)
     object.__setattr__(self, "aliases", _strings(self.aliases, "别名"))
     object.__setattr__(self, "related_ids", _strings(self.related_ids, "关联概念", "concept"))
+    options = _freeze(self.options, StrEnum, "关联口径")
+    if any(
+      not isinstance(option, LeapMonthPolicy | DayRollover | YearBoundary) for option in options
+    ):
+      raise TypeError("关联口径须为已实现的口径枚举成员")
+    if len(set(options)) != len(options):
+      raise ValueError("关联口径不可重复")
+    if options and self.kind is not ConceptKind.POLICY:
+      raise ValueError("只有口径概念能关联配置选项")
+    object.__setattr__(self, "options", options)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -196,7 +209,10 @@ class RuleVariant:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Source:
-  """所列版本的出处。谱系键只归并同路转录，不认证祖本独立性。"""
+  """所列版本的出处。checked_on是核验尝试日期，是否已核由status记录。
+
+  谱系键只归并同路转录，不认证祖本独立性。
+  """
 
   id: str
   title: str
@@ -235,12 +251,14 @@ class Citation:
   source_id: str
   locator: str
   quote: str
+  layer: TextLayer
   aspects: tuple[EvidenceAspect, ...]
   limits: str
 
   def __post_init__(self) -> None:
     _identifier(self.id, "citation")
     _identifier(self.source_id, "source")
+    _enum(self.layer, TextLayer)
     for value in (self.locator, self.quote, self.limits):
       _text(value, "引文说明")
     aspects = _freeze(self.aspects, EvidenceAspect, "支持层次")
