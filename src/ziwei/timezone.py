@@ -70,6 +70,7 @@ class ResolvedTime:
   """消歧后的时刻，保留钟面、UTC、偏移、请求与实际 fold、数据来源。
 
   只支持1972年起的 UTC；更早的原始出生记录可保存，但不向前外推现代时标合同。
+  构造只校验形状与内部自洽，不重新读取 IANA 规则；时区解析请调用 resolve_civil_time()。
   """
 
   local_time: datetime

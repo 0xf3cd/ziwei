@@ -296,3 +296,14 @@ def test_result_is_frozen_and_consistent() -> None:
     with pytest.raises(error):
       replace(value, **changes)
   assert isinstance(value, ResolvedTime)
+
+
+def test_result_copy_does_not_reload_timezone_data(monkeypatch: pytest.MonkeyPatch) -> None:
+  value = resolve_civil_time(datetime(2000, 1, 1, 12), IanaTimezone("Asia/Shanghai"))
+
+  def forbidden(name: str) -> None:
+    raise RuntimeError("值记录构造不得重新读取时区规则")
+
+  monkeypatch.setattr(implementation, "_load_zone", forbidden)
+  monkeypatch.setattr(implementation, "files", forbidden)
+  assert replace(value) == value
