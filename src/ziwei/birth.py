@@ -213,6 +213,12 @@ class CalculationInput:
       raise ValueError("晚子时顺延只发生在子时")
     if self.day_rolled and self.config.day_rollover is DayRollover.早晚子时同日:
       raise ValueError("晚子时顺延与早晚子时同日口径矛盾")
+    if self.day_rolled and not (
+      isinstance(self.record, GregorianBirthRecord)
+      and self.record.birth_time is not None
+      and self.record.birth_time.hour == 23
+    ):
+      raise ValueError("晚子时顺延需要原始记录含 23 时的公历钟点")
     if self.apparent_solar and (
       not isinstance(self.record, GregorianBirthRecord) or self.record.longitude_deg is None
     ):

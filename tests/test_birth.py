@@ -350,6 +350,39 @@ def test_parsed_input_rejects_contradictory_states() -> None:
   assert gregorian_input.apparent_solar is True
 
 
+def test_parsed_input_day_rolled_needs_provable_late_zi() -> None:
+  """day_rolled=True 需要原始记录能证明晚子时（公历 23 时），否则结果不可复现。"""
+  with pytest.raises(ValueError, match="23 时的公历钟点"):
+    calculation_input(
+      day_rolled=True,  # 农历记录只有子时粒度
+      config=ChartConfig(
+        leap_month_policy=LeapMonthPolicy.全月归本月,
+        day_rollover=DayRollover.晚子时归次日,
+        year_boundary=YearBoundary.立春,
+      ),
+    )
+  with pytest.raises(ValueError, match="23 时的公历钟点"):
+    calculation_input(
+      record=gregorian_record(birth_time=time(0, 30)),
+      day_rolled=True,
+      config=ChartConfig(
+        leap_month_policy=LeapMonthPolicy.全月归本月,
+        day_rollover=DayRollover.晚子时归次日,
+        year_boundary=YearBoundary.立春,
+      ),
+    )
+  value = calculation_input(
+    record=gregorian_record(birth_time=time(23, 30)),
+    day_rolled=True,
+    config=ChartConfig(
+      leap_month_policy=LeapMonthPolicy.全月归本月,
+      day_rollover=DayRollover.晚子时归次日,
+      year_boundary=YearBoundary.立春,
+    ),
+  )
+  assert value.day_rolled is True
+
+
 def test_frozen_inputs_and_nested_values() -> None:
   value = calculation_input()
   for instance, field, replacement in (

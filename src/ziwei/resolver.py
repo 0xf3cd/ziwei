@@ -126,6 +126,8 @@ def _resolve_lunar(
 ) -> CalculationInput:
   if config.year_boundary is YearBoundary.立春:
     raise ValueError("农历输入不支持立春换年口径：记录没有瞬间与时区，无法与立春时刻同标比较")
+  if record.longitude_deg is not None:
+    raise ValueError("农历记录没有钟点与时区，无法应用真太阳时：请用公历记录或去掉经度")
   if record.shichen is Dizhi.子 and config.day_rollover is DayRollover.晚子时归次日:
     raise ValueError(
       "农历记录的子时无法判定早子时（00-01）或晚子时（23-24）；晚子时归次日需公历钟点"

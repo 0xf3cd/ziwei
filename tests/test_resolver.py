@@ -286,6 +286,21 @@ def test_lunar_record_zi_needs_civil_clock_for_late_zi_rollover() -> None:
   assert (same.month, same.day, same.day_rolled) == (5, 18, False)
 
 
+def test_lunar_record_with_longitude_rejected() -> None:
+  """农历记录带经度但无钟点与时区：真太阳时无法应用，显式失败而非静默忽略。"""
+  lunar = LunarBirthRecord(
+    year=1988,
+    month=5,
+    day=18,
+    is_leap_month=False,
+    shichen=Dizhi.午,
+    gender=Gender.女,
+    longitude_deg=121.47,
+  )
+  with pytest.raises(ValueError, match="真太阳时"):
+    resolve(lunar, config())
+
+
 def test_lunar_record_rejects_lichun() -> None:
   lunar = LunarBirthRecord(
     year=1988, month=5, day=18, is_leap_month=False, shichen=Dizhi.午, gender=Gender.女
