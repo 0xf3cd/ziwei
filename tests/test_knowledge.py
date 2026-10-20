@@ -95,14 +95,17 @@ def catalog() -> Catalog:
 
 def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   catalog = load_catalog()
-  assert catalog.version == "2026.10.19.4"
+  assert catalog.version == "2026.10.20.1"
   assert {item.kind for item in catalog.concepts} == set(ConceptKind)
   assert len({item.id for item in catalog.records}) == len(catalog.records)
   assert catalog.find("天馬") == catalog.find("tianma")
   assert len(catalog.find("庚干四化")) == 3
   assert catalog.filter_entries(default_only=True) == ()
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
-  assert [item.id for item in pending] == ["entry.leap-month.month-stars-scope"]
+  assert [item.id for item in pending] == [
+    "entry.leap-month.month-stars-scope",
+    "entry.star.kuiyue-quanshu-pending",
+  ]
   assert pending[0].alternatives == ("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星")
   month = catalog.get("entry.tianma.month-branch")
   assert isinstance(month, KnowledgeEntry)
@@ -548,10 +551,13 @@ def test_builtin_filters_intersect_individually_nonempty_sets() -> None:
   ] == ["variant.sihua.geng-jiuqian-zhongzhou"]
   assert catalog.filter_entries(concept_id="concept.star.tianma")
   assert catalog.filter_entries(source_id="source.lifedna-flying")
-  assert (
-    catalog.filter_entries(concept_id="concept.star.tianma", source_id="source.lifedna-flying")
-    == ()
-  )
+  assert [
+    entry.id
+    for entry in catalog.filter_entries(
+      concept_id="concept.star.tianma",
+      source_id="source.lifedna-flying",
+    )
+  ] == ["entry.star.month-policy-composition"]
   assert catalog.filter_entries(variant_id="variant.leap-month.next")
   assert (
     catalog.filter_entries(concept_id="concept.star.tianma", variant_id="variant.leap-month.next")

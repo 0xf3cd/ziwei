@@ -2,8 +2,8 @@
 
 [项目入口](../README.md) · [API 参考](api.md) · [计算边界](architecture.md)
 
-本页的出生资料与计算输入均为合成数据。当前 API 保存输入、检查形状并消歧民用时刻，
-不把公历换成农历、不应用闰月或子时换日，也不排出命盘。
+本页的出生资料与计算输入均为合成数据。记录类型保存输入、检查形状并消歧民用时刻；
+历法换算与子时换日由[解析层](resolver.md)执行，28星位置由[安星入口](stars.md)计算。
 
 ## 保存原始公历记录
 
@@ -94,6 +94,17 @@ IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，�
 '立春'
 ```
 
+安星规则的`TianmaRule`另设具名默认年马，不改变三个历法口径的必填要求：
+
+```{doctest}
+>>> from ziwei.config import TianmaRule
+>>> choices.tianma_rule is TianmaRule.年支天马
+True
+>>> monthly = replace(choices, tianma_rule=TianmaRule.月支天马)
+>>> monthly.tianma_rule.value
+'月支天马'
+```
+
 农历原始记录显式给闰月标志，时辰未知为 `None`。这里只核年1至9999、月1至12、日1至30等形状与值域，
 不证明该年有这个闰月、这个月有这一天；这些须由历法适配验证。
 
@@ -138,6 +149,7 @@ True
 
 普通记录可以保留未知，`require_complete()` 才检查完整命盘的必要项；它不排盘。
 调用完整命盘入口时须先完成历法解析，再执行该检查。公开校验在 `python -O` 下同样有效。
+当前`place_stars()`只要求时辰已知，不调用`require_complete()`，因此可安性别未知的记录。
 
 ## 干支来源与限度
 

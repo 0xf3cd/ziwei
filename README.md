@@ -5,9 +5,10 @@
 四化口径、流派变体与出处，并组织可复现的命盘结果。
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
-（公历/农历记录到计算输入）、命宫身宫与十二宫、五行局，以及独立知识目录；尚未安星与排盘。
+（公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、28星安星，以及独立知识目录；
+尚无完整命盘、生年四化与大限API。
 用法见[出生输入](docs/birth.md)、[历法与时间](docs/calendar.md)、[解析层](docs/resolver.md)、
-[命宫身宫与十二宫](docs/palaces.md)、[五行局](docs/bureau.md)和[知识查询](docs/knowledge.md)，
+[命宫身宫与十二宫](docs/palaces.md)、[五行局](docs/bureau.md)、[安星](docs/stars.md)和[知识查询](docs/knowledge.md)，
 开发检查与协作约定见[参与开发](docs/contributing.md)。
 
 ## 首版目标

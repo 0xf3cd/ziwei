@@ -1,4 +1,4 @@
-"""互相独立的三个口径；本模块定义选择，不执行历法运算。"""
+"""三个独立历法口径与安星规则选择；本模块不执行计算。"""
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -40,19 +40,30 @@ PolicyOption: TypeAlias = LeapMonthPolicy | DayRollover | YearBoundary
 POLICY_ENUMS: Final[tuple[type[StrEnum], ...]] = get_args(PolicyOption)
 
 
+class TianmaRule(StrEnum):
+  """天马查法；年马为具名默认，月马保留单源证据限度。"""
+
+  YEAR_BRANCH = "年支天马"
+  MONTH_BRANCH = "月支天马"
+  年支天马 = YEAR_BRANCH
+  月支天马 = MONTH_BRANCH
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ChartConfig:
-  """三项均须显式给出；没有具名或静默默认值。"""
+  """三个历法口径必填；天马默认按年支，可显式改为月支。"""
 
   leap_month_policy: LeapMonthPolicy
   day_rollover: DayRollover
   year_boundary: YearBoundary
+  tianma_rule: TianmaRule = TianmaRule.YEAR_BRANCH
 
   def __post_init__(self) -> None:
     for value, expected in (
       (self.leap_month_policy, LeapMonthPolicy),
       (self.day_rollover, DayRollover),
       (self.year_boundary, YearBoundary),
+      (self.tianma_rule, TianmaRule),
     ):
       if not isinstance(value, expected):
         raise TypeError(f"口径须为 {expected.__name__} 成员")

@@ -175,7 +175,7 @@ class Concept:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RuleVariant:
-  """具名查法与范围；option只链接已实现的口径值，不执行规则。"""
+  """具名查法与范围；option链接历法口径，implementation只存公开对象路径，不执行。"""
 
   id: str
   name: str
@@ -187,6 +187,7 @@ class RuleVariant:
   school_ids: tuple[str, ...] = ()
   conditions: tuple[str, ...] = ()
   option: PolicyOption | None = None
+  implementation: str | None = None
 
   def __post_init__(self) -> None:
     _identifier(self.id, "variant")
@@ -201,6 +202,10 @@ class RuleVariant:
     object.__setattr__(self, "conditions", _strings(self.conditions, "条件"))
     if self.option is not None and not isinstance(self.option, PolicyOption):
       raise TypeError("option须为已实现的口径枚举成员")
+    if self.implementation is not None:
+      _text(self.implementation, "实现路径")
+      if not re.fullmatch(r"ziwei(?:\.[a-z][a-z0-9_]*)+", self.implementation):
+        raise ValueError("实现路径须为ziwei包内的公开对象路径")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
