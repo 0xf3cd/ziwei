@@ -8,6 +8,7 @@ from pathlib import Path
 
 import ziwei
 from ziwei.birth import CalculationInput, Gender, GregorianBirthRecord, TimePrecision
+from ziwei.calendar import LunarAlgorithm
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.ganzhi import Dizhi
 from ziwei.knowledge import load_catalog
@@ -65,8 +66,49 @@ def check_inputs() -> None:
     shichen=Dizhi.子,
     ganzhi_year=2000,
     config=choices,
+    lunar_algorithm=LunarAlgorithm.ALGO3,
+    lunar_algorithm_version="0.8.0",
+    apparent_solar=False,
+    day_rolled=False,
+    ut1_jd=None,
+    lichun_jd=None,
   )
   value.require_complete()
+
+
+def check_calendar() -> None:
+  """消费已安装包的历法适配与安星基础；会加载 celestial 原生库，须在隔离检查之后。"""
+  from ziwei.bureau import WuxingJu, bureau_of
+  from ziwei.calendar import celestial_version
+  from ziwei.palaces import effective_month, minggong_dizhi, palace_ganzhi
+  from ziwei.resolver import resolve
+
+  if celestial_version() != "0.8.0":
+    raise ValueError("Installed celestial-calendar version differs from the declared pin")
+  record = GregorianBirthRecord(
+    birth_date=date(1988, 7, 1),
+    birth_time=time(12),
+    time_precision=TimePrecision.分,
+    timezone=IanaTimezone("Asia/Shanghai"),
+    gender=Gender.男,
+  )
+  choices = ChartConfig(
+    leap_month_policy=LeapMonthPolicy.全月归本月,
+    day_rollover=DayRollover.晚子时归次日,
+    year_boundary=YearBoundary.农历正月初一,
+  )
+  value = resolve(record, choices)
+  if (value.lunar_year, value.month, value.day) != (1988, 5, 18):
+    raise ValueError("Installed resolver produced a wrong lunar date")
+  if str(value.year_ganzhi) != "戊辰":
+    raise ValueError("Installed resolver produced a wrong ganzhi year")
+  effective = effective_month(
+    value.month, value.day, value.is_leap_month, choices.leap_month_policy
+  )
+  if value.shichen is None or minggong_dizhi(effective, value.shichen) != Dizhi.子:
+    raise ValueError("Installed palace rule produced a wrong minggong")
+  if bureau_of(palace_ganzhi(Dizhi.子, value.ganzhi_year)) is not WuxingJu.JIN_SI:
+    raise ValueError("Installed bureau rule produced a wrong wuxingju")
 
 
 def main(expected_version: str) -> None:
@@ -85,6 +127,7 @@ def main(expected_version: str) -> None:
     name == "celestial_calendar" or name.startswith("celestial_calendar.") for name in sys.modules
   ):
     raise ValueError("Import initialized the calendar adapter")
+  check_calendar()
   print(f"Installed ziwei {metadata.version}; optimized={sys.flags.optimize}")
 
 

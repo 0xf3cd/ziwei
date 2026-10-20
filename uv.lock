@@ -102,6 +102,17 @@ wheels = [
 ]
 
 [[package]]
+name = "celestial-calendar"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/90/42/20897e54b7a61727690f5dffbc1a699a1e1de42f69b680a972845dd91728/celestial_calendar-0.8.0-py3-none-macosx_14_0_arm64.whl", hash = "sha256:77fd86e861d64c0034c695b8436442ba5f105dc6934fbee10738b90018d19bb5", size = 686030, upload-time = "2026-10-17T22:30:42.457Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/ad/bdc46453f735b8f493e9b21af45d1f768762348a4ee69983b499a288d705/celestial_calendar-0.8.0-py3-none-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c8048ed9a3e670362d15604c39b1cefe8beefbed838a4d102397eee943b9d6e9", size = 784580, upload-time = "2026-10-17T22:30:44.388Z" },
+    { url = "https://files.pythonhosted.org/packages/42/30/b634df43da1d76d8b68036092625b81840ffd0beb4a42c09f178c6402ec4/celestial_calendar-0.8.0-py3-none-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e873e05bb3dfba456d85eb7c397fc90970f84c3b829577808ea74ae8230d8e38", size = 809758, upload-time = "2026-10-17T22:30:46.117Z" },
+    { url = "https://files.pythonhosted.org/packages/04/c5/203d0df6d4d8aa960313014487896523e67a4eadaae95dffd1a444aacc1f/celestial_calendar-0.8.0-py3-none-win_amd64.whl", hash = "sha256:c3e261aa2693e48d8c14667924a16cd47618e15aea538116d8e52d58431127df", size = 884539, upload-time = "2026-10-17T22:30:47.595Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.10.18"
 source = { registry = "https://pypi.org/simple" }
@@ -1074,6 +1085,7 @@ name = "ziwei"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "celestial-calendar" },
     { name = "tzdata" },
 ]
 
@@ -1091,7 +1103,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "tzdata", specifier = "==2026.5" }]
+requires-dist = [
+    { name = "celestial-calendar", specifier = "==0.8.0" },
+    { name = "tzdata", specifier = "==2026.5" },
+]
 
 [package.metadata.requires-dev]
 dev = [

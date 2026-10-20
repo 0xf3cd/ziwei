@@ -16,6 +16,7 @@ from ziwei.birth import (
   TimePrecision,
   shichen_from_time,
 )
+from ziwei.calendar import LunarAlgorithm
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.ganzhi import Dizhi, Yinyang
 from ziwei.timezone import FixedOffset, IanaTimezone
@@ -64,7 +65,22 @@ def calculation_input(**changes: Any) -> CalculationInput:
     "shichen": Dizhi.子,
     "ganzhi_year": 1999,
     "config": config(),
+    "lunar_algorithm": LunarAlgorithm.ALGO3,
+    "lunar_algorithm_version": "0.8.0",
+    "apparent_solar": False,
+    "day_rolled": False,
+    "ut1_jd": None,
+    "lichun_jd": None,
   }
+  selected = changes.get("config", values["config"])
+  if isinstance(selected, ChartConfig) and selected.year_boundary is YearBoundary.立春:
+    if "ut1_jd" not in changes:
+      values["ut1_jd"] = 0.0
+    if "lichun_jd" not in changes:
+      values["lichun_jd"] = 0.0
+  elif isinstance(selected, ChartConfig) and selected.year_boundary is YearBoundary.农历正月初一:
+    if "ganzhi_year" not in changes:
+      values["ganzhi_year"] = values["lunar_year"]
   values.update(changes)
   return CalculationInput(**values)
 
@@ -297,6 +313,86 @@ def test_parsed_values_do_not_require_raw_calendar_equality(
 def test_parsed_input_validation(changes: dict[str, Any], error: type[Exception]) -> None:
   with pytest.raises(error):
     calculation_input(**changes)
+
+
+def test_parsed_input_rejects_contradictory_states() -> None:
+  """CalculationInput 拒绝互相矛盾的状态：口径与标志不一致不产生可算输入。"""
+  with pytest.raises(ValueError, match="矛盾"):
+    calculation_input(
+      day_rolled=True,
+      config=ChartConfig(
+        leap_month_policy=LeapMonthPolicy.全月归本月,
+        day_rollover=DayRollover.早晚子时同日,
+        year_boundary=YearBoundary.立春,
+      ),
+    )
+  with pytest.raises(ValueError, match="公历记录与经度"):
+    calculation_input(apparent_solar=True)
+  with pytest.raises(ValueError, match="干支纪年须等于农历年"):
+    calculation_input(
+      ganzhi_year=1999,
+      config=ChartConfig(
+        leap_month_policy=LeapMonthPolicy.全月归本月,
+        day_rollover=DayRollover.晚子时归次日,
+        year_boundary=YearBoundary.农历正月初一,
+      ),
+    )
+  # 合法的真太阳时组合仍可构造：公历记录带经度
+  gregorian_input = calculation_input(
+    record=gregorian_record(longitude_deg=121.47),
+    apparent_solar=True,
+    config=ChartConfig(
+      leap_month_policy=LeapMonthPolicy.全月归本月,
+      day_rollover=DayRollover.晚子时归次日,
+      year_boundary=YearBoundary.立春,
+    ),
+  )
+  assert gregorian_input.apparent_solar is True
+
+
+def test_parsed_input_day_rolled_needs_provable_late_zi() -> None:
+  """day_rolled=True 需要原始记录含公历钟点；民用路径还须钟点在 23 时，结果可复现。"""
+  with pytest.raises(ValueError, match="公历钟点"):
+    calculation_input(
+      day_rolled=True,  # 农历记录只有子时粒度
+      config=ChartConfig(
+        leap_month_policy=LeapMonthPolicy.全月归本月,
+        day_rollover=DayRollover.晚子时归次日,
+        year_boundary=YearBoundary.立春,
+      ),
+    )
+  with pytest.raises(ValueError, match="23 时"):
+    calculation_input(
+      record=gregorian_record(birth_time=time(0, 30)),
+      day_rolled=True,
+      config=ChartConfig(
+        leap_month_policy=LeapMonthPolicy.全月归本月,
+        day_rollover=DayRollover.晚子时归次日,
+        year_boundary=YearBoundary.立春,
+      ),
+    )
+  value = calculation_input(
+    record=gregorian_record(birth_time=time(23, 30)),
+    day_rolled=True,
+    config=ChartConfig(
+      leap_month_policy=LeapMonthPolicy.全月归本月,
+      day_rollover=DayRollover.晚子时归次日,
+      year_boundary=YearBoundary.立春,
+    ),
+  )
+  assert value.day_rolled is True
+  # 真太阳时路径：晚子时由换算后的真太阳钟判定，原始钟点无须在 23 时
+  solar = calculation_input(
+    record=gregorian_record(birth_time=time(19, 30), longitude_deg=180.0),
+    day_rolled=True,
+    apparent_solar=True,
+    config=ChartConfig(
+      leap_month_policy=LeapMonthPolicy.全月归本月,
+      day_rollover=DayRollover.晚子时归次日,
+      year_boundary=YearBoundary.立春,
+    ),
+  )
+  assert solar.day_rolled is True and solar.apparent_solar is True
 
 
 def test_frozen_inputs_and_nested_values() -> None:

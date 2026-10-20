@@ -97,23 +97,35 @@ IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，�
 农历原始记录显式给闰月标志，时辰未知为 `None`。这里只核年1至9999、月1至12、日1至30等形状与值域，
 不证明该年有这个闰月、这个月有这一天；这些须由历法适配验证。
 
-`CalculationInput` 是解析层完成处理后的输出形状，本批没有从原始记录生成它的转换器。
+`CalculationInput` 是解析层完成处理后的输出形状，由解析层从原始记录生成。
 `ganzhi_year` 须是解析层按换年口径确定的纪年编号，可能不同于农历年；不能把公历出生年直接代入。
-以下仍为合成值，只示范保存字段与拒绝缺项，不是历法转换或参考盘例。
+`lunar_algorithm` 与 `lunar_algorithm_version` 记录所用农历算法及版本，`apparent_solar`
+与 `day_rolled` 记录真太阳时路径与晚子时顺延，`ut1_jd` 与 `lichun_jd` 记录立春换年
+比较的出生瞬间与立春时刻。换年口径为立春时 `ut1_jd` 与 `lichun_jd` 不可缺省；
+以下合成例用正月初一口径，只示范保存字段与拒绝缺项，不是历法转换或参考盘例。
 
 ```{doctest}
 >>> from ziwei.birth import CalculationInput, LunarBirthRecord
+>>> from ziwei.calendar import LunarAlgorithm
+>>> from ziwei.config import YearBoundary
 >>> from ziwei.ganzhi import Dizhi
 >>> lunar = LunarBirthRecord(
 ...   year=2000, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.女,
 ... )
+>>> lichun = ChartConfig(
+...   leap_month_policy=LeapMonthPolicy.全月归本月,
+...   day_rollover=DayRollover.晚子时归次日,
+...   year_boundary=YearBoundary.立春,
+... )
 >>> value = CalculationInput(
 ...   record=lunar, lunar_year=2000, month=1, day=1, is_leap_month=False,
-...   shichen=Dizhi.子, ganzhi_year=1999, config=choices,
+...   shichen=Dizhi.子, ganzhi_year=1999, config=lichun,
+...   lunar_algorithm=LunarAlgorithm.ALGO3, lunar_algorithm_version="0.8.0",
+...   apparent_solar=False, day_rolled=False, ut1_jd=0.0, lichun_jd=0.0,
 ... )
 >>> str(value.year_ganzhi), value.yinyang.value, value.gender.value
 ('己卯', '阴', '女')
->>> value.config is choices
+>>> value.config is lichun
 True
 >>> value.require_complete()
 >>> partial = replace(value, shichen=None, record=replace(lunar, gender=Gender.未知))
@@ -133,6 +145,11 @@ True
 时辰钟面区间据同页表三；纪年锚为该台[1984年对照表首行](https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T1984c.txt)。
 年干支参考表由同一六十甲子定义生成，不手抄第二套序列。`year_ganzhi()` 只查已经确定的纪年编号，
 不采用该台的换年时刻去替调用方选择正月初一或立春。
+
+纳音五行与五虎遁同为带出处的声明式表：纳音元素取自《紫微斗數全書》卷二纳音歌（维基文库
+修订1963110）与《渊海子平》卷一纳音注解（物名异文不进入计算）；五虎遁取《起五行寅例》与
+王亭之中州派讲义五虎遁诀，同口诀亦见《渊海子平》年上起月例。两表只供命宫定局与宫干推排，
+不证明任何吉凶解释。
 
 独立 golden 据交通部中央气象署编印[《天文日曆 2024》](https://www.cwa.gov.tw/Data/service/notice/download/Publish_20231127145652.pdf)，
 2023年11月出版，印刷第6页（PDF第11页）的“干支順序表”；同书PDF第2页年历抬头提供2024甲辰锚。

@@ -3,6 +3,7 @@
 import re
 import subprocess
 import sys
+from collections.abc import Iterator
 from dataclasses import replace
 from importlib.metadata import distribution, version
 from pathlib import Path
@@ -18,6 +19,14 @@ from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
 from ziwei.timezone import TimezoneData
+
+
+@pytest.fixture(autouse=True)
+def _unload_celestial() -> Iterator[None]:
+  """测试后卸载 celestial_calendar，避免 check_calendar 污染后续隔离断言。"""
+  yield
+  for name in [name for name in sys.modules if name.startswith("celestial_calendar")]:
+    del sys.modules[name]
 
 
 @pytest.fixture
@@ -69,6 +78,35 @@ def test_installed_check_passes_for_consumer(
 ) -> None:
   installed_check.main(version("ziwei"))
   assert "Installed ziwei" in capsys.readouterr().out
+
+
+def test_calendar_consumer_rejects_faulty_resolve(monkeypatch: pytest.MonkeyPatch) -> None:
+  """check_calendar 拒绝已安装解析器产出错误农历月。"""
+  import ziwei.resolver as resolver_module
+  from ziwei.ganzhi import Dizhi, Ganzhi
+
+  def faulty(record: object, choices: object, lunar_algorithm: object = None) -> Any:
+    return SimpleNamespace(
+      lunar_year=1988,
+      month=5,
+      day=19,
+      is_leap_month=False,
+      shichen=Dizhi.午,
+      year_ganzhi=Ganzhi.from_str("戊辰"),
+    )
+
+  monkeypatch.setattr(resolver_module, "resolve", faulty)
+  with pytest.raises(ValueError, match="wrong lunar date"):
+    installed_check.check_calendar()
+
+
+def test_calendar_consumer_rejects_wrong_calendar_pin(monkeypatch: pytest.MonkeyPatch) -> None:
+  """check_calendar 拒绝与声明钉版不一致的 celestial 版本。"""
+  import ziwei.calendar as calendar_module
+
+  monkeypatch.setattr(calendar_module, "celestial_version", lambda: "9.9.9")
+  with pytest.raises(ValueError, match="declared pin"):
+    installed_check.check_calendar()
 
 
 def test_command_line_entry_validates_under_optimization(tmp_path: Path) -> None:

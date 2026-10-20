@@ -46,7 +46,8 @@ def test_actual_html_and_relative_stable_links(html: Path) -> None:
 
 
 @pytest.mark.parametrize(
-  "defect", ["missing", "fake", "duplicate", "quote", "premise", "policy", "jiazi"]
+  "defect",
+  ["missing", "fake", "duplicate", "quote", "premise", "policy", "jiazi", "nayin", "wuhu"],
 )
 def test_knowledge_gate_rejects_representative_defects(html: Path, defect: str) -> None:
   page = html / "docs/knowledge-reference.html"
@@ -70,9 +71,15 @@ def test_knowledge_gate_rejects_representative_defects(html: Path, defect: str) 
       + '<section id="implemented-policies">'
       + after.replace(config.LeapMonthPolicy.全月归下月.value, "假值")
     )
-  else:
+  elif defect == "jiazi":
     before, after = text.split('<section id="implemented-jiazi">')
     text = before + '<section id="implemented-jiazi">' + after.replace("甲子", "假值")
+  elif defect == "nayin":
+    before, after = text.split('<section id="implemented-nayin">')
+    text = before + '<section id="implemented-nayin">' + after.replace("甲子乙丑=金", "甲子乙丑=火")
+  else:
+    before, after = text.split('<section id="implemented-wuhu">')
+    text = before + '<section id="implemented-wuhu">' + after.replace("甲己起丙寅", "甲己起戊寅")
   page.write_text(text, encoding="utf-8")
   with pytest.raises(ValueError, match=r"target|lost|definition"):
     check_knowledge_reference(html)

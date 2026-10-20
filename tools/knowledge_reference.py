@@ -54,6 +54,20 @@ def render_catalog(catalog: Catalog) -> str:
   parts.append('<section id="implemented-jiazi"><h2>六十甲子</h2><p>')
   parts.append(" ".join(str(item) for item in ganzhi.JIAZI))
   parts.append("</p></section>")
+  parts.append('<section id="implemented-nayin"><h2>六十甲子纳音五行</h2><p>')
+  pairs = (
+    f"{ganzhi.JIAZI[index * 2]}{ganzhi.JIAZI[index * 2 + 1]}={ganzhi.NAYIN_ELEMENT[index].value}"
+    for index in range(len(ganzhi.NAYIN_ELEMENT))
+  )
+  parts.append(" ".join(pairs))
+  parts.append("</p></section>")
+  parts.append('<section id="implemented-wuhu"><h2>五虎遁起寅</h2><p>')
+  parts.append(
+    "、".join(
+      f"{pair[0][0].value}{pair[0][1].value}起{pair[1].value}寅" for pair in ganzhi.WUHU_YIN
+    )
+  )
+  parts.append("</p></section>")
   return "\n".join(parts)
 
 
@@ -159,6 +173,17 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
     raise ValueError("Policy reference differs from definition")
   if " ".join(str(item) for item in ganzhi.JIAZI) not in parser.text.get("implemented-jiazi", ""):
     raise ValueError("Jiazi reference differs from definition")
+  nayin = " ".join(
+    f"{ganzhi.JIAZI[index * 2]}{ganzhi.JIAZI[index * 2 + 1]}={ganzhi.NAYIN_ELEMENT[index].value}"
+    for index in range(len(ganzhi.NAYIN_ELEMENT))
+  )
+  if nayin not in parser.text.get("implemented-nayin", ""):
+    raise ValueError("Nayin reference differs from definition")
+  wuhu = "、".join(
+    f"{pair[0][0].value}{pair[0][1].value}起{pair[1].value}寅" for pair in ganzhi.WUHU_YIN
+  )
+  if wuhu not in parser.text.get("implemented-wuhu", ""):
+    raise ValueError("Wuhu reference differs from definition")
   ids = {record.id for record in catalog.records}
   for document in directory.rglob("*.html"):
     links = KnowledgeTargets()

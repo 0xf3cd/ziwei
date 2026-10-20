@@ -4,8 +4,11 @@
 [celestial-calendar](https://github.com/0xf3cd/celestial-calendar) 提供；本仓记录紫微斗数的安星规则、
 四化口径、流派变体与出处，并组织可复现的命盘结果。
 
-目前提供出生记录、显式口径配置、民用时刻消歧、干支基础与独立知识目录，尚未实现排盘。
-用法见[出生输入](docs/birth.md)和[知识查询](docs/knowledge.md)，开发检查与协作约定见[参与开发](docs/contributing.md)。
+目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
+（公历/农历记录到计算输入）、命宫身宫与十二宫、五行局，以及独立知识目录；尚未安星与排盘。
+用法见[出生输入](docs/birth.md)、[历法与时间](docs/calendar.md)、[解析层](docs/resolver.md)、
+[命宫身宫与十二宫](docs/palaces.md)、[五行局](docs/bureau.md)和[知识查询](docs/knowledge.md)，
+开发检查与协作约定见[参与开发](docs/contributing.md)。
 
 ## 首版目标
 
