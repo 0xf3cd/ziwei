@@ -16,6 +16,7 @@ from ziwei.birth import (
   TimePrecision,
   shichen_from_time,
 )
+from ziwei.calendar import LunarAlgorithm
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.ganzhi import Dizhi, Yinyang
 from ziwei.timezone import FixedOffset, IanaTimezone
@@ -64,7 +65,19 @@ def calculation_input(**changes: Any) -> CalculationInput:
     "shichen": Dizhi.子,
     "ganzhi_year": 1999,
     "config": config(),
+    "lunar_algorithm": LunarAlgorithm.ALGO3,
+    "lunar_algorithm_version": "0.8.0",
+    "apparent_solar": False,
+    "day_rolled": False,
+    "ut1_jd": None,
+    "lichun_jd": None,
   }
+  selected = changes.get("config", values["config"])
+  if isinstance(selected, ChartConfig) and selected.year_boundary is YearBoundary.立春:
+    if "ut1_jd" not in changes:
+      values["ut1_jd"] = 0.0
+    if "lichun_jd" not in changes:
+      values["lichun_jd"] = 0.0
   values.update(changes)
   return CalculationInput(**values)
 

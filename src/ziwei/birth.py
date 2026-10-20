@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, time
 from enum import StrEnum
 
-from ziwei.config import ChartConfig
+from ziwei.calendar import LunarAlgorithm
+from ziwei.config import ChartConfig, YearBoundary
 from ziwei.ganzhi import Dizhi, Ganzhi, Yinyang, year_ganzhi
 from ziwei.timezone import FixedOffset, IanaTimezone, ResolvedTime, resolve_civil_time
 
@@ -154,11 +155,15 @@ BirthRecord = GregorianBirthRecord | LunarBirthRecord
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CalculationInput:
-  """解析层的输出形状；本批不提供从原始记录生成它的历法转换器。
+  """解析层的输出形状；本批由 resolver 从原始记录生成。
 
   ganzhi_year 是解析层按所选换年口径得到的纪年编号，不一定等于 lunar_year。
   原始记录和实际口径随值保存；阴阳及年干支由该编号派生，不维护可互相矛盾的副本。
   原始时辰未知时，解析时辰不得变为已知。
+  lunar_algorithm 与 lunar_algorithm_version 记录所用农历算法及 celestial 版本；
+  apparent_solar 记录是否采用真太阳时路径；day_rolled 记录晚子时归次日是否顺延；
+  ut1_jd 与 lichun_jd 记录立春换年所比较的出生瞬间与立春时刻（UT1 日数），
+  纯民用正月初一路径为 None。
   """
 
   record: BirthRecord
@@ -169,6 +174,12 @@ class CalculationInput:
   shichen: Dizhi | None
   ganzhi_year: int
   config: ChartConfig
+  lunar_algorithm: LunarAlgorithm
+  lunar_algorithm_version: str
+  apparent_solar: bool
+  day_rolled: bool
+  ut1_jd: float | None
+  lichun_jd: float | None
 
   def __post_init__(self) -> None:
     if not isinstance(self.record, BirthRecord):
@@ -179,6 +190,27 @@ class CalculationInput:
     year_ganzhi(self.ganzhi_year)
     if not isinstance(self.config, ChartConfig):
       raise TypeError("口径须为显式 ChartConfig")
+    if not isinstance(self.lunar_algorithm, LunarAlgorithm):
+      raise TypeError("农历算法须为 LunarAlgorithm 成员")
+    if not isinstance(self.lunar_algorithm_version, str) or not self.lunar_algorithm_version:
+      raise ValueError("农历算法版本不得为空")
+    for value, label in (
+      (self.apparent_solar, "真太阳时路径"),
+      (self.day_rolled, "晚子时顺延"),
+    ):
+      if type(value) is not bool:
+        raise TypeError(f"{label}标志须为 bool")
+    for instant, label in ((self.ut1_jd, "出生瞬间"), (self.lichun_jd, "立春时刻")):
+      if instant is not None and not isinstance(instant, float):
+        raise TypeError(f"{label} UT1 日数须为 float 或 None")
+    if self.config.year_boundary is YearBoundary.立春 and self.ut1_jd is None:
+      raise ValueError("立春换年必须记录出生瞬间的 UT1 日数")
+    if self.ut1_jd is not None and self.lichun_jd is None:
+      raise ValueError("记录出生瞬间时必须同时记录立春时刻")
+    if self.lichun_jd is not None and self.config.year_boundary is not YearBoundary.立春:
+      raise ValueError("立春时刻只属于立春换年口径")
+    if self.day_rolled and self.shichen is not Dizhi.子:
+      raise ValueError("晚子时顺延只发生在子时")
 
   @property
   def gender(self) -> Gender:

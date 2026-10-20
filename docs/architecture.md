@@ -2,7 +2,9 @@
 
 [项目入口](../README.md) · [知识组织](knowledge.md) · [参与开发](contributing.md)
 
-本页描述目标架构；已实现的API见[出生输入](birth.md)与[独立知识目录](knowledge.md)。首个目标是可复现的本命盘：安星、生年四化与大限，
+本页描述目标架构；已实现的API见[出生输入](birth.md)、[历法与时间](calendar.md)、
+[解析层](resolver.md)、[命宫身宫与十二宫](palaces.md)、[五行局](bureau.md)与
+[独立知识目录](knowledge.md)。首个目标是可复现的本命盘：安星、生年四化与大限，
 并能独立查阅排盘所依据的规则与出处。
 
 ## 结构组织

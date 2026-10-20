@@ -51,7 +51,7 @@
 
 ```{eval-rst}
 .. automodule:: ziwei.ganzhi
-   :members: Yinyang, Tiangan, Dizhi, Ganzhi, year_ganzhi
+   :members: Yinyang, Tiangan, Dizhi, Wuxing, Ganzhi, year_ganzhi, nayin, yin_stem, palace_stems
    :undoc-members:
    :member-order: bysource
 ```
@@ -62,6 +62,58 @@
 
 .. autodata:: ziwei.ganzhi.YEAR_GANZHI
    :no-value:
+
+.. autodata:: ziwei.ganzhi.NAYIN_ELEMENT
+   :annotation:
+
+.. autodata:: ziwei.ganzhi.WUHU_YIN
+   :annotation:
+```
+
+## 历法适配
+
+celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial 原生库（公开函数在
+函数体内导入）。所选农历算法与支持范围见[历法与时间](calendar.md)，时标合同见
+[解析层](resolver.md)。
+
+```{eval-rst}
+.. automodule:: ziwei.calendar
+   :members: LunarAlgorithm, celestial_version, supported_lunar_year_range, gregorian_to_lunar, lunar_to_gregorian, lunar_year_info, validate_lunar_date, utc_to_ut1_jd, lichun_jd, utc_civil, apparent_solar
+   :undoc-members:
+   :member-order: bysource
+```
+
+## 命宫身宫与十二宫
+
+[安星边界](palaces.md)。
+
+```{eval-rst}
+.. automodule:: ziwei.palaces
+   :members: PalaceName, Palace, effective_month, month_palace_index, minggong_dizhi, shengong_dizhi, twelve_palaces, palace_ganzhi
+   :undoc-members:
+   :member-order: bysource
+```
+
+## 五行局
+
+[定局规则](bureau.md)。
+
+```{eval-rst}
+.. automodule:: ziwei.bureau
+   :members: WuxingJu, bureau_of, bureau_number
+   :undoc-members:
+   :member-order: bysource
+```
+
+## 解析层
+
+[解析顺序与失败边界](resolver.md)。
+
+```{eval-rst}
+.. automodule:: ziwei.resolver
+   :members: resolve
+   :undoc-members:
+   :member-order: bysource
 ```
 
 ## 独立知识目录

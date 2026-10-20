@@ -99,6 +99,21 @@ class Ganzhi:
     return cls(Tiangan(value[0]), Dizhi(value[1]))
 
 
+class Wuxing(StrEnum):
+  """五行。"""
+
+  JIN = "金"
+  MU = "木"
+  SHUI = "水"
+  HUO = "火"
+  TU = "土"
+  金 = JIN
+  木 = MU
+  水 = SHUI
+  火 = HUO
+  土 = TU
+
+
 # 香港天文台《天干和地支》表二：https://www.hko.gov.hk/tc/gts/time/stemsandbranches.htm
 JIAZI: Final[tuple[Ganzhi, ...]] = tuple(
   Ganzhi.from_str(value)
@@ -185,3 +200,90 @@ def year_ganzhi(ganzhi_year: int) -> Ganzhi:
   if not 1 <= ganzhi_year <= 9999:
     raise ValueError("干支纪年编号须在1至9999之间")
   return YEAR_GANZHI[(ganzhi_year - YEAR_GANZHI[0][0]) % len(YEAR_GANZHI)][1]
+
+
+# 六十甲子纳音五行，按六十甲子序两两一组（甲子乙丑海中金、丙寅丁卯炉中火……）。
+# 出处：维基文库《紫微斗數全書/卷二》六十花甲子纳音歌（修订1963110），
+# 元素与《渊海子平》卷一《论六十花甲子纳音并注解》所列为同一五行表。
+# 纳音歌的物名在转录中有异文（如剑峰金/剑锋金、甲戊/甲戌），本表只取五行，不取物名。
+NAYIN_ELEMENT: Final[tuple[Wuxing, ...]] = tuple(
+  Wuxing(value)
+  for value in (
+    "金",
+    "火",
+    "木",
+    "土",
+    "金",
+    "火",
+    "水",
+    "土",
+    "金",
+    "木",
+    "水",
+    "土",
+    "火",
+    "木",
+    "水",
+    "金",
+    "火",
+    "木",
+    "土",
+    "金",
+    "火",
+    "水",
+    "土",
+    "金",
+    "木",
+    "水",
+    "土",
+    "火",
+    "木",
+    "水",
+  )
+)
+"""每两个连续甲子的纳音五行；与 JIAZI 同序，供命宫定局使用。"""
+
+
+def nayin(ganzhi: Ganzhi) -> Wuxing:
+  """查一组干支的纳音五行。
+
+  按六十甲子序两两一组取五行；仅接受六十甲子成员（Ganzhi 已保证阴阳相同）。
+  """
+  if not isinstance(ganzhi, Ganzhi):
+    raise TypeError("纳音须查干支")
+  index = JIAZI.index(ganzhi)
+  return NAYIN_ELEMENT[index // 2]
+
+
+# 五虎遁：由生年天干定寅宫天干（甲己起丙寅、乙庚起戊寅、丙辛起庚寅、丁壬起壬寅、戊癸起甲寅）。
+# 出处：维基文库《紫微斗數全書/卷二》起五行寅例（修订1963110）；
+# 同口诀亦见《渊海子平》论起大运法所引年上起月例与王亭之中州派《紫微斗数初级讲义》安十二宫天干。
+# 天干序号按十天干序（甲=0……癸=9），以年干序号对五取余得合组，再定寅宫干。
+WUHU_YIN: Final[tuple[tuple[tuple[Tiangan, Tiangan], Tiangan], ...]] = (
+  ((Tiangan.甲, Tiangan.己), Tiangan.丙),
+  ((Tiangan.乙, Tiangan.庚), Tiangan.戊),
+  ((Tiangan.丙, Tiangan.辛), Tiangan.庚),
+  ((Tiangan.丁, Tiangan.壬), Tiangan.壬),
+  ((Tiangan.戊, Tiangan.癸), Tiangan.甲),
+)
+"""五虎遁合组到寅宫天干的表，顺序与口诀一致。"""
+
+
+def yin_stem(year_tiangan: Tiangan) -> Tiangan:
+  """按五虎遁查寅宫天干。"""
+  if not isinstance(year_tiangan, Tiangan):
+    raise TypeError("年干须为 Tiangan 成员")
+  index = tuple(Tiangan).index(year_tiangan)
+  return WUHU_YIN[index % 5][1]
+
+
+def palace_stems(year_tiangan: Tiangan) -> tuple[Tiangan, ...]:
+  """十二宫宫干，从寅宫起按十天干顺排到丑宫。
+
+  寅宫干由五虎遁定，其余各宫依次取下一个天干；返回顺序与 Dizhi 的寅至丑相同。
+  """
+  if not isinstance(year_tiangan, Tiangan):
+    raise TypeError("年干须为 Tiangan 成员")
+  stems = tuple(Tiangan)
+  start = tuple(stems).index(yin_stem(year_tiangan))
+  return tuple(stems[(start + offset) % 10] for offset in range(12))
