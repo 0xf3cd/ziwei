@@ -4,7 +4,7 @@
 
 本页描述目标架构；已实现的API见[出生输入](birth.md)、[历法与时间](calendar.md)、
 [解析层](resolver.md)、[命宫身宫与十二宫](palaces.md)、[五行局](bureau.md)、[安星](stars.md)与
-[独立知识目录](knowledge.md)。首个目标是可复现的本命盘：安星、生年四化与大限，
+[四化与大限](sihua-decades.md)与[独立知识目录](knowledge.md)。首个目标是可复现的本命盘：安星、生年四化与大限，
 并能独立查阅排盘所依据的规则与出处。
 
 ## 结构组织
@@ -95,7 +95,11 @@ celestial-calendar 负责公历与农历互转、闰月与各月长、节气时�
 
 当前`stars.place_stars()`接收解析后的`CalculationInput`，返回28个不可变的`StarPlacement`星位记录，
 每颗星只有一个位置，不同星可以同宫。输入须有已知时辰，性别可以未知；无法完成安星时整次失败，不返回部分结果。
-独立主星入口`place_major_stars()`只需五行局与农历日。四化、大限、完整命盘与序列化另行实现。
+独立主星入口`place_major_stars()`只需五行局与农历日。
+`shengnian_sihua()`使用解析后的年干，并要求显式选择`SihuaVariant`，不改动既有`ChartConfig`。
+`place_decades()`使用同一解析结果的年干阴阳、性别、命宫与五行局，只给首尾包含的虚岁标签；
+不换算日期、不指定换岁日。低层入口分别只需年干，或命宫、五行局、年干和性别。
+完整命盘与序列化另行实现。
 
 ## 组合与失败
 

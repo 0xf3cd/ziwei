@@ -131,6 +131,25 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
    :annotation:
 ```
 
+## 生年四化与大限
+
+[用法与来源限度](sihua-decades.md)。两个模块均不在导入时初始化原生历法库。
+
+```{eval-rst}
+.. automodule:: ziwei.sihua
+   :members: SihuaVariant, SihuaTable, SihuaResult, sihua_for_stem, shengnian_sihua
+   :undoc-members:
+   :member-order: bysource
+
+.. autodata:: ziwei.sihua.SIHUA_TABLES
+   :no-value:
+
+.. automodule:: ziwei.decades
+   :members: Direction, Decade, decade_direction, decade_periods, place_decades
+   :undoc-members:
+   :member-order: bysource
+```
+
 ## 独立知识目录
 
 [查询与状态说明](knowledge.md) · [从语料生成的参考页](knowledge-reference.md)

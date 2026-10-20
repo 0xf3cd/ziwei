@@ -1,0 +1,99 @@
+# 生年四化与大限
+
+[项目入口](../README.md) · [解析层](resolver.md) · [API](api.md#生年四化与大限)
+
+四化只说明哪颗星化禄、化权、化科、化忌，不改变星曜身份或位置。大限给出十二个宫位上的
+岁数区间，不解释吉凶。两者可以独立计算，不要求先构造完整命盘。
+
+## 显式选择一套完整四化表
+
+目前提供《排命盘口诀》网页转录与王亭之讲义转录两套表，无默认。名称只表示实际所见转录，
+不认证某个门派或所有同名刊本。两套在戊科、庚科／忌、壬科上有分歧；
+[完整参考表](knowledge-reference.md#implemented-sihua)从执行定义生成，不另维护一份数值表。
+
+```{doctest}
+>>> from ziwei.ganzhi import Tiangan
+>>> from ziwei.sihua import SihuaVariant, sihua_for_stem
+>>> d = sihua_for_stem(Tiangan.庚, SihuaVariant.排命盘口诀转录)
+>>> (d.lu.value, d.quan.value, d.ke.value, d.ji.value)
+('太阳', '武曲', '天同', '太阴')
+>>> c = sihua_for_stem(Tiangan.庚, SihuaVariant.王亭之讲义转录)
+>>> (c.ke.value, c.ji.value)
+('天府', '天同')
+>>> c.rule_id
+'variant.sihua.wangtingzhi-lecture'
+```
+
+结果是不可变的`SihuaResult`，保留年干、变体、四颗星和规则标识。禄权科忌使用固定字段，
+不接收可能重复或缺项的标签列表。参数须为对应枚举成员，不把普通字符串猜成配置；
+所请求的变体没有唯一完整定义时抛错，不换用另一张表。
+
+## 命宫起大限
+
+阳男阴女按子、丑、寅……亥顺行，阴男阳女逆行。首限在命宫，以五行局数起，每限十年。
+这里的岁数是**虚岁标签，首尾均包含**，例如水二局首限为2–11，下一限12–21；
+不是周岁，也不计算当前年龄或公历起止日期。没有指定生日、正月初一或立春换岁。
+
+```{doctest}
+>>> from ziwei.birth import Gender
+>>> from ziwei.bureau import WuxingJu
+>>> from ziwei.decades import decade_periods
+>>> from ziwei.ganzhi import Dizhi
+>>> periods = decade_periods(Dizhi.亥, WuxingJu.水二局, Tiangan.甲, Gender.男)
+>>> [(p.dizhi.value, p.start_age, p.end_age) for p in periods[:2]]
+[('亥', 2, 11), ('子', 12, 21)]
+>>> (len(periods), periods[0].direction.value, periods[0].age_convention)
+(12, '顺行', '虚岁')
+>>> periods[0].rule_id
+'variant.decades.xusui-inclusive'
+```
+
+返回十二个不可变的`Decade`，按行限先后排列，不按十二宫名的返回顺序排列。
+每限保留地支、方向、起止岁数、年龄计法与规则标识。首限前的岁数不补小限或童限。
+性别未知时显式失败，不代填男或女。[大限示例](knowledge-reference.md#implemented-decades)同样从执行定义生成。
+
+## 使用解析后的出生记录
+
+```{doctest}
+>>> from ziwei.birth import LunarBirthRecord
+>>> from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
+>>> from ziwei.resolver import resolve
+>>> from ziwei.sihua import shengnian_sihua
+>>> from ziwei.decades import place_decades
+>>> choices = ChartConfig(
+...   leap_month_policy=LeapMonthPolicy.全月归本月,
+...   day_rollover=DayRollover.早晚子时同日,
+...   year_boundary=YearBoundary.农历正月初一,
+... )
+>>> record = LunarBirthRecord(
+...   year=2024, month=1, day=1, is_leap_month=False,
+...   shichen=Dizhi.子, gender=Gender.男,
+... )
+>>> value = resolve(record, choices)
+>>> shengnian_sihua(value, SihuaVariant.排命盘口诀转录).lu.value
+'廉贞'
+>>> place_decades(value)[0].dizhi.value
+'寅'
+```
+
+这两个入口沿用`CalculationInput`的所选年干，不暗中改回农历年的年干；换年口径可能同时改变
+四化、大限方向、宫干与五行局。大限的命宫也沿用所选闰月规则，晚子时是否顺延已由解析层处理。
+只算四化不要求时辰或性别；从出生输入起大限则二者都须已知。既有`resolve()`和`place_stars()`调用不变。
+四化不附带星位；需要显示在盘上时，可按`Star`身份关联安星结果，不用宫位作为唯一键覆盖同宫多星。
+
+## 来源与验证能说明什么
+
+- 《排命盘口诀》完整十干表取所见论坛转录；共有七干与讲义、九千对照，戊壬科另据令东来亲文，
+  庚科忌另据藏玄易社的独立解释。没有把这些说明拼成执行表，也没有声称取得第二份完整同表。
+- 王亭之完整表取讲义网页提取稿，并与九千王亭之列逐干核对。戊太阳科有直接文字，
+  但纸本、PDF图像和版次未校，不能说成已认证的原著刊本。
+- 两个独立盘例分别检验1954甲午的四化和1970庚戌图的四化。甲例不区分庚壬异文，庚图不是王亭之原图，
+  也不证明图作者采用讲义其他九干；没有完整生日，不能据此重排全星位。逐干字面期望另检全部表值。
+- 大限的虚岁明文、含首尾的木三局顺逆例与1954火六局例出自论坛；王亭之讲义图四金四局原图作区间和方向对照。
+  这些例子不为本库增加实际换岁日期的合同。
+
+具体定位、短引、独立支持及未核事项见知识条目
+[网页转录四化](knowledge-reference.md#entry.sihua.zhongyi999)、
+[讲义四化](knowledge-reference.md#entry.sihua.wangtingzhi-lecture)与
+[大限](knowledge-reference.md#entry.decades.xusui-inclusive)。
+条目暂不默认展示，来源仍保留转录未校的状态；可执行不代表可以默认展示或解释某张命盘。
