@@ -26,10 +26,11 @@ class IanaTimezone:
         raise ValueError("fold 只能为0或1")
 
   def require_resolvable(self) -> None:
-    """验证 IANA 标识在钉版 tzdata 中存在；不构造时刻、不依赖宿主时区库。"""
-    resource = files("tzdata.zoneinfo").joinpath(*self.key.split("/"))
-    if not resource.is_file():
-      raise ValueError(f"IANA 时区标识不存在：{self.key}")
+    """验证 IANA 标识在钉版 tzdata 中可解析为有效时区；与需瞬间路径同一边界。"""
+    try:
+      _load_zone(self.key)
+    except ZoneInfoNotFoundError as error:
+      raise ValueError(f"IANA 时区标识不存在或不是有效时区：{self.key}") from error
 
 
 def _check_offset(offset: timedelta) -> None:

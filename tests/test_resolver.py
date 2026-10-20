@@ -208,7 +208,14 @@ def test_unknown_time_with_longitude_rejected() -> None:
 def test_civil_path_rejects_invalid_iana() -> None:
   """纯民用路径也验证 IANA 时区标识可解析：无效标识显式失败，不静默进时辰计算。"""
   record = gregorian(date(1988, 7, 1), time(12), timezone=IanaTimezone("No/Such_Zone"))
-  with pytest.raises(ValueError, match="时区标识不存在"):
+  with pytest.raises(ValueError, match="No/Such_Zone"):
+    resolve(record, config())
+
+
+def test_civil_path_rejects_non_tzif_iana() -> None:
+  """纯民用路径拒绝 tzdata 中非时区的文件（如 leapseconds），与需瞬间路径一致。"""
+  record = gregorian(date(1988, 7, 1), time(12), timezone=IanaTimezone("leapseconds"))
+  with pytest.raises(ValueError, match="leapseconds"):
     resolve(record, config())
 
 
