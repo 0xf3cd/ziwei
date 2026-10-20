@@ -297,6 +297,7 @@ def test_public_rule_copies_mutable_sequences() -> None:
     ({"conditions": (" ",)}, ValueError),
     ({"tianma_rule": "年支天马"}, TypeError),
     ({"tianma_rule": TianmaRule.年支天马}, ValueError),
+    ({"stars": (Star.天马, Star.紫微), "tianma_rule": TianmaRule.年支天马}, ValueError),
     ({"stars": (Star.天马,)}, ValueError),
   ],
 )

@@ -19,8 +19,8 @@ def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy
   """按闰月口径确定有效生月归属。
 
   《全书》安身命例以闰月全月归下月；LifeDNA 列全月归本月与十六日起算次月的口径。
-  只返回有效月序（1至12）；闰十二月按归下月口径无对应有效月（不合成「来年正月」
-  无出处规则）时显式失败。
+  只返回有效月序（1至12）；闰十二月归入下月时（含半月口径十六日起）无对应有效月，
+  显式失败；不合成「来年正月」的无出处规则。
   """
   if not isinstance(policy, LeapMonthPolicy):
     raise TypeError("闰月口径须为 LeapMonthPolicy 成员")

@@ -1088,7 +1088,7 @@ ENTRIES = (
     premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.已整理,
-    limits="W全章半月、J全章下月与LifeDNA列举本月选项分别记录；Q身命闰月例的跨段争议不因此解决。闰十二归下月显式失败。",
+    limits="W全章半月、J全章下月与LifeDNA列举本月选项分别记录；Q身命闰月例的跨段争议不因此解决。闰十二月落到下月（含半月口径十六日起）无对应有效月时显式失败。",
     recheck="分别核W讲义原书闰月前置、J原书准备工作及本月口径直接作者例盘；不能把项目组合倒归原典。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
