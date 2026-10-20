@@ -111,7 +111,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.resolver
-   :members: resolve
+   :members: resolve, DEFAULT_LUNAR_ALGORITHM
    :undoc-members:
    :member-order: bysource
 ```

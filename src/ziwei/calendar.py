@@ -87,8 +87,9 @@ def _native_algorithm(algorithm: LunarAlgorithm, celestial: Any) -> Any:
 def gregorian_to_lunar(algorithm: LunarAlgorithm, day: date) -> tuple[int, int, int, bool]:
   """公历日期标签换农历年月日与闰月标志。
 
-  换算用出生地当地民用日标签（`BirthRecord.birth_date`），不随真太阳时或时区变化。
-  超出算法支持范围或日期不可表示时显式失败。
+  换算以传入的当地民用日标签为基准：民用路径传 `BirthRecord.birth_date`，真太阳时
+  路径由解析层传真太阳钟的民用日（见 resolver）。超出算法支持范围或日期不可表示时
+  显式失败。
   """
   _check_algorithm(algorithm)
   _check_day(day)
@@ -129,10 +130,15 @@ def validate_lunar_date(
     raise ValueError(f"农历年{year}超出{LunarAlgorithm(algorithm).value}支持范围")
   if not 1 <= month <= 12:
     raise ValueError(f"农历月须在1至12之间：{month}")
+  if day < 1:
+    raise ValueError(f"农历{year}年{month}月没有第{day}日")
   _, leap_month, month_lengths = lunar_year_info(algorithm, year)
-  effective_month = month if not is_leap else month + 1
   if is_leap and month != leap_month:
     raise ValueError(f"农历{year}年不存在闰{month}月")
+  # 月长元组把闰月插在同名月之后：闰月与其后的平月下标都要后移一位。
+  effective_month = month + (
+    1 if leap_month is not None and (month > leap_month or (is_leap and month == leap_month)) else 0
+  )
   if effective_month > len(month_lengths):
     raise ValueError(f"农历{year}年不存在第{month}月")
   if day > month_lengths[effective_month - 1]:
@@ -239,6 +245,8 @@ def utc_to_ut1_jd(utc: datetime) -> float:
   """
   _check_utc(utc)
   utc_utc = utc.astimezone(UTC)
+  if utc_utc < datetime(1972, 1, 1, tzinfo=UTC):
+    raise ValueError("UTC 早于1972-01-01的时刻须另定时标合同")
   fraction = (
     utc_utc.hour * 3600 + utc_utc.minute * 60 + utc_utc.second + utc_utc.microsecond / 1e6
   ) / 86400.0

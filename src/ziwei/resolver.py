@@ -20,13 +20,14 @@
 - 农历输入选立春口径：显式失败（农历记录没有瞬间与时区，无法与立春 UT1 时刻同标比较）。
 - 1972 年前的公历记录需要瞬间（立春口径或真太阳时）时：显式失败（`resolve_time` 拒绝
   现代 UTC 合同之前的历史时刻）；正月初一口径加无经度路径不受影响。
-- 请求的农历算法不支持该日期、闰月/日组合不存在、时辰未知但需要瞬间：显式失败。
+- 请求的农历算法不支持该日期、闰月/日组合不存在、时辰未知但需要瞬间（立春口径或
+  真太阳时——有经度但钟点未知）时：显式失败。
 """
 
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Final
+from typing import Final, cast
 
 from ziwei.birth import BirthRecord, CalculationInput, GregorianBirthRecord, LunarBirthRecord
 from ziwei.calendar import (
@@ -40,6 +41,7 @@ from ziwei.calendar import (
 )
 from ziwei.config import ChartConfig, DayRollover, YearBoundary
 from ziwei.ganzhi import Dizhi
+from ziwei.timezone import ResolvedTime
 
 
 def _shichen_from_fraction(fraction: float) -> tuple[Dizhi, bool]:
@@ -61,14 +63,15 @@ def _resolve_gregorian(
   resolved = record.resolve_time() if need_instant and record.birth_time is not None else None
   late_zi = False
   if record.birth_time is None:
+    if record.longitude_deg is not None:
+      raise ValueError("真太阳时需要已知钟点")
     shichen = None
     anchor = record.birth_date
     apparent = False
   elif record.longitude_deg is not None:
-    if resolved is None:
-      raise ValueError("真太阳时需要已知钟点")
+    # 本分支 birth_time 非 None 且 need_instant 含经度，resolved 必已解析。
     solar_year, solar_month, solar_day, fraction = apparent_solar(
-      resolved.utc, record.longitude_deg
+      cast(ResolvedTime, resolved).utc, record.longitude_deg
     )
     shichen, late_zi = _shichen_from_fraction(fraction)
     anchor = date(solar_year, solar_month, solar_day)

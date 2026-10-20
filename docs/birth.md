@@ -112,20 +112,20 @@ IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，�
 >>> lunar = LunarBirthRecord(
 ...   year=2000, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.女,
 ... )
->>> plain = ChartConfig(
+>>> lichun = ChartConfig(
 ...   leap_month_policy=LeapMonthPolicy.全月归本月,
 ...   day_rollover=DayRollover.晚子时归次日,
-...   year_boundary=YearBoundary.农历正月初一,
+...   year_boundary=YearBoundary.立春,
 ... )
 >>> value = CalculationInput(
 ...   record=lunar, lunar_year=2000, month=1, day=1, is_leap_month=False,
-...   shichen=Dizhi.子, ganzhi_year=1999, config=plain,
+...   shichen=Dizhi.子, ganzhi_year=1999, config=lichun,
 ...   lunar_algorithm=LunarAlgorithm.ALGO3, lunar_algorithm_version="0.8.0",
-...   apparent_solar=False, day_rolled=False, ut1_jd=None, lichun_jd=None,
+...   apparent_solar=False, day_rolled=False, ut1_jd=0.0, lichun_jd=0.0,
 ... )
 >>> str(value.year_ganzhi), value.yinyang.value, value.gender.value
 ('己卯', '阴', '女')
->>> value.config is plain
+>>> value.config is lichun
 True
 >>> value.require_complete()
 >>> partial = replace(value, shichen=None, record=replace(lunar, gender=Gender.未知))

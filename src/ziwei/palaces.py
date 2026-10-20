@@ -19,15 +19,20 @@ def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy
   """按闰月口径取命宫、身宫等按月安星所用的有效生月。
 
   《全书》安身命例以闰月全月归下月；LifeDNA 列全月归本月与十六日起算次月的口径。
-  只返回有效月序（1至13），不核该月存在性。
+  只返回有效月序（1至12）；闰十二月按归下月口径无对应命宫月（不合成「来年正月」
+  无出处规则）时显式失败。
   """
   if not isinstance(policy, LeapMonthPolicy):
     raise TypeError("闰月口径须为 LeapMonthPolicy 成员")
   if policy is LeapMonthPolicy.全月归下月:
-    return month + 1 if is_leap else month
-  if policy is LeapMonthPolicy.上半月归本月下半月归下月:
-    return month + 1 if is_leap and day >= 16 else month
-  return month
+    effective = month + 1 if is_leap else month
+  elif policy is LeapMonthPolicy.上半月归本月下半月归下月:
+    effective = month + 1 if is_leap and day >= 16 else month
+  else:
+    effective = month
+  if effective > 12:
+    raise ValueError("闰十二月按该口径无对应命宫月（不合成来年正月规则）")
+  return effective
 
 
 class PalaceName(StrEnum):

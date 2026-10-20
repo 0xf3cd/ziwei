@@ -5,7 +5,7 @@ from datetime import date, datetime, time
 from enum import StrEnum
 
 from ziwei.calendar import LunarAlgorithm
-from ziwei.config import ChartConfig, YearBoundary
+from ziwei.config import ChartConfig, DayRollover, YearBoundary
 from ziwei.ganzhi import Dizhi, Ganzhi, Yinyang, year_ganzhi
 from ziwei.timezone import FixedOffset, IanaTimezone, ResolvedTime, resolve_civil_time
 
@@ -211,6 +211,16 @@ class CalculationInput:
       raise ValueError("立春时刻只属于立春换年口径")
     if self.day_rolled and self.shichen is not Dizhi.子:
       raise ValueError("晚子时顺延只发生在子时")
+    if self.day_rolled and self.config.day_rollover is DayRollover.早晚子时同日:
+      raise ValueError("晚子时顺延与早晚子时同日口径矛盾")
+    if self.apparent_solar and (
+      not isinstance(self.record, GregorianBirthRecord) or self.record.longitude_deg is None
+    ):
+      raise ValueError("真太阳时路径需要公历记录与经度")
+    if (
+      self.config.year_boundary is YearBoundary.农历正月初一 and self.ganzhi_year != self.lunar_year
+    ):
+      raise ValueError("正月初一换年口径下干支纪年须等于农历年")
 
   @property
   def gender(self) -> Gender:

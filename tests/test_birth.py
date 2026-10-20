@@ -78,6 +78,9 @@ def calculation_input(**changes: Any) -> CalculationInput:
       values["ut1_jd"] = 0.0
     if "lichun_jd" not in changes:
       values["lichun_jd"] = 0.0
+  elif isinstance(selected, ChartConfig) and selected.year_boundary is YearBoundary.农历正月初一:
+    if "ganzhi_year" not in changes:
+      values["ganzhi_year"] = values["lunar_year"]
   values.update(changes)
   return CalculationInput(**values)
 
@@ -310,6 +313,41 @@ def test_parsed_values_do_not_require_raw_calendar_equality(
 def test_parsed_input_validation(changes: dict[str, Any], error: type[Exception]) -> None:
   with pytest.raises(error):
     calculation_input(**changes)
+
+
+def test_parsed_input_rejects_contradictory_states() -> None:
+  """CalculationInput 拒绝互相矛盾的状态：口径与标志不一致不产生可算输入。"""
+  with pytest.raises(ValueError, match="矛盾"):
+    calculation_input(
+      day_rolled=True,
+      config=ChartConfig(
+        leap_month_policy=LeapMonthPolicy.全月归本月,
+        day_rollover=DayRollover.早晚子时同日,
+        year_boundary=YearBoundary.立春,
+      ),
+    )
+  with pytest.raises(ValueError, match="公历记录与经度"):
+    calculation_input(apparent_solar=True)
+  with pytest.raises(ValueError, match="干支纪年须等于农历年"):
+    calculation_input(
+      ganzhi_year=1999,
+      config=ChartConfig(
+        leap_month_policy=LeapMonthPolicy.全月归本月,
+        day_rollover=DayRollover.晚子时归次日,
+        year_boundary=YearBoundary.农历正月初一,
+      ),
+    )
+  # 合法的真太阳时组合仍可构造：公历记录带经度
+  gregorian_input = calculation_input(
+    record=gregorian_record(longitude_deg=121.47),
+    apparent_solar=True,
+    config=ChartConfig(
+      leap_month_policy=LeapMonthPolicy.全月归本月,
+      day_rollover=DayRollover.晚子时归次日,
+      year_boundary=YearBoundary.立春,
+    ),
+  )
+  assert gregorian_input.apparent_solar is True
 
 
 def test_frozen_inputs_and_nested_values() -> None:

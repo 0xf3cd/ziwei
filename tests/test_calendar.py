@@ -65,6 +65,25 @@ def test_validate_lunar_date_accepts_leap_month() -> None:
   validate_lunar_date(LunarAlgorithm.ALGO3, 2023, 2, 29, True)
 
 
+def test_validate_lunar_date_accepts_plain_month_after_leap() -> None:
+  """闰月之后的平月取真实月长：2023 闰二月，四月三十（2023-06-17）与腊月三十（2024-02-09）都在。"""
+  validate_lunar_date(LunarAlgorithm.ALGO3, 2023, 4, 30, False)
+  validate_lunar_date(LunarAlgorithm.ALGO3, 2023, 12, 30, False)
+
+
+def test_validate_lunar_date_rejects_short_plain_month_after_leap() -> None:
+  """闰月之后的平月取真实月长：2023 六月只有 29 天，三十不存在。"""
+  with pytest.raises(ValueError, match="没有第30日"):
+    validate_lunar_date(LunarAlgorithm.ALGO3, 2023, 6, 30, False)
+
+
+@pytest.mark.parametrize("day", [0, -1, -3])
+def test_validate_lunar_date_rejects_nonpositive_day(day: int) -> None:
+  """农历日的下界校验：0 与负数都不存在，显式失败。"""
+  with pytest.raises(ValueError, match="没有第"):
+    validate_lunar_date(LunarAlgorithm.ALGO3, 2024, 1, day, False)
+
+
 @pytest.mark.parametrize(
   "args, message",
   [
@@ -85,6 +104,37 @@ def test_gregorian_out_of_algorithm_coverage_fails() -> None:
 
   with pytest.raises(celestial_calendar.CelestialError):
     gregorian_to_lunar(LunarAlgorithm.ALGO1, date(1900, 1, 1))
+
+
+@pytest.mark.parametrize(
+  "algorithm, upper, day",
+  [
+    (LunarAlgorithm.ALGO1, 2099, date(2099, 6, 30)),
+    (LunarAlgorithm.ALGO2, 2500, date(2500, 6, 30)),
+    (LunarAlgorithm.ALGO3, 2199, date(2199, 6, 30)),
+  ],
+)
+def test_upper_range_endpoint_converts(algorithm: LunarAlgorithm, upper: int, day: date) -> None:
+  """支持范围上端点可换算：往返一致且落在上端点年。"""
+  lunar = gregorian_to_lunar(algorithm, day)
+  assert lunar[0] == upper
+  assert lunar_to_gregorian(algorithm, *lunar) == day
+
+
+@pytest.mark.parametrize(
+  "algorithm, day",
+  [
+    (LunarAlgorithm.ALGO1, date(2100, 6, 30)),
+    (LunarAlgorithm.ALGO2, date(2501, 6, 30)),
+    (LunarAlgorithm.ALGO3, date(2200, 6, 30)),
+  ],
+)
+def test_above_upper_range_endpoint_fails(algorithm: LunarAlgorithm, day: date) -> None:
+  """超上界年份显式失败。"""
+  import celestial_calendar
+
+  with pytest.raises(celestial_calendar.CelestialError):
+    gregorian_to_lunar(algorithm, day)
 
 
 def test_ut1_conversion_matches_chart_snapshot() -> None:
@@ -139,6 +189,14 @@ def test_apparent_solar_crosses_midnight() -> None:
 def test_utc_input_requires_timezone() -> None:
   with pytest.raises(ValueError, match="时区"):
     utc_to_ut1_jd(datetime(2024, 2, 4, 8, 0))
+
+
+def test_ut1_conversion_rejects_pre_1972() -> None:
+  """1972 前没有现代 UTC 闰秒合同，公开函数显式失败而非静默给错值。"""
+  with pytest.raises(ValueError, match="1972"):
+    utc_to_ut1_jd(datetime(1960, 7, 1, tzinfo=UTC))
+  with pytest.raises(ValueError, match="1972"):
+    utc_to_ut1_jd(datetime(1971, 12, 31, 23, 0, tzinfo=UTC))
 
 
 def test_import_celestial_only_on_use() -> None:
