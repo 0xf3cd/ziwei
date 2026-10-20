@@ -149,4 +149,7 @@ def test_decades_use_selected_leap_month(
     policy is LeapMonthPolicy.上半月归本月下半月归下月 and day == 16
   )
   assert place_decades(value)[0].dizhi is (Dizhi.子 if following else Dizhi.亥)
+  assert (place_decades(value)[0].start_age, place_decades(value)[0].end_age) == (
+    (6, 15) if following else (5, 14)
+  )
   assert place_decades(value)[0].direction is Direction.逆行

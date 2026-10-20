@@ -4,7 +4,7 @@ import re
 import subprocess
 import sys
 from collections.abc import Iterator
-from dataclasses import replace
+from dataclasses import asdict, replace
 from importlib.metadata import distribution, version
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -14,10 +14,14 @@ import pytest
 
 import ziwei
 from tools import installed_check
-from ziwei.birth import GregorianBirthRecord
+from ziwei.birth import Gender, GregorianBirthRecord
+from ziwei.bureau import WuxingJu
+from ziwei.decades import decade_periods
+from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
+from ziwei.stars import Star
 from ziwei.timezone import TimezoneData
 
 
@@ -106,6 +110,71 @@ def test_calendar_consumer_rejects_wrong_calendar_pin(monkeypatch: pytest.Monkey
 
   monkeypatch.setattr(calendar_module, "celestial_version", lambda: "9.9.9")
   with pytest.raises(ValueError, match="declared pin"):
+    installed_check.check_calendar()
+
+
+@pytest.mark.parametrize("kind", ["sihua", "sihua-reference", "decade-reference"])
+def test_sihua_decade_consumer_rejects_wrong_values_or_sources(
+  monkeypatch: pytest.MonkeyPatch,
+  kind: str,
+) -> None:
+  if kind == "sihua":
+    monkeypatch.setattr(
+      installed_check,
+      "sihua_for_stem",
+      lambda *args: SimpleNamespace(
+        ke=Star.紫微,
+        ji=Star.武曲,
+        rule_id="variant.sihua.zhongyi999",
+      ),
+    )
+  else:
+    original = Catalog.references
+    prefix = "variant.sihua." if kind == "sihua-reference" else "variant.decades."
+
+    def references(self: Catalog, identifier: str) -> tuple[Citation, ...]:
+      return () if identifier.startswith(prefix) else original(self, identifier)
+
+    monkeypatch.setattr(Catalog, "references", references)
+  with pytest.raises(ValueError, match=r"Installed sihua|Installed decade"):
+    installed_check.check_sihua_decades()
+
+
+@pytest.mark.parametrize("kind", ["count", "position", "age", "convention"])
+def test_sihua_decade_consumer_rejects_wrong_periods(
+  monkeypatch: pytest.MonkeyPatch,
+  kind: str,
+) -> None:
+  periods: list[Any] = list(decade_periods(Dizhi.亥, WuxingJu.水二局, Tiangan.甲, Gender.男))
+  if kind == "count":
+    periods.pop()
+  elif kind == "position":
+    periods.reverse()
+  elif kind == "age":
+    periods[0] = replace(periods[0], start_age=3, end_age=12)
+  else:
+    values = asdict(periods[0])
+    values["age_convention"] = "周岁"
+    # 模拟有错误元数据的安装包，不通过领域构造器制造合法记录。
+    periods[0] = SimpleNamespace(**values)
+  monkeypatch.setattr(installed_check, "decade_periods", lambda *args: tuple(periods))
+  with pytest.raises(ValueError, match="Installed decade"):
+    installed_check.check_sihua_decades()
+
+
+@pytest.mark.parametrize("kind", ["sihua", "decades"])
+def test_calendar_consumer_rejects_wrong_resolved_sihua_or_decades(
+  monkeypatch: pytest.MonkeyPatch,
+  kind: str,
+) -> None:
+  if kind == "sihua":
+    monkeypatch.setattr(
+      installed_check, "shengnian_sihua", lambda *args: SimpleNamespace(ke=Star.紫微)
+    )
+  else:
+    wrong = decade_periods(Dizhi.亥, WuxingJu.火六局, Tiangan.甲, Gender.男)
+    monkeypatch.setattr(installed_check, "place_decades", lambda *args: wrong)
+  with pytest.raises(ValueError, match=r"Installed sihua|Installed decade"):
     installed_check.check_calendar()
 
 

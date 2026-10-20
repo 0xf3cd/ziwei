@@ -3,6 +3,7 @@
 《排命盘口诀》取2007论坛所见转录，王亭之表取讲义「安四化星诀」的网页提取稿。
 各表十干均来自自身的完整出处；具体行另以独立成文核对，不拼接不同作者的格子。
 转录页、讲义提取稿不等于已校纸本，名称也不认证整个门派。出处与限度见知识目录。
+出生类型只在实际计算时加载，使独立知识查询不连带导入出生与历法模块。
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class SihuaVariant(StrEnum):
-  """只选择四化表，无默认；中文值说明实际核到的转录层。"""
+  """只选择四化表，无默认；枚举值是所见转录的中文名称。"""
 
   ZHONGYI999 = "排命盘口诀网页转录"
   WANGTINGZHI_LECTURE = "王亭之讲义转录"
@@ -29,7 +30,10 @@ class SihuaVariant(StrEnum):
   @property
   def rule_id(self) -> str:
     """知识目录中整套十干表的标识，不与既有单行异文混用。"""
-    return "variant.sihua." + self.name.lower().replace("_", "-")
+    return {
+      SihuaVariant.ZHONGYI999: "variant.sihua.zhongyi999",
+      SihuaVariant.WANGTINGZHI_LECTURE: "variant.sihua.wangtingzhi-lecture",
+    }[self]
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,7 +64,7 @@ class SihuaTable:
     return self.variant.rule_id
 
 
-# 两份完整转录分别保留，不以覆盖共有表的方式掩盖组合出处。引文另存知识目录。
+# 两套表分别按完整出处列出，便于逐干核对；引文另存知识目录。
 SIHUA_TABLES: Final[tuple[SihuaTable, ...]] = (
   SihuaTable(
     SihuaVariant.ZHONGYI999,
@@ -95,9 +99,21 @@ SIHUA_TABLES: Final[tuple[SihuaTable, ...]] = (
 )
 
 
+def _sihua_row(year_tiangan: Tiangan, variant: SihuaVariant) -> tuple[Star, Star, Star, Star]:
+  """校验年干与唯一完整定义，返回禄权科忌行。"""
+  if not isinstance(year_tiangan, Tiangan):
+    raise TypeError("生年干须为 Tiangan 成员")
+  if not isinstance(variant, SihuaVariant):
+    raise TypeError("四化变体须为 SihuaVariant 成员")
+  tables = tuple(table for table in SIHUA_TABLES if table.variant is variant)
+  if len(tables) != 1:
+    raise ValueError(f"四化变体须恰有一份完整定义：{variant}")
+  return tables[0].rows[tuple(Tiangan).index(year_tiangan)]
+
+
 @dataclass(frozen=True, slots=True)
 class SihuaResult:
-  """保存所用年干、变体与四颗星；固定字段避免遗漏或重复四化标签，不包含星位。"""
+  """保存年干、变体与四颗星，并校验结果与所选表一致；固定字段，不包含星位。"""
 
   year_tiangan: Tiangan
   variant: SihuaVariant
@@ -115,6 +131,8 @@ class SihuaResult:
       raise TypeError("四化结果须使用 Star 成员")
     if len({self.lu, self.quan, self.ke, self.ji}) != 4:
       raise ValueError("同一干的四化星曜不得重复")
+    if (self.lu, self.quan, self.ke, self.ji) != _sihua_row(self.year_tiangan, self.variant):
+      raise ValueError("四化结果须与生年干和所选完整表一致")
 
   @property
   def rule_id(self) -> str:
@@ -124,14 +142,7 @@ class SihuaResult:
 
 def sihua_for_stem(year_tiangan: Tiangan, variant: SihuaVariant) -> SihuaResult:
   """按生年干取禄权科忌；只需年干，不要求性别、时辰或星位。"""
-  if not isinstance(year_tiangan, Tiangan):
-    raise TypeError("生年干须为 Tiangan 成员")
-  if not isinstance(variant, SihuaVariant):
-    raise TypeError("四化变体须为 SihuaVariant 成员")
-  tables = tuple(table for table in SIHUA_TABLES if table.variant is variant)
-  if len(tables) != 1:
-    raise ValueError(f"四化变体须恰有一份完整定义：{variant}")
-  row = tables[0].rows[tuple(Tiangan).index(year_tiangan)]
+  row = _sihua_row(year_tiangan, variant)
   return SihuaResult(year_tiangan, variant, *row)
 
 

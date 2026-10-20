@@ -439,7 +439,7 @@ CITATIONS = (
     quote="关于庚干的化科化忌，争议较多，作者采用的是天同化科、太阴化忌。",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="按出生年干，顺序禄权科忌；壬用左辅，戊用右弼。左、辅等简称的解码另记，不校改引文。",
+    limits="按出生年干，顺序禄权科忌。引文只截庚的说明，壬左辅科见紧接下句，戊右弼科见同节完整口诀；左、辅为左辅的简称，不校改引文。",
   ),
   Citation(
     id="citation.zhongzhou.sihua-table",
@@ -448,7 +448,7 @@ CITATIONS = (
     quote="戊贪阴阳机",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="提取稿完整十干表与九千王亭之列逐干一致，庚府同、壬府武；未核PDF图像，不由盘例反推戊科。",
+    limits="提取稿完整十干表与九千王亭之列逐干一致：庚为天府科、天同忌，壬为天府科、武曲忌。未核PDF图像，不由盘例反推戊科。",
   ),
   Citation(
     id="citation.jiuqian.full-wangtingzhi",
@@ -511,7 +511,7 @@ CITATIONS = (
     quote="安大限",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="图像已读：丑4至13、寅14至23，支持局数起限、命宫起及含首尾；酉宫未见岁数，不补写。此图不单独定义换岁日。",
+    limits="短引只是图题，岁数证据在图中：丑4至13、寅14至23，支持局数起限、命宫起及含首尾；酉宫未见岁数，不补写。此图不单独定义换岁日。",
   ),
   Citation(
     id="citation.quanshu.geng",
@@ -971,7 +971,7 @@ ENTRIES = (
     premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.已整理,
-    limits="整套组合只见此转录；共有七干以讲义和九千对照，戊壬科另据令东来，庚科忌另据藏玄易社独立说明。1954甲午原例只验证共有甲行，不区分庚壬异文；不认证所有全书刊本。",
+    limits="整套组合只见此转录；甲乙丙丁己辛癸七干以讲义和九千对照，戊壬科另据令东来，庚科忌另据藏玄易社独立说明。1954甲午原例只验证共有甲行，不区分庚壬异文；不认证所有全书刊本。",
     recheck="取得论坛转录所据原著的书名、版次和安四化页影像，逐干核对；取得庚或壬干独立原盘以进一步区分异文。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
   ),

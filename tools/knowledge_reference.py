@@ -158,7 +158,7 @@ def render_catalog(catalog: Catalog) -> str:
     ),
     (
       "implemented-decades",
-      "大限示例（命宫寅，首尾包含）",
+      "大限示例（命宫寅，甲阳乙阴各一例，首尾包含）",
       ("年干", "性别", "五行局", "方向", "首限", "次限", "年龄计法", "规则"),
       _decade_rows(),
     ),

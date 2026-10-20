@@ -1,6 +1,6 @@
 """独立字面期望来自完整转录及原例，不从待测表或生成参考页反取。"""
 
-from dataclasses import FrozenInstanceError, replace
+from dataclasses import FrozenInstanceError, asdict, replace
 from typing import Any, cast
 
 import pytest
@@ -13,7 +13,7 @@ from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.sihua import SIHUA_TABLES, SihuaResult, SihuaTable, SihuaVariant, sihua_for_stem
 from ziwei.stars import Star
 
-# D据2007论坛安化禄化权化科化忌诀；C据讲义页标39，并与九千王亭之列核对。
+# 第1组据2007论坛安化禄化权化科化忌诀；第2组据讲义页标39，并与九千王亭之列核对。
 # 期望展开为星名，不把简称的解码当作原文引述，也不从SIHUA_TABLES读取。
 EXPECTED = (
   (
@@ -114,6 +114,34 @@ def test_table_copies_both_sequence_levels() -> None:
 def test_table_does_not_accept_a_string_as_rows() -> None:
   with pytest.raises(TypeError, match="序列"):
     SihuaTable(SihuaVariant.排命盘口诀转录, "not a table")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+  "field,value",
+  [
+    ("year_tiangan", Tiangan.壬),
+    ("variant", SihuaVariant.王亭之讲义转录),
+    ("lu", Star.紫微),
+    ("quan", Star.天机),
+    ("ke", Star.天府),
+    ("ji", Star.文曲),
+  ],
+)
+def test_result_cannot_claim_a_rule_with_a_different_row(field: str, value: Any) -> None:
+  result = sihua_for_stem(Tiangan.庚, SihuaVariant.排命盘口诀转录)
+  with pytest.raises(ValueError, match="所选完整表一致"):
+    replace(result, **{field: value})
+
+
+def test_decade_metadata_is_preserved_in_dataclass_fields() -> None:
+  period = Decade(Dizhi.子, Direction.顺行, 2, 11)
+  saved = asdict(period)
+  assert saved["rule_id"] == "variant.decades.xusui-inclusive"
+  assert saved["age_convention"] == "虚岁"
+  for field in ("rule_id", "age_convention"):
+    changes: dict[str, Any] = {field: "其他口径"}
+    with pytest.raises((TypeError, ValueError), match="init=False"):
+      replace(period, **changes)
 
 
 @pytest.mark.parametrize("defect", ["missing", "extra", "short", "duplicate", "type"])

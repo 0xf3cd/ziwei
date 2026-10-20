@@ -3,11 +3,12 @@
 2007论坛《排命盘口诀》大限段明确使用虚岁，并以3至12、13至22等首尾包含的区间举例；
 王亭之讲义图四的金四局4至13、14至23另作对照。只生成岁数标签，不算公历起止日期，
 也不规定生日、立春或正月初一换岁。年干取解析层所选年界的结果，性别未知时拒绝起限。
+出生年干与阴阳的选择，不等于计算虚岁在哪一天增加。出生类型在计算时才加载，保持知识查询隔离。
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final, Literal
 
@@ -26,7 +27,7 @@ DECADE_DEFINITION: Final = (
 
 
 class Direction(StrEnum):
-  """顺行按子丑寅……亥，逆行相反；不是十二宫名的返回顺序。"""
+  """地支方向：顺行按子丑寅……亥，逆行相反。"""
 
   FORWARD = "顺行"
   REVERSE = "逆行"
@@ -42,6 +43,8 @@ class Decade:
   direction: Direction
   start_age: int
   end_age: int
+  rule_id: str = field(init=False, default=DECADE_RULE_ID)
+  age_convention: Literal["虚岁"] = field(init=False, default="虚岁")
 
   def __post_init__(self) -> None:
     if not isinstance(self.dizhi, Dizhi) or not isinstance(self.direction, Direction):
@@ -50,16 +53,6 @@ class Decade:
       raise TypeError("大限岁数须为整数，不接受 bool")
     if self.start_age < 2 or self.end_age != self.start_age + 9:
       raise ValueError("大限起始岁数至少为二，首尾包含共十年")
-
-  @property
-  def rule_id(self) -> str:
-    """实际执行的起限规则，链接知识目录。"""
-    return DECADE_RULE_ID
-
-  @property
-  def age_convention(self) -> Literal["虚岁"]:
-    """所用年龄计法；不据此推断某一天的当前年龄。"""
-    return "虚岁"
 
 
 def decade_direction(year_tiangan: Tiangan, gender: Gender) -> Direction:

@@ -60,7 +60,10 @@ def test_actual_html_rejects_new_reference_defects(
     start = after.index("<tr><td>")
     end = after.index("</tr>", start) + len("</tr>")
     after = after[:start] + after[end:]
-  page.write_text(before + f'<section id="{section if defect != "anchor" else "fake"}">' + after)
+  page.write_text(
+    before + f'<section id="{section if defect != "anchor" else "fake"}">' + after,
+    encoding="utf-8",
+  )
   with pytest.raises(ValueError, match="Sihua/decade reference differs"):
     check_knowledge_reference(tmp_path)
 
@@ -73,7 +76,7 @@ def test_reference_generation_uses_the_executable_table(
   page.parent.mkdir()
   catalog = load_catalog()
   original = render_catalog(catalog)
-  page.write_text(original)
+  page.write_text(original, encoding="utf-8")
   table = SIHUA_TABLES[0]
   row = (Star.廉贞, Star.破军, Star.天府, Star.太阳)
   changed = SihuaTable(table.variant, (row, *table.rows[1:]))
@@ -82,7 +85,7 @@ def test_reference_generation_uses_the_executable_table(
     check_knowledge_reference(tmp_path)
   rendered = render_catalog(catalog)
   assert rendered != original
-  page.write_text(rendered)
+  page.write_text(rendered, encoding="utf-8")
   check_knowledge_reference(tmp_path)
 
 
