@@ -41,7 +41,7 @@ from ziwei.calendar import (
 )
 from ziwei.config import ChartConfig, DayRollover, YearBoundary
 from ziwei.ganzhi import Dizhi
-from ziwei.timezone import ResolvedTime
+from ziwei.timezone import IanaTimezone, ResolvedTime
 
 
 def _shichen_from_fraction(fraction: float) -> tuple[Dizhi, bool]:
@@ -77,6 +77,8 @@ def _resolve_gregorian(
     anchor = date(solar_year, solar_month, solar_day)
     apparent = True
   else:
+    if isinstance(record.timezone, IanaTimezone):
+      record.timezone.require_resolvable()
     shichen = record.shichen
     late_zi = record.birth_time.hour == 23
     anchor = record.birth_date

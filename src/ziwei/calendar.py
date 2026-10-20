@@ -126,6 +126,11 @@ def validate_lunar_date(
 ) -> None:
   """核对农历年月日与闰月组合存在于所选算法；不存在或超范围显式失败。"""
   _check_algorithm(algorithm)
+  for value, label in ((year, "农历年"), (month, "农历月"), (day, "农历日")):
+    if type(value) is not int:
+      raise TypeError(f"{label}须为整数，不接受 bool")
+  if type(is_leap) is not bool:
+    raise TypeError("闰月标志须为 bool")
   if year < _ALGORITHM_RANGE[algorithm][0] or year > _ALGORITHM_RANGE[algorithm][1]:
     raise ValueError(f"农历年{year}超出{LunarAlgorithm(algorithm).value}支持范围")
   if not 1 <= month <= 12:

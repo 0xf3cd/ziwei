@@ -85,6 +85,27 @@ def test_validate_lunar_date_rejects_nonpositive_day(day: int) -> None:
 
 
 @pytest.mark.parametrize(
+  "changes, error",
+  [
+    ({"year": True}, TypeError),
+    ({"month": True}, TypeError),
+    ({"day": True}, TypeError),
+    ({"is_leap": 1}, TypeError),
+  ],
+)
+def test_validate_lunar_date_rejects_wrong_types(
+  changes: dict[str, object], error: type[Exception]
+) -> None:
+  """农历日期校验拒绝 bool 与非预期类型，不把 1/True 静默当作合法输入。"""
+  base: dict[str, object] = dict(
+    algorithm=LunarAlgorithm.ALGO3, year=2023, month=2, day=1, is_leap=False
+  )
+  base.update(changes)
+  with pytest.raises(error):
+    validate_lunar_date(**base)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
   "args, message",
   [
     ((LunarAlgorithm.ALGO3, 2023, 1, 30, False), "没有第30日"),

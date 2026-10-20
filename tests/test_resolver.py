@@ -205,6 +205,13 @@ def test_unknown_time_with_longitude_rejected() -> None:
     resolve(record, config())
 
 
+def test_civil_path_rejects_invalid_iana() -> None:
+  """纯民用路径也验证 IANA 时区标识可解析：无效标识显式失败，不静默进时辰计算。"""
+  record = gregorian(date(1988, 7, 1), time(12), timezone=IanaTimezone("No/Such_Zone"))
+  with pytest.raises(ValueError, match="时区标识不存在"):
+    resolve(record, config())
+
+
 def test_leap_twelfth_month_next_month_policy_rejected() -> None:
   """闰十二月按归下月口径无对应命宫月：显式失败，不合成来年正月规则。"""
   with pytest.raises(ValueError, match="闰十二月"):
