@@ -213,6 +213,27 @@ def test_leap_twelfth_month_next_month_policy_rejected() -> None:
     effective_month(12, 16, True, LeapMonthPolicy.上半月归本月下半月归下月)
 
 
+@pytest.mark.parametrize(
+  "changes, error",
+  [
+    ({"month": 0}, ValueError),
+    ({"month": 13}, ValueError),
+    ({"month": 1.0}, TypeError),
+    ({"day": 0}, ValueError),
+    ({"day": True}, TypeError),
+    ({"is_leap": 1}, TypeError),
+  ],
+)
+def test_effective_month_validates_inputs(
+  changes: dict[str, object], error: type[Exception]
+) -> None:
+  """effective_month 校验入参类型与值域，不把错误推迟到宫位计算。"""
+  base: dict[str, object] = dict(month=2, day=4, is_leap=True, policy=LeapMonthPolicy.全月归本月)
+  base.update(changes)
+  with pytest.raises(error):
+    effective_month(**base)  # type: ignore[arg-type]
+
+
 def test_apparent_solar_crosses_midnight_changes_zi_anchor() -> None:
   """真太阳时跨日：东经 120 度 07:45+08 对应 UTC 23:45 前夜，真太阳次日清晨，时辰取真太阳钟。"""
   record = gregorian(
@@ -245,6 +266,17 @@ def test_lunar_record_new_year_boundary() -> None:
   assert (value.lunar_year, value.month, value.day) == (1988, 5, 18)
   assert value.ganzhi_year == 1988
   assert value.apparent_solar is False and value.day_rolled is False
+
+
+def test_lunar_record_zi_needs_civil_clock_for_late_zi_rollover() -> None:
+  """农历记录的子时无钟点粒度：晚子时归次日无法判定早晚，显式失败；早晚子时同日可行。"""
+  lunar = LunarBirthRecord(
+    year=1988, month=5, day=18, is_leap_month=False, shichen=Dizhi.子, gender=Gender.女
+  )
+  with pytest.raises(ValueError, match="晚子时归次日"):
+    resolve(lunar, config(rollover=DayRollover.晚子时归次日))
+  same = resolve(lunar, config(rollover=DayRollover.早晚子时同日))
+  assert (same.month, same.day, same.day_rolled) == (5, 18, False)
 
 
 def test_lunar_record_rejects_lichun() -> None:

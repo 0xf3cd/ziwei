@@ -24,6 +24,16 @@ def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy
   """
   if not isinstance(policy, LeapMonthPolicy):
     raise TypeError("闰月口径须为 LeapMonthPolicy 成员")
+  if type(month) is not int:
+    raise TypeError("农历生月须为整数，不接受 bool")
+  if not 1 <= month <= 12:
+    raise ValueError("农历生月须在1至12之间")
+  if type(day) is not int:
+    raise TypeError("农历日须为整数，不接受 bool")
+  if day < 1:
+    raise ValueError("农历日须为正整数")
+  if type(is_leap) is not bool:
+    raise TypeError("闰月标志须为 bool")
   if policy is LeapMonthPolicy.全月归下月:
     effective = month + 1 if is_leap else month
   elif policy is LeapMonthPolicy.上半月归本月下半月归下月:
