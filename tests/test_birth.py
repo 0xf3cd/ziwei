@@ -351,8 +351,8 @@ def test_parsed_input_rejects_contradictory_states() -> None:
 
 
 def test_parsed_input_day_rolled_needs_provable_late_zi() -> None:
-  """day_rolled=True 需要原始记录能证明晚子时（公历 23 时），否则结果不可复现。"""
-  with pytest.raises(ValueError, match="23 时的公历钟点"):
+  """day_rolled=True 需要原始记录含公历钟点；民用路径还须钟点在 23 时，结果可复现。"""
+  with pytest.raises(ValueError, match="公历钟点"):
     calculation_input(
       day_rolled=True,  # 农历记录只有子时粒度
       config=ChartConfig(
@@ -361,7 +361,7 @@ def test_parsed_input_day_rolled_needs_provable_late_zi() -> None:
         year_boundary=YearBoundary.立春,
       ),
     )
-  with pytest.raises(ValueError, match="23 时的公历钟点"):
+  with pytest.raises(ValueError, match="23 时"):
     calculation_input(
       record=gregorian_record(birth_time=time(0, 30)),
       day_rolled=True,
@@ -381,6 +381,18 @@ def test_parsed_input_day_rolled_needs_provable_late_zi() -> None:
     ),
   )
   assert value.day_rolled is True
+  # 真太阳时路径：晚子时由换算后的真太阳钟判定，原始钟点无须在 23 时
+  solar = calculation_input(
+    record=gregorian_record(birth_time=time(19, 30), longitude_deg=180.0),
+    day_rolled=True,
+    apparent_solar=True,
+    config=ChartConfig(
+      leap_month_policy=LeapMonthPolicy.全月归本月,
+      day_rollover=DayRollover.晚子时归次日,
+      year_boundary=YearBoundary.立春,
+    ),
+  )
+  assert solar.day_rolled is True and solar.apparent_solar is True
 
 
 def test_frozen_inputs_and_nested_values() -> None:
