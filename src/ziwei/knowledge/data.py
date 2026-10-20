@@ -317,7 +317,7 @@ SOURCES = (
     url="https://www.5shubook.com/p-70106.html",
     layer=TextLayer.今人说明,
     lineage_id="lineage.zhongzhou-wangtingzhi",
-    provenance="与既有王亭之博客转录同路；星侨多诀同文，不计为另一独立传承。",
+    provenance="与既有王亭之博客转录同路；星侨网站的多条口诀与之同文，不计为另一独立传承。",
     claims="第6至13条支持紫微例解、两系、辅弼昌曲空劫、现代表魁钺、禄羊陀与火铃方向；第18条支持年马。",
     limits="只核网页所引片段；条号和印刷页码据网页转录页眉，未见纸本，不认证完整章节。未核原著版次、OCR忠实度或转载授权。博客原页未覆盖的章节不归给博客。",
     rights="仅必要短引与自撰事实说明，不收讲义全文。",
@@ -555,7 +555,7 @@ CITATIONS = (
     quote="紫微天机逆行旁",
     layer=TextLayer.原文,
     aspects=(EvidenceAspect.规则,),
-    limits="两系星曜的相对位置由完整段落确定。《全书》与《精成》口诀相近，中州派讲义与星侨安星诀为另一组同文材料；不把网址数量当独立来源数。",
+    limits="两系星曜的相对位置由完整段落确定。《全书》与《精成》口诀相近，中州派讲义与星侨网站的安星诀为另一组同文材料；不把网址数量当独立来源数。",
   ),
   Citation(
     id="citation.quanshu.tianfu",
@@ -636,7 +636,7 @@ CITATIONS = (
     quote="其馀丑卯互安星",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则,),
-    limits="紫微、天府两系的星曜次序、间隔宫数及天府对应关系，依据这两条说明。星侨安星诀与讲义多处同文，不另算独立来源。",
+    limits="紫微、天府两系的星曜次序、间隔宫数及天府对应关系，依据这两条说明。星侨网站的安星诀与讲义多处同文，不另算独立来源。",
   ),
   Citation(
     id="citation.zhongzhou.fubi-wen-kongjie",
@@ -712,7 +712,7 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
     ),
     "variant.star.ziwei-series": (
       ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
-      "《全书》与《精成》的相近口诀归为一组，中州派讲义与星侨的同文口诀归为另一组，不把网站数量当独立传承数。",
+      "《全书》与《精成》的相近口诀归为一组，中州派讲义与星侨网站的同文口诀归为另一组，不把网站数量当独立传承数。",
     ),
     "variant.star.tianfu-reflection": (
       ("citation.quanshu.tianfu", "citation.zhongzhou.major-series"),
@@ -752,7 +752,7 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
     ),
     "variant.star.kongjie-hour": (
       ("citation.quanshu.kongjie", "citation.zhongzhou.fubi-wen-kongjie"),
-      "此处只安按时辰确定位置的地空、地劫。《全书》与《精成》把这里的地空称为天空，中州派讲义与星侨称为地空；另有一颗按年支安的天空，本版不安那颗星。",
+      "此处只安按时辰确定位置的地空、地劫。《全书》与《精成》把这里的地空称为天空，中州派讲义与星侨网站称为地空；另有一颗按年支安的天空，本版不安那颗星。",
     ),
   }
   selected = tuple(rule for rule in rules if rule.tianma_rule is None)
@@ -942,7 +942,7 @@ ENTRIES = (
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.待整理,
     alternatives=("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星"),
-    limits="两读是拟应用范围，并非各有直接出处的规则；同段后文“凡有闰月具要依此为例”是待对照的范围线索，不否认已明确的身命归月。",
+    limits="这两种读法讨论的是安身命例的适用范围，并非各有直接出处的规则；同段后文“凡有闰月具要依此为例”是待对照的范围线索，不否认已明确的身命归月。",
     recheck="取得同版其他月系星的闰月例，核安身命例的归月是否被沿用；不由身命段自行外推。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
   ),
