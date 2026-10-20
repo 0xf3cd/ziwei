@@ -175,7 +175,11 @@ class Concept:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RuleVariant:
-  """具名查法与范围；option链接历法口径，implementation只存公开对象路径，不执行。"""
+  """一项有名称、定义和适用范围的规则。
+
+  option可关联历法口径选项；implementation保存实现中公开函数或对象的路径字符串，
+  查询知识时不会按这个路径导入模块或执行计算。
+  """
 
   id: str
   name: str

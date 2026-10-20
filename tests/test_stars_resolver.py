@@ -182,7 +182,7 @@ def test_leap_fourth_month_all_policies_day15_day16(
   expected = (Dizhi.申, Dizhi.午, Dizhi.申) if following else (Dizhi.未, Dizhi.未, Dizhi.亥)
   positions = _positions(value)
   assert tuple(positions[star] for star in (Star.左辅, Star.右弼, Star.天马)) == expected
-  # 同一有效月的普通记录给相同星位，生日没有累加前月天数。
+  # 非闰月记录若使用相同月份和日数，应给出相同星位；闰月生日不加上前一个月的天数。
   plain = replace(record, month=5 if following else 4, is_leap_month=False)
   assert positions == _positions(resolve(plain, value.config))
   assert value.day == day

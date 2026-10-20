@@ -1,4 +1,4 @@
-"""安星独立期望：Q五局宫格与固定关系、W例解及现代辅星表。"""
+"""安星测试的独立期望取自《全书》五局宫格、星曜相对位置、中州派讲义例解及现代辅星表。"""
 
 import json
 import subprocess
@@ -28,8 +28,8 @@ from ziwei.stars import (
   ziwei_dizhi,
 )
 
-# Q宫格支持范围见citation.quanshu.ziwei-daily限度；其余期望据W掌诀独立手算：
-# 木三初五寅、初九辰，金四三十亥；不补Q原字，不从待测实现生成，也不称W逐日表。
+# 《全书》宫格缺失或有歧义的三处，按中州派讲义掌诀独立手算：木三局初五在寅、初九在辰，金四局三十在亥。
+# 详见citation.quanshu.ziwei-daily的限度说明；不补录文原字、不从待测实现生成，也不称为讲义逐日表。
 DAILY = (
   "丑寅寅卯卯辰辰巳巳午午未未申申酉酉戌戌亥亥子子丑丑寅寅卯卯辰",
   "辰丑寅巳寅卯午卯辰未辰巳申巳午酉午未戌未申亥申酉子酉戌丑戌亥",
@@ -56,7 +56,7 @@ MAJOR_STARS = tuple(
     "破军",
   )
 )
-# Q安南北斗诸星诀及安天府图，逐紫微位置列完整14星；不读取待测偏移。
+# 按《全书》安南北斗诸星诀及安天府图，分别列出紫微在十二宫时的14星位置，不读取待测实现的偏移表。
 MAJOR_BY_ZIWEI = (
   "子亥酉申未辰辰巳午未申酉戌寅",
   "丑子戌酉申巳卯辰巳午未申酉丑",
@@ -95,7 +95,7 @@ def test_all_150_daily_positions_and_all_fourteen_stars(ju: WuxingJu, day: int) 
   ],
 )
 def test_wangtingzhi_three_printed_examples(ju: WuxingJu, day: int, expected: Dizhi) -> None:
-  """W第6条印刷页36的三个例子，不是本仓复算期望。"""
+  """中州派讲义第6条、印刷页36的三个原例；期望值直接取自例子，不由本仓计算生成。"""
   assert ziwei_dizhi(ju, day) is expected
 
 
@@ -180,7 +180,7 @@ def test_fire_bell_four_by_twelve_and_all_year_group_members(
     result = place_fire_bell(Dizhi(year), shichen)
     assert tuple(item.dizhi for item in result) == (Dizhi(fire[index]), Dizhi(bell[index]))
     assert tianma_dizhi(Dizhi(year)) is Dizhi(ma)
-  # W第13条壬辰卯时例被矩阵覆盖：火巳、铃丑；非子时能区分逆行缺陷。
+  # 表中包含中州派讲义第13条壬辰年卯时例：火星在巳、铃星在丑；使用非子时才能检出顺逆方向错误。
 
 
 def test_star_aliases_identity_json_and_no_global_tiankong() -> None:

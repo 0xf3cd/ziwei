@@ -52,12 +52,18 @@ def test_source_bindings_follow_stable_rule_identity_not_order() -> None:
     "citation.quanshu.wenchang-wenqu",
     "citation.zhongzhou.fubi-wen-kongjie",
   )
-  assert wen.limits == "Q子丑时例与W时系口诀相合，不执行出生钟点解析。"
+  assert (
+    wen.limits
+    == "《全书》的子时、丑时例与中州派讲义按时辰安星的口诀相合；本规则不把出生钟点换算为时辰。"
+  )
   assert kuiyue.citation_ids == (
     "citation.zhongzhou.kuiyue-lucun",
     "citation.jingcheng.kuiyue-modern",
   )
-  assert kuiyue.limits == "现代表按W/J；两者歌诀同族，不冒称异文各有双源。Q的辛与丙丁行另记待核。"
+  assert (
+    kuiyue.limits
+    == "现代表采用中州派讲义与《精成》所列位置，两者歌诀同文，不据此认定不同字句的版本各有两路独立出处。《全书》的辛、丙丁两行另记待核。"
+  )
 
 
 def test_month_composition_is_queryable_once_by_minggong() -> None:

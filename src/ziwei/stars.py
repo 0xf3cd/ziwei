@@ -1,13 +1,16 @@
 """十四主星、六吉六煞、禄存与天马的纯函数安星。
 
-《紫微斗數全書》卷二固定修订1963110（Q）给出五局逐日紫微宫格、天府对应与各系规则。
-王亭之《中州派紫微斗数初级讲义》转录（W，第6至13、18条）及《紫微斗數精成》网页
-（J，第7至12项）提供对照。W与星侨安星诀多处同文，不按网址数计独立来源。
-来源定位、谱系和限度由知识目录关联；本模块的定义同时用于计算与参考页，不复制数值表。
+《紫微斗數全書》卷二固定修订1963110给出五局逐日紫微宫格、天府对应及各系安星规则。
+另以王亭之《中州派紫微斗数初级讲义》网页转录的第6至13、18条，以及《紫微斗數精成》
+网页第7至12项作对照。讲义与星侨网站的安星诀多处同文，不因网址不同就算作独立来源。
+具体出处、转录关系和未核事项见知识目录；计算与参考页共用本模块的规则和数值表。
 
-魁钺只执行现代表；Q的异文留在知识目录。火铃起点据Q/W/J，两星顺行的方向据W例与J明文，
-不归给Q。地空是时系星，Q的旧称天空不作为全局别名。月马按J单源变体执行；月系星与
-三个归月口径的组合是项目规则，不宣称复刻某一著作的整套历法口径。
+天魁、天钺采用现代资料所列的表，《全书》中不同的口诀只存入知识目录，待核后再决定是否执行。
+火星、铃星在子时的起始宫位按出生年支分组，四组宫位参照上述三份资料；两星顺数到出生时辰的
+方向，由讲义例解和《精成》明文支持，《全书》该段未说明顺逆。
+本模块的地空按出生时辰安星；《全书》虽称它为天空，本项目不设这个全局别名，以免与另一颗
+按年支安置的天空混淆。按月安天马目前只核到《精成》一路独立出处，仍作为可选规则提供。
+辅弼、月马采用所选闰月归属规则，是本项目的组合方式，不代表完整采用某部著作的历法规则。
 """
 
 from __future__ import annotations
@@ -26,7 +29,7 @@ if TYPE_CHECKING:
 
 
 class Star(StrEnum):
-  """28星身份；拼音成员及中文别名不随规则选择改变。"""
+  """28颗星的名称与中文别名；选择不同的安星规则，不会把同一颗星变成另一颗星。"""
 
   ZIWEI = "紫微"
   TIANJI = "天机"
@@ -87,13 +90,16 @@ class Star(StrEnum):
 
   @property
   def concept_id(self) -> str:
-    """稳定知识标识；拼音规范名是身份键，不从中文显示名推导。"""
+    """知识目录中的固定标识，由拼音枚举名生成，不随中文显示名称改变。"""
     return "concept.star." + self.name.lower()
 
 
 @dataclass(frozen=True, slots=True)
 class StarRule:
-  """安星规则身份；复制星曜与条件序列，隔离调用方容器。"""
+  """一条安星规则的标识、说明及所用星曜。
+
+  星曜与条件序列会复制为元组，调用者之后修改原来的列表不会改变这条规则。
+  """
 
   id: str
   name: str
@@ -134,7 +140,7 @@ class StarRule:
     object.__setattr__(self, "conditions", conditions)
 
 
-# 顺逆均按地支子丑寅……亥；偏移为宫数，不含起点。
+# 顺行按子、丑、寅……亥排列，逆行相反；偏移0表示原宫，1表示顺移一宫。
 ZIWEI_OFFSETS: Final[tuple[tuple[Star, int], ...]] = (
   (Star.紫微, 0),
   (Star.天机, -1),
@@ -163,7 +169,7 @@ _HOUR_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
   (Star.地空, Dizhi.亥, -1),
   (Star.地劫, Dizhi.亥, 1),
 )
-# 十干按甲至癸；前魁后钺。Q的丙丁亥戌、辛寅午异文不混入本表。
+# 按甲至癸排列，每行依次为天魁、天钺。《全书》的丙丁亥戌、辛寅午异文不混入本表。
 _KUIYUE_BY_STEM: Final[tuple[tuple[Dizhi, Dizhi], ...]] = tuple(
   (Dizhi(pair[0]), Dizhi(pair[1]))
   for pair in ("丑未", "子申", "亥酉", "亥酉", "丑未", "子申", "丑未", "午寅", "卯巳", "卯巳")
@@ -184,15 +190,16 @@ _ZIWEI = StarRule(
   "variant.star.ziwei-bureau-day",
   "五局逐日紫微",
   (Star.紫微,),
-  "生日补至局数整倍；自寅含起点顺数至商数，再按补数奇逆偶顺移动。",
+  "把农历日向上补到局数的整数倍，所加的最小非负整数称为补数，补后的日数除以局数得到商。"
+  "从寅宫起顺数到商数，寅宫算第一宫；再移动补数那么多宫，补数为奇数时逆行，为偶数时顺行。",
   "ziwei.stars.ziwei_dizhi",
-  conditions=("五行局已定；农历日1至30，闰月不累加日数",),
+  conditions=("五行局已定，农历日为1至30；闰月也使用当月的日数，不加上前一个月的天数",),
 )
 _ZIWEI_SERIES = StarRule(
   "variant.star.ziwei-series",
   "紫微系固定关系",
   tuple(star for star, _ in ZIWEI_OFFSETS if star is not Star.紫微),
-  "自紫微按紫微系固定宫数偏移安入其余五星。",
+  "以紫微所在宫位为起点，按固定的宫数和方向安置紫微系其余五星。",
   "ziwei.stars.place_major_stars",
 )
 _TIANFU = StarRule(
@@ -206,29 +213,30 @@ _TIANFU_SERIES = StarRule(
   "variant.star.tianfu-series",
   "天府系固定关系",
   tuple(star for star, _ in TIANFU_OFFSETS if star is not Star.天府),
-  "自天府按天府系固定宫数偏移安入其余七星。",
+  "以天府所在宫位为起点，按固定的宫数和方向安置天府系其余七星。",
   "ziwei.stars.place_major_stars",
 )
 _FUBI = StarRule(
   "variant.star.fubi-effective-month",
   "辅弼按有效生月",
   tuple(star for star, _, _ in _MONTH_STARS),
-  "辰起正月顺安辅、戌起正月逆安弼；本项目统一消费所选归月口径。",
+  "左辅从辰宫起正月，顺数到生月；右弼从戌宫起正月，逆数到生月。"
+  "闰月按所选的闰月归属规则确定安星用的月份。",
   "ziwei.stars.place_month_stars",
-  conditions=("月参数为已按所选口径解析的有效生月",),
+  conditions=("月参数须已按所选闰月归属规则确定，不能直接传入尚未处理的闰月月份",),
 )
 _WEN = StarRule(
   "variant.star.wenchang-wenqu-hour",
   "昌曲按生时",
   (Star.文昌, Star.文曲),
-  "戌起子时逆安昌、辰起子时顺安曲。",
+  "文昌从戌宫起子时，逆数到出生时辰；文曲从辰宫起子时，顺数到出生时辰。",
   "ziwei.stars.place_hour_stars",
 )
 _KUIYUE = StarRule(
   "variant.star.kuiyue-modern",
   "魁钺现代表",
   (Star.天魁, Star.天钺),
-  "依年干查现代表，前魁后钺；不执行电子全书异文。",
+  "按年干查现代资料的天魁、天钺表，每行先列天魁、后列天钺；不执行电子《全书》中不同的口诀。",
   "ziwei.stars.place_stem_stars",
 )
 _LUCUN = StarRule(
@@ -247,9 +255,10 @@ _YANGTUO = StarRule(
 )
 _HUOLING = StarRule(
   "variant.star.huoling-forward",
-  "火铃年支起点顺生时",
+  "火铃按年支与生时",
   (Star.火星, Star.铃星),
-  "年支三合组定子时起点，两星均顺行至生时；方向据现代说明。",
+  "按出生年支所属的三合组，确定火星、铃星在子时的起始宫位，再分别顺数到出生时辰。"
+  "两星均顺行的依据是现代资料中的说明。",
   "ziwei.stars.place_fire_bell",
   conditions=("年支已由换年口径确定；时辰已知",),
 )
@@ -257,25 +266,28 @@ _KONGJIE = StarRule(
   "variant.star.kongjie-hour",
   "时系地空地劫",
   (Star.地空, Star.地劫),
-  "亥起子时逆安地空、顺安地劫；古籍时系旧称天空不作全局别名。",
+  "地空、地劫都从亥宫起子时，分别逆数、顺数到出生时辰。"
+  "《全书》把这里的地空称为天空，但本项目不设Star.天空别名，以免与按年支安的另一颗天空混淆。",
   "ziwei.stars.place_hour_stars",
 )
 _YEAR_MA = StarRule(
   "variant.tianma.year-branch",
   "年支天马",
   (Star.天马,),
-  "按年支三合组查马；是本项目具名默认，不替代三个必填历法口径。",
+  "按出生年支所属的三合组查天马，是本项目默认的天马查法。"
+  "闰月归属、子时换日和换年界线仍须另外指定。",
   "ziwei.stars.tianma_dizhi",
-  conditions=("锚为已经确定的年支",),
+  conditions=("查表使用已经按所选换年规则确定的年支",),
   tianma_rule=TianmaRule.YEAR_BRANCH,
 )
 _MONTH_MA = StarRule(
   "variant.tianma.month-branch",
   "月支天马",
   (Star.天马,),
-  "按有效农历生月所对应地支的三合组查马，不看节气；月马为具名单源执行例外。",
+  "把农历生月对应到地支，再按所属三合组查天马，不按节气划分月份。"
+  "目前只核到一路独立出处，仍作为可选的月支天马规则执行。",
   "ziwei.stars.tianma_dizhi",
-  conditions=("有效生月按本项目三个归月口径组合，非整套原书口径",),
+  conditions=("安星用的月份按所选闰月归属规则确定；这是项目组合，不代表采用原书的整套历法规则",),
   tianma_rule=TianmaRule.MONTH_BRANCH,
 )
 STAR_RULES: Final[tuple[StarRule, ...]] = (
@@ -293,12 +305,12 @@ STAR_RULES: Final[tuple[StarRule, ...]] = (
   _YEAR_MA,
   _MONTH_MA,
 )
-"""计算、知识关联与参考页共用的规则身份和公开实现路径，不动态导入或执行路径。"""
+"""计算、知识目录与参考页共用的规则记录；实现路径只存为字符串，不据此导入或调用函数。"""
 
 
 @dataclass(frozen=True, slots=True)
 class StarPlacement:
-  """一颗星的位置与实际规则标识；多星同宫合法。"""
+  """保存一颗星所在的地支宫位及实际使用的规则标识；不同星可以落在同一宫。"""
 
   star: Star
   dizhi: Dizhi
@@ -348,7 +360,7 @@ def tianfu_dizhi(ziwei: Dizhi) -> Dizhi:
 
 
 def place_major_stars(ju: WuxingJu, day: int) -> tuple[StarPlacement, ...]:
-  """独立安十四主星；只需局与日，不读取出生资料或历法。"""
+  """按五行局与农历日安十四主星，不读取出生记录，也不调用历法换算。"""
   ziwei = ziwei_dizhi(ju, day)
   tianfu = tianfu_dizhi(ziwei)
   return (
@@ -358,7 +370,10 @@ def place_major_stars(ju: WuxingJu, day: int) -> tuple[StarPlacement, ...]:
 
 
 def place_month_stars(month: int) -> tuple[StarPlacement, ...]:
-  """安左辅右弼；month为有效生月1至12，闰月须先调用effective_month。"""
+  """按安星用的月份安左辅、右弼，month须在1至12之间。
+
+  闰月须先用effective_month按所选规则确定月份，不能直接把原始闰月月份传入。
+  """
   month_palace_index(month)
   return tuple(
     _placement(star, _move(start, direction * (month - 1)))
@@ -367,7 +382,7 @@ def place_month_stars(month: int) -> tuple[StarPlacement, ...]:
 
 
 def place_hour_stars(shichen: Dizhi) -> tuple[StarPlacement, ...]:
-  """依已知时辰安昌曲与时系空劫，不含年系天空。"""
+  """按出生时辰安文昌、文曲、地空与地劫，不包含那颗按年支安置的天空。"""
   if not isinstance(shichen, Dizhi):
     raise TypeError("时辰须为 Dizhi 成员")
   offset = tuple(Dizhi).index(shichen)
@@ -377,7 +392,7 @@ def place_hour_stars(shichen: Dizhi) -> tuple[StarPlacement, ...]:
 
 
 def place_stem_stars(year_tiangan: Tiangan) -> tuple[StarPlacement, ...]:
-  """依已确定年干安现代表魁钺、禄存与羊陀。"""
+  """按已确定的年干安天魁、天钺、禄存、擎羊与陀罗；天魁、天钺使用现代表。"""
   if not isinstance(year_tiangan, Tiangan):
     raise TypeError("年干须为 Tiangan 成员")
   index = tuple(Tiangan).index(year_tiangan)
@@ -399,7 +414,7 @@ def _group_index(branch: Dizhi) -> int:
 
 
 def place_fire_bell(year_dizhi: Dizhi, shichen: Dizhi) -> tuple[StarPlacement, ...]:
-  """依年支组定火铃子时起点，两星均顺行至生时。"""
+  """按出生年支所属的三合组，确定火星、铃星在子时的起始宫位，再分别顺数到出生时辰。"""
   group = _group_index(year_dizhi)
   if not isinstance(shichen, Dizhi):
     raise TypeError("时辰须为 Dizhi 成员")
@@ -412,18 +427,23 @@ def place_fire_bell(year_dizhi: Dizhi, shichen: Dizhi) -> tuple[StarPlacement, .
 
 
 def tianma_dizhi(branch: Dizhi) -> Dizhi:
-  """以选定的年支或有效月支查天马；调用方负责选择查法锚。"""
+  """按传入地支所属的三合组查天马。
+
+  调用者负责传入年支或农历生月对应的地支；本函数不替调用者选择年马或月马。
+  """
   return _TIANMA_BY_GROUP[_group_index(branch)]
 
 
 def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
   """从解析结果安28星，按Star枚举顺序返回；要求时辰已知，允许性别未知。
 
-  本入口不重做历法，也不调用完整命盘校验。辅弼、月马与命宫共享有效生月，半月分界按解析后
-  农历日day>=16；不累加上月天数。闰十二归下月等不可用组合显式失败，不返回部分结果。
-  每颗星恰一位置，天马的rule_id记录实际选择，不依赖以后配置的默认值。
+  本入口不重做历法，也不调用完整命盘校验。命宫、左辅右弼和月马使用同一个安星月份，
+  由effective_month按所选闰月归属规则确定。选择按前后半月分别归属时，用解析后的农历日
+  判断：初一至十五按本月，十六日起按下月；不把前一个月的天数加到生日上。
+  闰十二月需要按下月安星等无法处理的组合会抛错，不返回部分结果。
+  每颗星只返回一个位置；天马的rule_id保存此次实际使用的规则，不靠日后的默认值还原。
   """
-  # 知识查询导入规则时不得加载出生与历法边界。
+  # 在调用时才导入出生记录类型，避免仅查询安星知识时连带加载出生与历法模块。
   from ziwei.birth import CalculationInput
 
   if not isinstance(value, CalculationInput):
