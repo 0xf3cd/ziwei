@@ -2,8 +2,8 @@
 
 [项目入口](../README.md) · [API 参考](api.md) · [计算边界](architecture.md)
 
-本页的出生资料与计算输入均为合成数据。当前 API 保存输入、检查形状并消歧民用时刻，
-不把公历换成农历、不应用闰月或子时换日，也不排出命盘。
+本页的出生资料与计算输入均为合成数据。记录类型保存输入、检查形状并消歧民用时刻；
+历法换算与子时换日由[解析层](resolver.md)执行，28星位置由[安星入口](stars.md)计算。
 
 ## 保存原始公历记录
 
@@ -78,7 +78,7 @@ IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，�
 
 ## 显式配置与解析后的输入形状
 
-三个口径互相独立，构造配置时全部必填；它们不改变原始日期。
+闰月归属、子时换日和换年界线互相独立，构造配置时必须分别指定；这些选择不改变原始记录中的日期。
 术数专有词用拼音，通用概念用惯用英语。枚举的中文别名与对应成员相同，JSON 值是中文。
 
 ```{doctest}
@@ -92,6 +92,18 @@ IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，�
 ... )
 >>> json.loads(json.dumps(asdict(choices), ensure_ascii=False))["year_boundary"]
 '立春'
+```
+
+天马的查法由`TianmaRule`选择，默认使用年支天马（年马），也可改为月支天马（月马）。
+这个默认值不影响闰月归属、子时换日和换年界线；构造配置时，这三项仍须自行指定：
+
+```{doctest}
+>>> from ziwei.config import TianmaRule
+>>> choices.tianma_rule is TianmaRule.年支天马
+True
+>>> monthly = replace(choices, tianma_rule=TianmaRule.月支天马)
+>>> monthly.tianma_rule.value
+'月支天马'
 ```
 
 农历原始记录显式给闰月标志，时辰未知为 `None`。这里只核年1至9999、月1至12、日1至30等形状与值域，
@@ -138,6 +150,7 @@ True
 
 普通记录可以保留未知，`require_complete()` 才检查完整命盘的必要项；它不排盘。
 调用完整命盘入口时须先完成历法解析，再执行该检查。公开校验在 `python -O` 下同样有效。
+当前`place_stars()`只要求时辰已知，不调用`require_complete()`，因此可安性别未知的记录。
 
 ## 干支来源与限度
 

@@ -7,9 +7,56 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from ziwei import config, ganzhi
+from ziwei import config, ganzhi, stars
+from ziwei.bureau import WuxingJu
+from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
+from ziwei.palaces import month_palace_index
+
+
+def _star_rows() -> list[tuple[str, ...]]:
+  rows: list[tuple[str, ...]] = []
+  for rule in stars.STAR_RULES:
+    for star in rule.stars:
+      rows.append((rule.id, "规则", star.value, rule.definition))
+  for ju in WuxingJu:
+    for day in range(1, 31):
+      rows.append(("紫微", f"{ju.value}/{day}日", "紫微", stars.ziwei_dizhi(ju, day).value))
+  for branch in Dizhi:
+    rows.append(("天府对应", branch.value, "天府", stars.tianfu_dizhi(branch).value))
+  for title, offsets in (("紫微系偏移", stars.ZIWEI_OFFSETS), ("天府系偏移", stars.TIANFU_OFFSETS)):
+    for star, offset in offsets:
+      rows.append((title, "顺为正、逆为负", star.value, str(offset)))
+  for month in range(1, 13):
+    for position in stars.place_month_stars(month):
+      rows.append((position.rule_id, str(month), position.star.value, position.dizhi.value))
+  for hour in Dizhi:
+    for position in stars.place_hour_stars(hour):
+      rows.append((position.rule_id, hour.value, position.star.value, position.dizhi.value))
+  for stem in Tiangan:
+    for position in stars.place_stem_stars(stem):
+      rows.append((position.rule_id, stem.value, position.star.value, position.dizhi.value))
+  for group in stars.SANHE_GROUPS:
+    for hour in Dizhi:
+      for position in stars.place_fire_bell(group[0], hour):
+        rows.append(
+          (
+            position.rule_id,
+            "".join(group) + "/" + hour.value,
+            position.star.value,
+            position.dizhi.value,
+          )
+        )
+  for rule in stars.STAR_RULES:
+    if rule.tianma_rule is config.TianmaRule.YEAR_BRANCH:
+      for year in Dizhi:
+        rows.append((rule.id, year.value, "天马", stars.tianma_dizhi(year).value))
+    elif rule.tianma_rule is config.TianmaRule.MONTH_BRANCH:
+      for month in range(1, 13):
+        branch = tuple(Dizhi)[month_palace_index(month)]
+        rows.append((rule.id, str(month), "天马", stars.tianma_dizhi(branch).value))
+  return rows
 
 
 def _value(value: object, ids: set[str]) -> str:
@@ -68,6 +115,11 @@ def render_catalog(catalog: Catalog) -> str:
     )
   )
   parts.append("</p></section>")
+  parts.append('<section id="implemented-stars"><h2>安星规则参考</h2><table>')
+  parts.append("<tr><th>项目</th><th>条件或说明</th><th>星曜</th><th>值</th></tr>")
+  for row in _star_rows():
+    parts.append("<tr>" + "".join(f"<td>{_value(value, ids)}</td>" for value in row) + "</tr>")
+  parts.append("</table></section>")
   return "\n".join(parts)
 
 
@@ -184,6 +236,11 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
   )
   if wuhu not in parser.text.get("implemented-wuhu", ""):
     raise ValueError("Wuhu reference differs from definition")
+  # 表头使用th，正文必须按完整行匹配，不能仅凭某个值在HTML中出现就放行。
+  if parser.targets.get("implemented-stars") != ["section"] or parser.rows.get(
+    "implemented-stars"
+  ) != [(), *_star_rows()]:
+    raise ValueError("Star reference differs from definition")
   ids = {record.id for record in catalog.records}
   for document in directory.rglob("*.html"):
     links = KnowledgeTargets()

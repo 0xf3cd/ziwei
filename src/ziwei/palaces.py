@@ -16,11 +16,12 @@ from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, palace_stems, year_ganzhi
 
 
 def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy) -> int:
-  """按闰月口径取命宫、身宫等按月安星所用的有效生月。
+  """按所选闰月归属规则，返回安星使用的月份（1至12）。
 
-  《全书》安身命例以闰月全月归下月；LifeDNA 列全月归本月与十六日起算次月的口径。
-  只返回有效月序（1至12）；闰十二月按归下月口径无对应命宫月（不合成「来年正月」
-  无出处规则）时显式失败。
+  《紫微斗數全書》的安身命例将闰月全月算作下月；LifeDNA网站还列出全月算作本月、
+  或初一至十五算作本月而十六日起算作下月的方式。
+  闰十二月若需要算作下月（包括按前后半月归属时的十六日起），会因没有第13月而抛错，
+  不自行改作来年正月，因为所据规则没有说明这种处理方式。
   """
   if not isinstance(policy, LeapMonthPolicy):
     raise TypeError("闰月口径须为 LeapMonthPolicy 成员")
@@ -93,7 +94,7 @@ class Palace:
 
 
 def month_palace_index(month: int) -> int:
-  """农历生月对应的宫位下标（寅为0）；只接受1至12。"""
+  """农历生月对应的地支下标（子为0、寅为2，正月返回2）；只接受1至12。"""
   if type(month) is not int:
     raise TypeError("农历生月须为整数，不接受 bool")
   if not 1 <= month <= 12:

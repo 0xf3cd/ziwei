@@ -1,8 +1,8 @@
-"""首批查法语料。电子版本与转录线索分列，不提供可执行安星表。"""
+"""保存规则的出处与说明；星曜和安星规则引用所属模块的定义，不另抄数值表。"""
 
 from datetime import date
 
-from ziwei.config import DayRollover, LeapMonthPolicy
+from ziwei.config import DayRollover, LeapMonthPolicy, TianmaRule
 from ziwei.knowledge.model import (
   Citation,
   Concept,
@@ -17,12 +17,21 @@ from ziwei.knowledge.model import (
   SourceStatus,
   TextLayer,
 )
+from ziwei.stars import STAR_RULES, Star, StarRule
 
-CATALOG_VERSION = "2026.10.19.4"
+CATALOG_VERSION = "2026.10.20.1"
 """语料版本，与开发包版本分别记录。"""
 
 CONCEPTS = (
-  Concept(id="concept.star.tianma", name="天马", aliases=("天馬", "Tianma"), kind=ConceptKind.星曜),
+  *(
+    Concept(
+      id=star.concept_id,
+      name=star.value,
+      aliases=(star.name.title(), *(("天馬",) if star is Star.天马 else ())),
+      kind=ConceptKind.星曜,
+    )
+    for star in Star
+  ),
   Concept(id="concept.palace.minggong", name="命宫", aliases=("命宮",), kind=ConceptKind.宫位),
   Concept(id="concept.palace.shengong", name="身宫", aliases=("身宮",), kind=ConceptKind.宫位),
   Concept(
@@ -113,23 +122,28 @@ VARIANTS = (
     concept_ids=("concept.sihua.shengnian",),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
   ),
-  RuleVariant(
-    id="variant.tianma.year-branch",
-    name="年支天马",
-    aliases=("年马", "年馬"),
-    definition="依出生年支查天马位置。",
-    scope="所列电子《全书》的安天马星诀",
-    concept_ids=("concept.star.tianma",),
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
+  *(
+    RuleVariant(
+      id=rule.id,
+      name=rule.name,
+      definition=rule.definition,
+      scope=rule.scope,
+      concept_ids=tuple(star.concept_id for star in rule.stars),
+      conditions=rule.conditions,
+      implementation=rule.implementation,
+      aliases=("年马", "年馬")
+      if rule.tianma_rule is TianmaRule.YEAR_BRANCH
+      else (("月马", "月馬") if rule.tianma_rule is TianmaRule.MONTH_BRANCH else ()),
+      tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
+    )
+    for rule in STAR_RULES
   ),
   RuleVariant(
-    id="variant.tianma.month-branch",
-    name="月支天马",
-    aliases=("月马", "月馬"),
-    definition="网页将天马列在月系诸星；生月按实际农历、不看节气，闰月归下月。",
-    scope="《精成》网页转录第11项",
-    concept_ids=("concept.star.tianma", "concept.policy.leap-month"),
-    conditions=("按该页准备工作的农历生月口径，以正月对应寅宫",),
+    id="variant.star.kuiyue-quanshu-pending",
+    name="电子全书魁钺异文（不执行）",
+    definition="固定录文的辛干虎马、丙丁猪狗与现代表有异，不校改原字或拼表。",
+    scope="仅记录维基文库1963110修订的录文，不作可执行变体",
+    concept_ids=(Star.天魁.concept_id, Star.天钺.concept_id),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
   RuleVariant(
@@ -231,7 +245,7 @@ SOURCES = (
     layer=TextLayer.原文,
     lineage_id="lineage.quanshu-wikisource",
     provenance="维基文库所见录文；底本刊本未确认，不与其他全书转录自动合并。",
-    claims="支持所列安天马、四化与安身命段的实际措辞和查法标记。",
+    claims="支持所列主星宫格、两系、辅星、天马、四化与身命段的实际措辞和查法；火铃段仅给起点。",
     limits="电子录文已核不等于底本校勘；不据此认证全书各版或一整个流派。",
     rights="古籍正文短引；电子转录来源署名保留，具体使用条件见来源页。",
     status=SourceStatus.已核,
@@ -294,6 +308,21 @@ SOURCES = (
     rights="仅必要短引，不收讲义全文。",
     status=SourceStatus.待核,
     checked_on=date(2026, 10, 19),
+  ),
+  Source(
+    id="source.zhongzhou-5shubook",
+    title="王亭之中州派《紫微斗数初级讲义》（五术书社OCR转录）",
+    authors=("王亭之（讲义署名）",),
+    edition="2026-10-20所见网页转录；页眉标印刷页10至11、33至44，纸本版次未核",
+    url="https://www.5shubook.com/p-70106.html",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.zhongzhou-wangtingzhi",
+    provenance="与既有王亭之博客转录同路；星侨网站的多条口诀与之同文，不计为另一独立传承。",
+    claims="第6至13条支持紫微例解、两系、辅弼昌曲空劫、现代表魁钺、禄羊陀与火铃方向；第18条支持年马。",
+    limits="只核网页所引片段；条号和印刷页码据网页转录页眉，未见纸本，不认证完整章节。未核原著版次、OCR忠实度或转载授权。博客原页未覆盖的章节不归给博客。",
+    rights="仅必要短引与自撰事实说明，不收讲义全文。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 10, 20),
   ),
   Source(
     id="source.yuanhai-changxian",
@@ -479,7 +508,7 @@ CITATIONS = (
     layer=TextLayer.今人说明,
     source_id="source.zhongzhou-wangtingzhi",
     locator="安命身宫诀",
-    quote="斗柄建寅起正月，数至生月顺流行，子时起数生时止，逆回安命顺安身",
+    quote="逆回安命顺安身",
     aspects=(EvidenceAspect.规则,),
     limits="口诀经作者修订；只作查法佐证，不是古籍原文。",
   ),
@@ -488,7 +517,7 @@ CITATIONS = (
     layer=TextLayer.今人说明,
     source_id="source.zhongzhou-wangtingzhi",
     locator="安十二宫天干/五虎遁诀",
-    quote="甲己之年丙遁寅，乙庚之岁戊先行，丙辛之年起庚寅，丁壬起壬戊癸甲",
+    quote="甲己之年丙遁寅",
     aspects=(EvidenceAspect.规则,),
     limits="同段以遁干化气必逢生注解；与全书起五行寅例同法。",
   ),
@@ -497,7 +526,7 @@ CITATIONS = (
     layer=TextLayer.今人说明,
     source_id="source.zhongzhou-wangtingzhi",
     locator="定五行局",
-    quote="以命宫位的干支，用六十纳音来定五行局。分别为水二局、木三局、金四局、土五局及火六局",
+    quote="用六十纳音来定五行局",
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
     limits="博客转录；局数即起限岁数的说明见同页起大限段。",
   ),
@@ -510,7 +539,248 @@ CITATIONS = (
     aspects=(EvidenceAspect.规则,),
     limits="转录页以逐对标五行；元素与全书纳音歌一致，物名不取。",
   ),
+  Citation(
+    id="citation.quanshu.ziwei-daily",
+    source_id="source.quanshu-wikisource",
+    locator="水二局至火六局五张逐日宫格；安身命例的火局初一例",
+    quote="酉宫起初一日",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="五局各30日，共150个组合。录文有149个日期标签：147个组合的落宫可以唯一核对；木三局初九在辰、寅两宫各出现一次，算一个歧义组合；木三局初五和金四局三十没有标签。后三处测试期望由中州派讲义的掌诀独立手算，不补录文原字，也不称为讲义逐日表。固定电子修订可核，纸本底本未核。",
+  ),
+  Citation(
+    id="citation.quanshu.major-series",
+    source_id="source.quanshu-wikisource",
+    locator="安南北斗诸星诀，两段分别列紫微系与天府系",
+    quote="紫微天机逆行旁",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则,),
+    limits="两系星曜的相对位置由完整段落确定。《全书》与《精成》口诀相近，中州派讲义与星侨网站的安星诀为另一组同文材料；不把网址数量当独立来源数。",
+  ),
+  Citation(
+    id="citation.quanshu.tianfu",
+    source_id="source.quanshu-wikisource",
+    locator="安天府图/图中央说明及两侧对应宫",
+    quote="天府惟寅申二宫紫府同宫",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则,),
+    limits="同图紫丑府卯、紫子府辰等对应给出寅申轴对称。",
+  ),
+  Citation(
+    id="citation.quanshu.fubi",
+    source_id="source.quanshu-wikisource",
+    locator="安左辅右弼星诀/标题、口诀及正二月例",
+    quote="左辅正月起于辰",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="左辅从辰宫起正月顺数，右弼从戌宫起正月逆数。本段未直接说明闰月；《全书》安身命段的闰月例能否也用于辅弼，仍待核实。",
+  ),
+  Citation(
+    id="citation.quanshu.wenchang-wenqu",
+    source_id="source.quanshu-wikisource",
+    locator="安文昌文曲星诀/论本生时；子时、丑时例",
+    quote="子时戌上起文昌",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="文昌从戌宫起子时逆数，文曲从辰宫起子时顺数，数到出生时辰所在宫。",
+  ),
+  Citation(
+    id="citation.quanshu.lucun-yangtuo",
+    source_id="source.quanshu-wikisource",
+    locator="安禄存星诀、安擎羊陀罗二星诀/癸年例",
+    quote="丑宫安擎羊，亥宫安陀罗",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="禄存按年干；癸禄子例明确羊顺一宫、陀逆一宫，消除前后方位歧义。",
+  ),
+  Citation(
+    id="citation.quanshu.huoling-starts",
+    source_id="source.quanshu-wikisource",
+    locator="安火铃二星诀/四组三合年支起点",
+    quote="寅午戌人丑卯方",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则,),
+    limits="本段按年支列出火星、铃星的四组起始宫位，但没有说明应顺数还是逆数到出生时辰。",
+  ),
+  Citation(
+    id="citation.quanshu.kongjie",
+    source_id="source.quanshu-wikisource",
+    locator="天空地劫诀/论本生时；子丑午时例",
+    quote="亥上起子顺安劫，逆向便是天空乡。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="本段把按时辰逆数的那颗星称为天空，中州派讲义称它为地空；它不是讲义另列的、按年支安置的天空。",
+  ),
+  Citation(
+    id="citation.quanshu.kuiyue-variant",
+    source_id="source.quanshu-wikisource",
+    locator="安天魁天钺诀/论本生年干",
+    quote="甲戊庚牛羊，乙己鼠猴乡，六辛逢虎马，壬癸免蛇藏，丙丁猪狗位，此是贵人方。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="保留虎马、免、猪狗等原字；辛、丙丁两行与现代表不同，仅登记待核，不执行。",
+  ),
+  Citation(
+    id="citation.zhongzhou.ziwei-daily",
+    source_id="source.zhongzhou-5shubook",
+    locator="第6条起紫微星诀/印刷页33至36，掌诀及三个例解",
+    quote="局数除日数",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="原文的三个例子是木三局22日紫微在亥、土五局20日在巳、火六局3日在亥。另按掌诀独立手算《全书》宫格缺失或有歧义处的测试期望，不称为讲义逐日表；具体位置见citation.quanshu.ziwei-daily的限度说明。未凭OCR转录复原图像，页码和条号取自网页页眉，未见纸本。",
+  ),
+  Citation(
+    id="citation.zhongzhou.major-series",
+    source_id="source.zhongzhou-5shubook",
+    locator="第7安天府诀、第8十四正曜诀/印刷页36至37",
+    quote="其馀丑卯互安星",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="紫微、天府两系的星曜次序、间隔宫数及天府对应关系，依据这两条说明。星侨网站的安星诀与讲义多处同文，不另算独立来源。",
+  ),
+  Citation(
+    id="citation.zhongzhou.fubi-wen-kongjie",
+    source_id="source.zhongzhou-5shubook",
+    locator="第9安辅弼昌曲空劫诀/印刷页37至38",
+    quote="逆回便是地空亡",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="三对星分别按该条标注的生月或生时安置；按月安星的闰月处理另见全章前面的说明。这里的地空与第18条按年支安的天空分别记录为不同星曜。",
+  ),
+  Citation(
+    id="citation.zhongzhou.kuiyue-lucun",
+    source_id="source.zhongzhou-5shubook",
+    locator="第11定魁钺诀、第12定禄存羊陀诀/印刷页39至40",
+    quote="丙丁猪鸡位",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="天魁、天钺表与《精成》一致，甲年例说明每对位置先列天魁、后列天钺。擎羊、陀罗与禄存相隔一宫的方向依据第12条步骤，不用《全书》的不同口诀拼补这张表。",
+  ),
+  Citation(
+    id="citation.zhongzhou.huoling-direction",
+    source_id="source.zhongzhou-5shubook",
+    locator="第13安火铃诀/印刷页41，壬辰年卯时例",
+    quote="即火星在巳，铃星在丑",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="本例把火星的寅宫、铃星的戌宫作为子时起点，分别顺数到卯时，说明两星都顺行；不把这个方向归为《全书》该段所载。",
+  ),
+  Citation(
+    id="citation.zhongzhou.tianma-year",
+    source_id="source.zhongzhou-5shubook",
+    locator="第18安天马天空诀/印刷页43至44，申子辰年例",
+    quote="三合长生恰对冲",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="这段另有说明：按年支所属三合局，在其长生宫的对宫安天马。同条的天空按年支安置，不与第9条按时辰安的地空合并。",
+  ),
+  Citation(
+    id="citation.zhongzhou.leap-split",
+    source_id="source.zhongzhou-5shubook",
+    locator="乙闰月推算法/印刷页10至11",
+    quote="出生日及时则保持不变",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="全章前面的说明按闰月前后半月分别归属。本项目用解析后的农历日判断：初一至十五按本月，十六日起按下月；子时换日仍另行配置，不代表完整采用讲义规则。",
+  ),
+  Citation(
+    id="citation.jingcheng.huoling-direction",
+    source_id="source.jingcheng-golla",
+    locator="第10项安時系諸星/安火星、鈴星歌訣末句",
+    quote="火鈴順行，生時方停",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="明确说明火星、铃星都顺行，与中州派讲义的壬辰年卯时例相互印证；原书版本未核。",
+  ),
+  Citation(
+    id="citation.jingcheng.kuiyue-modern",
+    source_id="source.jingcheng-golla",
+    locator="第12项安年干係諸星/安天魁、天鉞星歌訣",
+    quote="六辛逢馬虎",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="与中州派讲义的天魁、天钺表一致；《全书》中相近口诀的不同字句，不算作对现代表的第二路版本核验。",
+  ),
 )
+
+
+def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
+  evidence = {
+    "variant.star.ziwei-bureau-day": (
+      ("citation.quanshu.ziwei-daily", "citation.zhongzhou.ziwei-daily"),
+      "《全书》宫格的支持范围见citation.quanshu.ziwei-daily的限度说明。缺失或歧义处按中州派讲义的掌诀独立手算，不称为《全书》原文或讲义逐日表；未确认《全书》纸本底本或讲义OCR转录是否忠实。",
+    ),
+    "variant.star.ziwei-series": (
+      ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
+      "《全书》与《精成》的相近口诀归为一组，中州派讲义与星侨网站的同文口诀归为另一组，不把网站数量当独立传承数。",
+    ),
+    "variant.star.tianfu-reflection": (
+      ("citation.quanshu.tianfu", "citation.zhongzhou.major-series"),
+      "《全书》图中的紫微、天府对应位置与中州派讲义说明相合，原书底本仍未核。",
+    ),
+    "variant.star.tianfu-series": (
+      ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
+      "《全书》与中州派讲义的不同口诀给出相同的星曜相对位置；这里只安位置，不解释星曜性质或吉凶。",
+    ),
+    "variant.star.fubi-effective-month": (
+      ("citation.quanshu.fubi", "citation.zhongzhou.fubi-wen-kongjie"),
+      "辅弼的基本安法见《全书》与中州派讲义。让它们采用所选闰月归属规则是项目的选择；《全书》安身命段的闰月例能否用于其他月系星，仍待核实。",
+    ),
+    "variant.star.wenchang-wenqu-hour": (
+      ("citation.quanshu.wenchang-wenqu", "citation.zhongzhou.fubi-wen-kongjie"),
+      "《全书》的子时、丑时例与中州派讲义按时辰安星的口诀相合；本规则不把出生钟点换算为时辰。",
+    ),
+    "variant.star.kuiyue-modern": (
+      ("citation.zhongzhou.kuiyue-lucun", "citation.jingcheng.kuiyue-modern"),
+      "现代表采用中州派讲义与《精成》所列位置，两者歌诀同文，不据此认定不同字句的版本各有两路独立出处。《全书》的辛、丙丁两行另记待核。",
+    ),
+    "variant.star.lucun-stem": (
+      ("citation.quanshu.lucun-yangtuo", "citation.zhongzhou.kuiyue-lucun"),
+      "年干由解析层给定；不以出生公历年代替已选换年口径。",
+    ),
+    "variant.star.yangtuo-lucun": (
+      ("citation.quanshu.lucun-yangtuo", "citation.zhongzhou.kuiyue-lucun"),
+      "擎羊、陀罗相对禄存的方向，由《全书》癸年例和中州派讲义的步骤支持；只安本命羊陀，不计算流羊、流陀。",
+    ),
+    "variant.star.huoling-forward": (
+      (
+        "citation.quanshu.huoling-starts",
+        "citation.zhongzhou.huoling-direction",
+        "citation.jingcheng.huoling-direction",
+      ),
+      "火星、铃星在子时的四组起始宫位见《全书》、中州派讲义和《精成》。两星均顺数到出生时辰，依据讲义的壬辰年卯时例及《精成》明文；《全书》该段没有说明方向。",
+    ),
+    "variant.star.kongjie-hour": (
+      ("citation.quanshu.kongjie", "citation.zhongzhou.fubi-wen-kongjie"),
+      "此处只安按时辰确定位置的地空、地劫。《全书》与《精成》把这里的地空称为天空，中州派讲义与星侨网站称为地空；另有一颗按年支安的天空，本版不安那颗星。",
+    ),
+  }
+  selected = tuple(rule for rule in rules if rule.tianma_rule is None)
+  ids = {rule.id for rule in selected}
+  if len(ids) != len(selected) or ids != evidence.keys():
+    raise ValueError("安星规则与来源绑定须逐项一致，不得缺项、多项或重复")
+  return tuple(
+    KnowledgeEntry(
+      id=rule.id.replace("variant.", "entry.", 1),
+      statement=rule.definition,
+      concept_ids=tuple(star.concept_id for star in rule.stars),
+      variant_ids=(rule.id,),
+      citation_ids=evidence[rule.id][0],
+      premises=(rule.scope, *rule.conditions),
+      premise_status=PremiseStatus.已明确,
+      display=DisplayEligibility.暂不默认展示,
+      curation=CurationStatus.已整理,
+      limits=evidence[rule.id][1],
+      recheck=(
+        "取得《全书》电子录文的底本影像，逐格核木三局初五、初九同时见于辰寅两宫、金四局三十的记录；取得有版次信息的中州派讲义原书核掌诀和三个例解，不用手算结果校改原字。"
+        if Star.紫微 in rule.stars
+        else "取得所引电子录文底本与现代讲义具版次原书，核对应规则、查法与例解；同文转录不增独立来源数。"
+      ),
+      tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
+    )
+    for rule in selected
+  )
+
 
 ENTRIES = (
   KnowledgeEntry(
@@ -585,30 +855,38 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.tianma.year-branch",
-    statement="电子全书安天马段明确以出生年支为查法锚。",
+    statement="电子《全书》的安天马段明确按出生年支查天马。",
     concept_ids=("concept.star.tianma",),
-    variant_ids=("variant.tianma.year-branch",),
-    citation_ids=("citation.quanshu.tianma-anchor", "citation.quanshu.tianma-text"),
+    variant_ids=(
+      next(rule.id for rule in STAR_RULES if rule.tianma_rule is TianmaRule.YEAR_BRANCH),
+    ),
+    citation_ids=(
+      "citation.quanshu.tianma-anchor",
+      "citation.quanshu.tianma-text",
+      "citation.zhongzhou.tianma-year",
+    ),
     premises=("讨论所列本命安天马段，不是其他术数的驿马",),
     premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.已整理,
-    limits="此条目不含可执行安星表。",
-    recheck="取得该录文底本天马段，核年支标题及戍字，并补独立成文的查法证据。",
+    limits="按年支查天马与中州派讲义的解释相合；《全书》底本、讲义原书及OCR转录是否忠实仍待核实，规则可以执行不等于知识条目可以默认展示。",
+    recheck="取得该录文底本的天马段与有版次信息的中州派讲义原书，核年支标题、戍字及三合局长生宫的解释。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
   KnowledgeEntry(
     id="entry.tianma.month-branch",
     statement="精成网页将天马列入月系诸星；准备工作明确按农历生月，不看节气，闰月归下月。",
     concept_ids=("concept.star.tianma", "concept.policy.leap-month"),
-    variant_ids=("variant.tianma.month-branch",),
+    variant_ids=(
+      next(rule.id for rule in STAR_RULES if rule.tianma_rule is TianmaRule.MONTH_BRANCH),
+    ),
     citation_ids=("citation.jingcheng.tianma", "citation.jingcheng.birth-month"),
     premises=("采用该网页明确写出的农历生月口径，正月对应寅宫",),
     premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.已整理,
-    limits="网页口径已明确，原书版本仍未核；不替本项目选择默认口径。",
-    recheck="取得精成原书的准备工作与月系天马段，核网页转录是否忠于该版本。",
+    limits="月马只核到《精成》一路独立出处，属于单源；转载不能算作第二路出处。让月马采用所选闰月归属规则，是项目的选择。",
+    recheck="取得《精成》原书的准备工作与按月安天马段，核对网页转录；再找一路独立成文、明确按农历生月查天马的证据。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
   KnowledgeEntry(
@@ -664,7 +942,7 @@ ENTRIES = (
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.待整理,
     alternatives=("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星"),
-    limits="两读是拟应用范围，并非各有直接出处的规则；同段后文“凡有闰月具要依此为例”是待对照的范围线索，不否认已明确的身命归月。",
+    limits="这两种读法讨论的是安身命例的适用范围，并非各有直接出处的规则；同段后文“凡有闰月具要依此为例”是待对照的范围线索，不否认已明确的身命归月。",
     recheck="取得同版其他月系星的闰月例，核安身命例的归月是否被沿用；不由身命段自行外推。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
   ),
@@ -765,5 +1043,56 @@ ENTRIES = (
     limits="命宫干支本身须先由五虎遁与命宫地支定出；局数起限归大限条目。",
     recheck="核中州派讲义纸本定五行局段，确认五局名称与起限岁数说明。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/3",
+  ),
+  *_star_entries(STAR_RULES),
+  KnowledgeEntry(
+    id="entry.star.kuiyue-quanshu-pending",
+    statement="电子全书魁钺录文与现代说明在辛干次序和丙丁第二支不同；本项目只执行现代表，古籍异文保留待核。",
+    concept_ids=(Star.天魁.concept_id, Star.天钺.concept_id),
+    variant_ids=("variant.star.kuiyue-quanshu-pending",),
+    citation_ids=(
+      "citation.quanshu.kuiyue-variant",
+      "citation.zhongzhou.kuiyue-lucun",
+      "citation.jingcheng.kuiyue-modern",
+    ),
+    premises=("拟解释1963110电子录文与现代表之间的差异，不先认定谁是讹字",),
+    premise_status=PremiseStatus.待定,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.待整理,
+    alternatives=("所据刊本原有不同安法", "录文或底本存在传抄异字与次序误差"),
+    limits="保留虎马、免、猪狗原录文；不改成马虎、兔、猪鸡，也不执行混合表。",
+    recheck="取得该电子录文底本安天魁天钺诀影像及另一具版次古籍同段，逐字核辛、丙丁与魁钺先后定位。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
+  ),
+  KnowledgeEntry(
+    id="entry.star.month-policy-composition",
+    statement="本项目让左辅右弼、月马和命宫使用按所选闰月规则得到的同一个月份。选择前后半月分别归属时，用解析后的农历日判断：初一至十五按本月，十六日起按下月；不把前一个月的天数加到生日上。",
+    concept_ids=(
+      Star.左辅.concept_id,
+      Star.右弼.concept_id,
+      Star.天马.concept_id,
+      "concept.palace.minggong",
+      "concept.policy.leap-month",
+    ),
+    variant_ids=tuple(
+      rule.id
+      for rule in STAR_RULES
+      if Star.左辅 in rule.stars or rule.tianma_rule is TianmaRule.MONTH_BRANCH
+    ),
+    citation_ids=(
+      "citation.zhongzhou.leap-split",
+      "citation.jingcheng.birth-month",
+      "citation.lifedna.leap-current",
+    ),
+    premises=(
+      "采用本项目的组合方式，不代表完整采用某部著作或中州派的规则",
+      "解析层已经按所选子时换日规则处理日期",
+    ),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="中州派讲义按闰月前后半月分别归属，《精成》按闰月全月归下月，LifeDNA列出全月归本月选项，这些说法分别记录。本项目的组合不解决《全书》身命闰月例能否用于其他安星段落的争议。闰十二月若需按下月计算，包括前后半月分别归属时的十六日起，会因无对应月份而抛错。",
+    recheck="分别核讲义原书的闰月说明、《精成》原书的准备工作，以及直接采用闰月全月归本月的作者例盘；不把项目的组合方式当作原典所载规则。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
 )

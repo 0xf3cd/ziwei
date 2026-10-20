@@ -13,6 +13,7 @@ from ziwei.config import (
   DayRollover,
   LeapMonthPolicy,
   PolicyOption,
+  TianmaRule,
   YearBoundary,
 )
 
@@ -28,11 +29,13 @@ def test_all_independent_combinations() -> None:
       "leap_month_policy": config.leap_month_policy,
       "day_rollover": config.day_rollover,
       "year_boundary": config.year_boundary,
+      "tianma_rule": TianmaRule.年支天马,
     }
     assert json.loads(json.dumps(asdict(config), ensure_ascii=False)) == {
       "leap_month_policy": config.leap_month_policy.value,
       "day_rollover": config.day_rollover.value,
       "year_boundary": config.year_boundary.value,
+      "tianma_rule": TianmaRule.年支天马.value,
     }
     field = "year_boundary"
     with pytest.raises(FrozenInstanceError):
@@ -42,7 +45,11 @@ def test_all_independent_combinations() -> None:
 def test_policy_registry_matches_the_config_fields_and_type_alias() -> None:
   annotations = get_type_hints(ChartConfig)
   assert get_args(PolicyOption) == POLICY_ENUMS
-  assert tuple(annotations[field.name] for field in fields(ChartConfig)) == POLICY_ENUMS
+  assert tuple(annotations[field.name] for field in fields(ChartConfig)) == (
+    *POLICY_ENUMS,
+    TianmaRule,
+  )
+  assert not isinstance(TianmaRule.年支天马, PolicyOption)
   for enumeration in POLICY_ENUMS:
     assert all(isinstance(option, PolicyOption) for option in enumeration)
 
@@ -89,3 +96,16 @@ def test_policy_aliases() -> None:
     assert DayRollover.__members__[chinese] is DayRollover.__members__[english]
   for chinese, name in (("农历正月初一", "LUNAR_NEW_YEAR"), ("立春", "LICHUN")):
     assert YearBoundary.__members__[chinese] is YearBoundary.__members__[name]
+  for chinese, english in (("年支天马", "YEAR_BRANCH"), ("月支天马", "MONTH_BRANCH")):
+    assert TianmaRule.__members__[chinese] is TianmaRule.__members__[english]
+
+
+@pytest.mark.parametrize("invalid", [None, "年支天马", 0, True, YearBoundary.立春])
+def test_tianma_selection_does_not_accept_other_values(invalid: Any) -> None:
+  with pytest.raises(TypeError):
+    ChartConfig(
+      leap_month_policy=LeapMonthPolicy.全月归本月,
+      day_rollover=DayRollover.早晚子时同日,
+      year_boundary=YearBoundary.农历正月初一,
+      tianma_rule=invalid,
+    )
