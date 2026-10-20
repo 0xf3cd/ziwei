@@ -546,7 +546,7 @@ CITATIONS = (
     quote="酉宫起初一日",
     layer=TextLayer.原文,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="149个日期标签对应147个可唯一核对的日序；木三初五缺失、初九重见辰/寅，金四三十缺失。三处期望由W掌诀独立手算支持，不补原字。固定电子修订可核，纸本底本未核。",
+    limits="149个日期标签对应147个可唯一核对的日序、1个歧义日序（木三初九重见辰/寅）、2个缺失日序（木三初五、金四三十）。三处期望由W掌诀独立手算支持，不补原字，也不称W逐日表。固定电子修订可核，纸本底本未核。",
   ),
   Citation(
     id="citation.quanshu.major-series",
@@ -555,7 +555,7 @@ CITATIONS = (
     quote="紫微天机逆行旁",
     layer=TextLayer.原文,
     aspects=(EvidenceAspect.规则,),
-    limits="两系偏移由完整段落定；Q/J为近文一族，W/N为另一诀文族，不按网址计数。",
+    limits="两系偏移由完整段落定；Q/J为近文一族，W与星侨为另一诀文族，不按网址计数。",
   ),
   Citation(
     id="citation.quanshu.tianfu",
@@ -627,7 +627,7 @@ CITATIONS = (
     quote="局数除日数",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="木三22日亥、土五20日巳、火六3日亥为原文三例。木三初五寅、初九辰、金四三十亥由掌诀独立手算，非原文逐日表；Q另有147个唯一日序相合。图像未据OCR复原，页码和条号据网页页眉，纸本未见。",
+    limits="木三22日亥、土五20日巳、火六3日亥为原文三例；掌诀独立手算支持Q宫格缺失或歧义处的测试期望，不是W逐日表，详见关联的citation.quanshu.ziwei-daily限度。图像未据OCR复原，页码和条号据网页页眉，纸本未见。",
   ),
   Citation(
     id="citation.zhongzhou.major-series",
@@ -708,11 +708,11 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
   evidence = {
     "variant.star.ziwei-bureau-day": (
       ("citation.quanshu.ziwei-daily", "citation.zhongzhou.ziwei-daily"),
-      "Q有147个唯一日序相合、1个歧义日序（木三初九重见辰/寅）、2个缺失日序（木三初五、金四三十）。三处期望由W掌诀独立手算支持，不称Q原文或W逐日表；不认证Q纸本或W的OCR忠实度。",
+      "Q宫格的支持范围见关联引文citation.quanshu.ziwei-daily限度；缺失或歧义处由W掌诀独立手算支持，不称Q原文或W逐日表。不认证Q纸本或W的OCR忠实度。",
     ),
     "variant.star.ziwei-series": (
       ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
-      "Q/J近文与W/N诀文分别归族，不把网站数量当独立传承数量。",
+      "Q/J近文与W及星侨诀文分别归族，不把网站数量当独立传承数量。",
     ),
     "variant.star.tianfu-reflection": (
       ("citation.quanshu.tianfu", "citation.zhongzhou.major-series"),
@@ -752,7 +752,7 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
     ),
     "variant.star.kongjie-hour": (
       ("citation.quanshu.kongjie", "citation.zhongzhou.fubi-wen-kongjie"),
-      "此处只安时系地空/地劫；Q/J称天空，W/N称地空，另有年系天空不在本批。",
+      "此处只安时系地空/地劫；Q/J称天空，W与星侨称地空，另有年系天空不在本批。",
     ),
   }
   selected = tuple(rule for rule in rules if rule.tianma_rule is None)
@@ -885,7 +885,7 @@ ENTRIES = (
     premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.已整理,
-    limits="月马为单源，只核到J一路独立成文；转载链不充第二源。本项目允许显式切换，仍暂不默认展示，且与三归月口径组合是项目选择。",
+    limits="月马为单源，只核到J一路独立成文；转载链不充第二源。与三归月口径组合是项目选择。",
     recheck="取得精成原书的准备工作与月系天马段，核网页转录；再找独立成文且明确农历月锚的第二路证据。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
@@ -1071,6 +1071,7 @@ ENTRIES = (
       Star.左辅.concept_id,
       Star.右弼.concept_id,
       Star.天马.concept_id,
+      "concept.palace.minggong",
       "concept.policy.leap-month",
     ),
     variant_ids=tuple(

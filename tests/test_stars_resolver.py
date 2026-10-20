@@ -59,7 +59,12 @@ def _civil(day: date, clock: time, longitude: float | None = None) -> GregorianB
 
 
 def test_independent_1954_ninth_month_seventh_day_zi(choices: ChartConfig) -> None:
-  """2007论坛转《排命盘口诀》末段第1至13步；原著/底本未核，无地点或时区。"""
+  """2007论坛转《排命盘口诀》末段第1至13步，原著/底本未核。
+
+  http://www.zhongyi999.com.cn/thread-1744-1-1.html
+  匿名农历1954九月初七子时、火六局；正月初一换年、早晚子时同日、月马，无地点或时区。
+  本例年马与月马同在申，不能区分切换；切换由另一个不同三合组的年/月支用例验证。
+  """
   record = LunarBirthRecord(
     year=1954,
     month=9,

@@ -116,7 +116,7 @@ def render_catalog(catalog: Catalog) -> str:
   )
   parts.append("</p></section>")
   parts.append('<section id="implemented-stars"><h2>安星规则参考</h2><table>')
-  parts.append("<tr><th>规则或关系</th><th>输入</th><th>星曜</th><th>位置或定义</th></tr>")
+  parts.append("<tr><th>项目</th><th>条件或说明</th><th>星曜</th><th>值</th></tr>")
   for row in _star_rows():
     parts.append("<tr>" + "".join(f"<td>{_value(value, ids)}</td>" for value in row) + "</tr>")
   parts.append("</table></section>")

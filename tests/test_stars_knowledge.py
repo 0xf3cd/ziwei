@@ -60,6 +60,14 @@ def test_source_bindings_follow_stable_rule_identity_not_order() -> None:
   assert kuiyue.limits == "现代表按W/J；两者歌诀同族，不冒称异文各有双源。Q的辛与丙丁行另记待核。"
 
 
+def test_month_composition_is_queryable_once_by_minggong() -> None:
+  catalog = load_catalog()
+  matches = catalog.filter_entries(concept_id="concept.palace.minggong")
+  assert sum(entry.id == "entry.star.month-policy-composition" for entry in matches) == 1
+  entry = catalog.get("entry.star.month-policy-composition")
+  assert entry in matches
+
+
 @pytest.mark.parametrize("defect", ["missing", "extra", "duplicate"])
 def test_source_bindings_reject_rule_set_drift(defect: str) -> None:
   original = stars.STAR_RULES

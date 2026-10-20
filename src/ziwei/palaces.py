@@ -16,10 +16,10 @@ from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, palace_stems, year_ganzhi
 
 
 def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy) -> int:
-  """按闰月口径取命宫、身宫等按月安星所用的有效生月。
+  """按闰月口径确定有效生月归属。
 
   《全书》安身命例以闰月全月归下月；LifeDNA 列全月归本月与十六日起算次月的口径。
-  只返回有效月序（1至12）；闰十二月按归下月口径无对应命宫月（不合成「来年正月」
+  只返回有效月序（1至12）；闰十二月按归下月口径无对应有效月（不合成「来年正月」
   无出处规则）时显式失败。
   """
   if not isinstance(policy, LeapMonthPolicy):
