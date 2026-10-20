@@ -313,13 +313,13 @@ SOURCES = (
     id="source.zhongzhou-5shubook",
     title="王亭之中州派《紫微斗数初级讲义》（五术书社OCR转录）",
     authors=("王亭之（讲义署名）",),
-    edition="2026-10-20所见网页转录；讲义印刷页10至11、33至44，纸本版次未核",
+    edition="2026-10-20所见网页转录；页眉标印刷页10至11、33至44，纸本版次未核",
     url="https://www.5shubook.com/p-70106.html",
     layer=TextLayer.今人说明,
     lineage_id="lineage.zhongzhou-wangtingzhi",
     provenance="与既有王亭之博客转录同路；星侨多诀同文，不计为另一独立传承。",
     claims="第6至13条支持紫微例解、两系、辅弼昌曲空劫、现代表魁钺、禄羊陀与火铃方向；第18条支持年马。",
-    limits="只核网页可读章节；未核原著版次、OCR忠实度或转载授权。博客原页未覆盖的章节不归给博客。",
+    limits="只核网页所引片段；条号和印刷页码据网页转录页眉，未见纸本，不认证完整章节。未核原著版次、OCR忠实度或转载授权。博客原页未覆盖的章节不归给博客。",
     rights="仅必要短引与自撰事实说明，不收讲义全文。",
     status=SourceStatus.待核,
     checked_on=date(2026, 10, 20),
@@ -546,7 +546,7 @@ CITATIONS = (
     quote="酉宫起初一日",
     layer=TextLayer.原文,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="宫格给五局各30日；公式另以现代掌诀复核。固定电子修订可核，纸本底本未核。",
+    limits="149个日期标签对应147个可唯一核对的日序；木三初五缺失、初九重见辰/寅，金四三十缺失。三处期望由W掌诀独立手算支持，不补原字。固定电子修订可核，纸本底本未核。",
   ),
   Citation(
     id="citation.quanshu.major-series",
@@ -627,7 +627,7 @@ CITATIONS = (
     quote="局数除日数",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="木三22日亥、土五20日巳、火六3日亥三例支持起算；图像未据OCR复原，逐日另核Q宫格。",
+    limits="木三22日亥、土五20日巳、火六3日亥为原文三例。木三初五寅、初九辰、金四三十亥由掌诀独立手算，非原文逐日表；Q另有147个唯一日序相合。图像未据OCR复原，页码和条号据网页页眉，纸本未见。",
   ),
   Citation(
     id="citation.zhongzhou.major-series",
@@ -708,7 +708,7 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
   evidence = {
     "variant.star.ziwei-bureau-day": (
       ("citation.quanshu.ziwei-daily", "citation.zhongzhou.ziwei-daily"),
-      "150个Q宫格与W掌诀及三例相合，不认证Q纸本或W的OCR忠实度。",
+      "Q有147个唯一日序相合、1个歧义日序（木三初九重见辰/寅）、2个缺失日序（木三初五、金四三十）。三处期望由W掌诀独立手算支持，不称Q原文或W逐日表；不认证Q纸本或W的OCR忠实度。",
     ),
     "variant.star.ziwei-series": (
       ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
@@ -748,7 +748,7 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
         "citation.zhongzhou.huoling-direction",
         "citation.jingcheng.huoling-direction",
       ),
-      "四组起点由Q/W/J支持；两星同顺仅由W壬辰卯时例和J明文支持，不能归给Q。",
+      "四组起点由Q/W/J支持；两星同顺由W壬辰卯时例和J明文支持，不能归给Q。",
     ),
     "variant.star.kongjie-hour": (
       ("citation.quanshu.kongjie", "citation.zhongzhou.fubi-wen-kongjie"),
@@ -771,7 +771,11 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
       display=DisplayEligibility.暂不默认展示,
       curation=CurationStatus.已整理,
       limits=evidence[rule.id][1],
-      recheck="取得所引电子录文底本与现代讲义具版次原书，核对应规则、查法与例解；同文转录不增独立来源数。",
+      recheck=(
+        "取得Q电子录文底本影像，逐格核木三初五、初九辰/寅重见及金四三十；取得W具版次原书核掌诀和三例，不以手算校改原字。"
+        if Star.紫微 in rule.stars
+        else "取得所引电子录文底本与现代讲义具版次原书，核对应规则、查法与例解；同文转录不增独立来源数。"
+      ),
       tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
     )
     for rule in selected

@@ -28,7 +28,8 @@ from ziwei.stars import (
   ziwei_dizhi,
 )
 
-# 据Q oldid=1963110五张宫格人工按日序转录；不从实现公式或表生成。
+# Q oldid=1963110五张宫格可唯一核147日；木三初九重见辰/寅，木三初五、金四三十缺失。
+# 三处期望据W掌诀独立手算：木三初五寅、初九辰，金四三十亥；不补Q原字，不从待测实现生成。
 DAILY = (
   "丑寅寅卯卯辰辰巳巳午午未未申申酉酉戌戌亥亥子子丑丑寅寅卯卯辰",
   "辰丑寅巳寅卯午卯辰未辰巳申巳午酉午未戌未申亥申酉子酉戌丑戌亥",
@@ -308,7 +309,7 @@ def test_public_rule_rejects_invalid_values(
 
 def test_hour_table_order_does_not_determine_rule(monkeypatch: pytest.MonkeyPatch) -> None:
   expected = {item.star: item for item in place_hour_stars(Dizhi.卯)}
-  monkeypatch.setattr(stars, "HOUR_STARS", tuple(reversed(stars.HOUR_STARS)))
+  monkeypatch.setattr(stars, "_HOUR_STARS", tuple(reversed(stars._HOUR_STARS)))
   assert {item.star: item for item in place_hour_stars(Dizhi.卯)} == expected
 
 

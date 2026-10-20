@@ -145,7 +145,7 @@ def test_star_reference_generation_reads_executable_data(
   page.parent.mkdir()
   original = render_catalog(load_catalog())
   page.write_text(original, encoding="utf-8")
-  monkeypatch.setattr(stars, "LUCUN_BY_STEM", (Dizhi.子, *stars.LUCUN_BY_STEM[1:]))
+  monkeypatch.setattr(stars, "_LUCUN_BY_STEM", (Dizhi.子, *stars._LUCUN_BY_STEM[1:]))
   with pytest.raises(ValueError, match="Star reference differs"):
     check_knowledge_reference(tmp_path)
   changed = render_catalog(load_catalog())

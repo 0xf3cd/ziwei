@@ -153,32 +153,32 @@ TIANFU_OFFSETS: Final[tuple[tuple[Star, int], ...]] = (
   (Star.七杀, 6),
   (Star.破军, 10),
 )
-MONTH_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
+_MONTH_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
   (Star.左辅, Dizhi.辰, 1),
   (Star.右弼, Dizhi.戌, -1),
 )
-HOUR_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
+_HOUR_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
   (Star.文昌, Dizhi.戌, -1),
   (Star.文曲, Dizhi.辰, 1),
   (Star.地空, Dizhi.亥, -1),
   (Star.地劫, Dizhi.亥, 1),
 )
 # 十干按甲至癸；前魁后钺。Q的丙丁亥戌、辛寅午异文不混入本表。
-KUIYUE_BY_STEM: Final[tuple[tuple[Dizhi, Dizhi], ...]] = tuple(
+_KUIYUE_BY_STEM: Final[tuple[tuple[Dizhi, Dizhi], ...]] = tuple(
   (Dizhi(pair[0]), Dizhi(pair[1]))
   for pair in ("丑未", "子申", "亥酉", "亥酉", "丑未", "子申", "丑未", "午寅", "卯巳", "卯巳")
 )
-LUCUN_BY_STEM: Final[tuple[Dizhi, ...]] = tuple(Dizhi(value) for value in "寅卯巳午巳午申酉亥子")
+_LUCUN_BY_STEM: Final[tuple[Dizhi, ...]] = tuple(Dizhi(value) for value in "寅卯巳午巳午申酉亥子")
 SANHE_GROUPS: Final[tuple[tuple[Dizhi, ...], ...]] = tuple(
   tuple(Dizhi(value) for value in group) for group in ("寅午戌", "申子辰", "巳酉丑", "亥卯未")
 )
-FIRE_BELL_STARTS: Final[tuple[tuple[Dizhi, Dizhi], ...]] = (
+_FIRE_BELL_STARTS: Final[tuple[tuple[Dizhi, Dizhi], ...]] = (
   (Dizhi.丑, Dizhi.卯),
   (Dizhi.寅, Dizhi.戌),
   (Dizhi.卯, Dizhi.戌),
   (Dizhi.酉, Dizhi.戌),
 )
-TIANMA_BY_GROUP: Final[tuple[Dizhi, ...]] = (Dizhi.申, Dizhi.寅, Dizhi.亥, Dizhi.巳)
+_TIANMA_BY_GROUP: Final[tuple[Dizhi, ...]] = (Dizhi.申, Dizhi.寅, Dizhi.亥, Dizhi.巳)
 
 _ZIWEI = StarRule(
   "variant.star.ziwei-bureau-day",
@@ -212,7 +212,7 @@ _TIANFU_SERIES = StarRule(
 _FUBI = StarRule(
   "variant.star.fubi-effective-month",
   "辅弼按有效生月",
-  tuple(star for star, _, _ in MONTH_STARS),
+  tuple(star for star, _, _ in _MONTH_STARS),
   "辰起正月顺安辅、戌起正月逆安弼；本项目统一消费所选归月口径。",
   "ziwei.stars.place_month_stars",
   conditions=("月参数为已按所选口径解析的有效生月",),
@@ -362,7 +362,7 @@ def place_month_stars(month: int) -> tuple[StarPlacement, ...]:
   month_palace_index(month)
   return tuple(
     _placement(star, _move(start, direction * (month - 1)))
-    for star, start, direction in MONTH_STARS
+    for star, start, direction in _MONTH_STARS
   )
 
 
@@ -372,7 +372,7 @@ def place_hour_stars(shichen: Dizhi) -> tuple[StarPlacement, ...]:
     raise TypeError("时辰须为 Dizhi 成员")
   offset = tuple(Dizhi).index(shichen)
   return tuple(
-    _placement(star, _move(start, direction * offset)) for star, start, direction in HOUR_STARS
+    _placement(star, _move(start, direction * offset)) for star, start, direction in _HOUR_STARS
   )
 
 
@@ -381,8 +381,8 @@ def place_stem_stars(year_tiangan: Tiangan) -> tuple[StarPlacement, ...]:
   if not isinstance(year_tiangan, Tiangan):
     raise TypeError("年干须为 Tiangan 成员")
   index = tuple(Tiangan).index(year_tiangan)
-  kui, yue = KUIYUE_BY_STEM[index]
-  lucun = LUCUN_BY_STEM[index]
+  kui, yue = _KUIYUE_BY_STEM[index]
+  lucun = _LUCUN_BY_STEM[index]
   return (
     _placement(Star.天魁, kui),
     _placement(Star.天钺, yue),
@@ -404,7 +404,7 @@ def place_fire_bell(year_dizhi: Dizhi, shichen: Dizhi) -> tuple[StarPlacement, .
   if not isinstance(shichen, Dizhi):
     raise TypeError("时辰须为 Dizhi 成员")
   offset = tuple(Dizhi).index(shichen)
-  fire, bell = FIRE_BELL_STARTS[group]
+  fire, bell = _FIRE_BELL_STARTS[group]
   return (
     _placement(Star.火星, _move(fire, offset)),
     _placement(Star.铃星, _move(bell, offset)),
@@ -413,7 +413,7 @@ def place_fire_bell(year_dizhi: Dizhi, shichen: Dizhi) -> tuple[StarPlacement, .
 
 def tianma_dizhi(branch: Dizhi) -> Dizhi:
   """以选定的年支或有效月支查天马；调用方负责选择查法锚。"""
-  return TIANMA_BY_GROUP[_group_index(branch)]
+  return _TIANMA_BY_GROUP[_group_index(branch)]
 
 
 def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
