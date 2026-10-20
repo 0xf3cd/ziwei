@@ -15,6 +15,7 @@ from ziwei import stars
 from ziwei.config import POLICY_ENUMS, TianmaRule
 from ziwei.ganzhi import Dizhi
 from ziwei.knowledge import load_catalog
+from ziwei.knowledge.data import _star_entries
 from ziwei.knowledge.model import Concept, ConceptKind, RuleVariant, Source, SourceStatus
 
 
@@ -39,6 +40,37 @@ def test_every_star_and_rule_is_queryable_without_birth() -> None:
   assert len(POLICY_ENUMS) == 3
   assert all(not isinstance(TianmaRule.年支天马, enumeration) for enumeration in POLICY_ENUMS)
   assert catalog.filter_entries(default_only=True) == ()
+
+
+def test_source_bindings_follow_stable_rule_identity_not_order() -> None:
+  original = {entry.id: entry for entry in _star_entries(stars.STAR_RULES)}
+  reordered = {entry.id: entry for entry in _star_entries(tuple(reversed(stars.STAR_RULES)))}
+  assert reordered == original
+  wen = reordered["entry.star.wenchang-wenqu-hour"]
+  kuiyue = reordered["entry.star.kuiyue-modern"]
+  assert wen.citation_ids == (
+    "citation.quanshu.wenchang-wenqu",
+    "citation.zhongzhou.fubi-wen-kongjie",
+  )
+  assert wen.limits == "Q子丑时例与W时系口诀相合，不执行出生钟点解析。"
+  assert kuiyue.citation_ids == (
+    "citation.zhongzhou.kuiyue-lucun",
+    "citation.jingcheng.kuiyue-modern",
+  )
+  assert kuiyue.limits == "现代表按W/J；两者歌诀同族，不冒称异文各有双源。Q的辛与丙丁行另记待核。"
+
+
+@pytest.mark.parametrize("defect", ["missing", "extra", "duplicate"])
+def test_source_bindings_reject_rule_set_drift(defect: str) -> None:
+  original = stars.STAR_RULES
+  if defect == "missing":
+    changed = original[1:]
+  elif defect == "extra":
+    changed = (*original, replace(original[0], id="variant.star.unbound"))
+  else:
+    changed = (*original, original[0])
+  with pytest.raises(ValueError, match="来源绑定须逐项一致"):
+    _star_entries(changed)
 
 
 def test_pending_quanshu_is_not_executed_and_modern_evidence_is_not_upgraded() -> None:

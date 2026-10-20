@@ -9,11 +9,14 @@ from typing import Any
 
 import pytest
 
+from ziwei import stars
 from ziwei.bureau import WuxingJu
+from ziwei.config import TianmaRule
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.stars import (
   STAR_RULES,
   Star,
+  StarRule,
   place_fire_bell,
   place_hour_stars,
   place_major_stars,
@@ -261,6 +264,69 @@ def test_frozen_positions_and_rule_association() -> None:
     assert any(rule.id == position.rule_id and position.star in rule.stars for rule in STAR_RULES)
 
 
+def test_public_rule_copies_mutable_sequences() -> None:
+  original = STAR_RULES[0]
+  members: Any = list(original.stars)
+  conditions: Any = ["时辰已知"]
+  rule = replace(original, stars=members, conditions=conditions)
+  members.clear()
+  conditions.clear()
+  assert isinstance(rule, StarRule)
+  assert rule.stars == original.stars
+  assert rule.conditions == ("时辰已知",)
+  attribute = "name"
+  with pytest.raises(FrozenInstanceError):
+    setattr(rule, attribute, "改名")
+
+
+@pytest.mark.parametrize(
+  "changes,error",
+  [
+    ({"id": None}, TypeError),
+    ({"name": " "}, ValueError),
+    ({"definition": 1}, TypeError),
+    ({"implementation": ""}, ValueError),
+    ({"scope": False}, TypeError),
+    ({"stars": "紫微"}, TypeError),
+    ({"stars": ("紫微",)}, TypeError),
+    ({"stars": ()}, ValueError),
+    ({"stars": (Star.紫微, Star.紫微)}, ValueError),
+    ({"conditions": "时辰已知"}, TypeError),
+    ({"conditions": (None,)}, TypeError),
+    ({"conditions": (" ",)}, ValueError),
+    ({"tianma_rule": "年支天马"}, TypeError),
+    ({"tianma_rule": TianmaRule.年支天马}, ValueError),
+    ({"stars": (Star.天马,)}, ValueError),
+  ],
+)
+def test_public_rule_rejects_invalid_values(
+  changes: dict[str, Any], error: type[Exception]
+) -> None:
+  with pytest.raises(error):
+    replace(STAR_RULES[0], **changes)
+
+
+def test_hour_table_order_does_not_determine_rule(monkeypatch: pytest.MonkeyPatch) -> None:
+  expected = {item.star: item for item in place_hour_stars(Dizhi.卯)}
+  monkeypatch.setattr(stars, "HOUR_STARS", tuple(reversed(stars.HOUR_STARS)))
+  assert {item.star: item for item in place_hour_stars(Dizhi.卯)} == expected
+
+
+@pytest.mark.parametrize("defect", ["missing", "duplicate"])
+def test_rule_lookup_rejects_missing_or_ambiguous_owner(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  rule = next(rule for rule in STAR_RULES if Star.文昌 in rule.stars)
+  changed = (
+    tuple(item for item in STAR_RULES if item is not rule)
+    if defect == "missing"
+    else (*STAR_RULES, replace(rule, id="variant.star.duplicate"))
+  )
+  monkeypatch.setattr(stars, "STAR_RULES", changed)
+  with pytest.raises(ValueError, match="恰有一条规则"):
+    place_hour_stars(Dizhi.卯)
+
+
 @pytest.mark.parametrize("day", [True, 1.0, "1", None])
 def test_ziwei_rejects_wrong_day_type(day: Any) -> None:
   with pytest.raises(TypeError):
@@ -345,6 +411,9 @@ value = CalculationInput(record=record, lunar_year=2000, month=1, day=1, is_leap
 if len(place_stars(value)) != 28 or not load_catalog().find('紫微'):
   raise RuntimeError('pure placement or independent lookup did not run')
 cases = [lambda: ziwei_dizhi(WuxingJu.水二局, True),
+   lambda: StarRule('id', 'name', ['紫微'], 'definition', 'implementation'),
+   lambda: StarRule('id', 'name', [Star.紫微, Star.紫微], 'definition', 'implementation'),
+   lambda: StarRule('id', 'name', [Star.紫微], 'definition', 'implementation', conditions=[None]),
   lambda: ziwei_dizhi(WuxingJu.水二局, 31), lambda: ziwei_dizhi('水二局', 1),
   lambda: place_month_stars(13), lambda: place_month_stars(True),
   lambda: place_hour_stars('子'), lambda: place_stem_stars('甲'),
@@ -371,4 +440,4 @@ print('checked=' + str(len(cases)))
     check=False,
   )
   assert result.returncode == 0, result.stdout + result.stderr
-  assert "checked=16" in result.stdout
+  assert "checked=19" in result.stdout

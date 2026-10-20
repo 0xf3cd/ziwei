@@ -17,7 +17,7 @@ from ziwei.knowledge.model import (
   SourceStatus,
   TextLayer,
 )
-from ziwei.stars import STAR_RULES, Star
+from ziwei.stars import STAR_RULES, Star, StarRule
 
 CATALOG_VERSION = "2026.10.20.1"
 """语料版本，与开发包版本分别记录。"""
@@ -703,6 +703,81 @@ CITATIONS = (
   ),
 )
 
+
+def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
+  evidence = {
+    "variant.star.ziwei-bureau-day": (
+      ("citation.quanshu.ziwei-daily", "citation.zhongzhou.ziwei-daily"),
+      "150个Q宫格与W掌诀及三例相合，不认证Q纸本或W的OCR忠实度。",
+    ),
+    "variant.star.ziwei-series": (
+      ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
+      "Q/J近文与W/N诀文分别归族，不把网站数量当独立传承数量。",
+    ),
+    "variant.star.tianfu-reflection": (
+      ("citation.quanshu.tianfu", "citation.zhongzhou.major-series"),
+      "Q图与W对应说明相合，原书底本仍未核。",
+    ),
+    "variant.star.tianfu-series": (
+      ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
+      "Q与W不同诀文支持同一偏移关系；不附带星情解释。",
+    ),
+    "variant.star.fubi-effective-month": (
+      ("citation.quanshu.fubi", "citation.zhongzhou.fubi-wen-kongjie"),
+      "基础安法有Q与W；三个归月口径统一组合是项目选择，Q的闰月跨段适用范围仍待核。",
+    ),
+    "variant.star.wenchang-wenqu-hour": (
+      ("citation.quanshu.wenchang-wenqu", "citation.zhongzhou.fubi-wen-kongjie"),
+      "Q子丑时例与W时系口诀相合，不执行出生钟点解析。",
+    ),
+    "variant.star.kuiyue-modern": (
+      ("citation.zhongzhou.kuiyue-lucun", "citation.jingcheng.kuiyue-modern"),
+      "现代表按W/J；两者歌诀同族，不冒称异文各有双源。Q的辛与丙丁行另记待核。",
+    ),
+    "variant.star.lucun-stem": (
+      ("citation.quanshu.lucun-yangtuo", "citation.zhongzhou.kuiyue-lucun"),
+      "年干由解析层给定；不以出生公历年代替已选换年口径。",
+    ),
+    "variant.star.yangtuo-lucun": (
+      ("citation.quanshu.lucun-yangtuo", "citation.zhongzhou.kuiyue-lucun"),
+      "Q癸年例与W步骤支持方向；只安本命羊陀，不扩入流羊流陀。",
+    ),
+    "variant.star.huoling-forward": (
+      (
+        "citation.quanshu.huoling-starts",
+        "citation.zhongzhou.huoling-direction",
+        "citation.jingcheng.huoling-direction",
+      ),
+      "四组起点由Q/W/J支持；两星同顺仅由W壬辰卯时例和J明文支持，不能归给Q。",
+    ),
+    "variant.star.kongjie-hour": (
+      ("citation.quanshu.kongjie", "citation.zhongzhou.fubi-wen-kongjie"),
+      "此处只安时系地空/地劫；Q/J称天空，W/N称地空，另有年系天空不在本批。",
+    ),
+  }
+  selected = tuple(rule for rule in rules if rule.tianma_rule is None)
+  ids = {rule.id for rule in selected}
+  if len(ids) != len(selected) or ids != evidence.keys():
+    raise ValueError("安星规则与来源绑定须逐项一致，不得缺项、多项或重复")
+  return tuple(
+    KnowledgeEntry(
+      id=rule.id.replace("variant.", "entry.", 1),
+      statement=rule.definition,
+      concept_ids=tuple(star.concept_id for star in rule.stars),
+      variant_ids=(rule.id,),
+      citation_ids=evidence[rule.id][0],
+      premises=(rule.scope, *rule.conditions),
+      premise_status=PremiseStatus.已明确,
+      display=DisplayEligibility.暂不默认展示,
+      curation=CurationStatus.已整理,
+      limits=evidence[rule.id][1],
+      recheck="取得所引电子录文底本与现代讲义具版次原书，核对应规则、查法与例解；同文转录不增独立来源数。",
+      tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
+    )
+    for rule in selected
+  )
+
+
 ENTRIES = (
   KnowledgeEntry(
     id="entry.sihua.geng-wikisource",
@@ -965,56 +1040,7 @@ ENTRIES = (
     recheck="核中州派讲义纸本定五行局段，确认五局名称与起限岁数说明。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/3",
   ),
-  *(
-    KnowledgeEntry(
-      id=rule.id.replace("variant.", "entry.", 1),
-      statement=rule.definition,
-      concept_ids=tuple(star.concept_id for star in rule.stars),
-      variant_ids=(rule.id,),
-      citation_ids=citations,
-      premises=(rule.scope, *rule.conditions),
-      premise_status=PremiseStatus.已明确,
-      display=DisplayEligibility.暂不默认展示,
-      curation=CurationStatus.已整理,
-      limits=limits,
-      recheck="取得所引电子录文底本与现代讲义具版次原书，核对应规则、查法与例解；同文转录不增独立来源数。",
-      tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
-    )
-    for rule, citations, limits in zip(
-      (rule for rule in STAR_RULES if rule.tianma_rule is None),
-      (
-        ("citation.quanshu.ziwei-daily", "citation.zhongzhou.ziwei-daily"),
-        ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
-        ("citation.quanshu.tianfu", "citation.zhongzhou.major-series"),
-        ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
-        ("citation.quanshu.fubi", "citation.zhongzhou.fubi-wen-kongjie"),
-        ("citation.quanshu.wenchang-wenqu", "citation.zhongzhou.fubi-wen-kongjie"),
-        ("citation.zhongzhou.kuiyue-lucun", "citation.jingcheng.kuiyue-modern"),
-        ("citation.quanshu.lucun-yangtuo", "citation.zhongzhou.kuiyue-lucun"),
-        ("citation.quanshu.lucun-yangtuo", "citation.zhongzhou.kuiyue-lucun"),
-        (
-          "citation.quanshu.huoling-starts",
-          "citation.zhongzhou.huoling-direction",
-          "citation.jingcheng.huoling-direction",
-        ),
-        ("citation.quanshu.kongjie", "citation.zhongzhou.fubi-wen-kongjie"),
-      ),
-      (
-        "150个Q宫格与W掌诀及三例相合，不认证Q纸本或W的OCR忠实度。",
-        "Q/J近文与W/N诀文分别归族，不把网站数量当独立传承数量。",
-        "Q图与W对应说明相合，原书底本仍未核。",
-        "Q与W不同诀文支持同一偏移关系；不附带星情解释。",
-        "基础安法有Q与W；三个归月口径统一组合是项目选择，Q的闰月跨段适用范围仍待核。",
-        "Q子丑时例与W时系口诀相合，不执行出生钟点解析。",
-        "现代表按W/J；两者歌诀同族，不冒称异文各有双源。Q的辛与丙丁行另记待核。",
-        "年干由解析层给定；不以出生公历年代替已选换年口径。",
-        "Q癸年例与W步骤支持方向；只安本命羊陀，不扩入流羊流陀。",
-        "四组起点由Q/W/J支持；两星同顺仅由W壬辰卯时例和J明文支持，不能归给Q。",
-        "此处只安时系地空/地劫；Q/J称天空，W/N称地空，另有年系天空不在本批。",
-      ),
-      strict=True,
-    )
-  ),
+  *_star_entries(STAR_RULES),
   KnowledgeEntry(
     id="entry.star.kuiyue-quanshu-pending",
     statement="电子全书魁钺录文与现代说明在辛干次序和丙丁第二支不同；本项目只执行现代表，古籍异文保留待核。",

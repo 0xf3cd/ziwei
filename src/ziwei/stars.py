@@ -92,7 +92,9 @@ class Star(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class _Rule:
+class StarRule:
+  """安星规则身份；复制星曜与条件序列，隔离调用方容器。"""
+
   id: str
   name: str
   stars: tuple[Star, ...]
@@ -101,6 +103,35 @@ class _Rule:
   scope: str = "本命安星；只定位置，不解释吉凶"
   conditions: tuple[str, ...] = ()
   tianma_rule: TianmaRule | None = None
+
+  def __post_init__(self) -> None:
+    for field in ("id", "name", "definition", "implementation", "scope"):
+      value = getattr(self, field)
+      if not isinstance(value, str):
+        raise TypeError("规则文本须为字符串")
+      if not value.strip():
+        raise ValueError("规则文本不得为空")
+    if isinstance(self.stars, str) or isinstance(self.conditions, str):
+      raise TypeError("星曜与条件须为序列，不接受字符串")
+    stars = tuple(self.stars)
+    conditions = tuple(self.conditions)
+    if any(not isinstance(star, Star) for star in stars):
+      raise TypeError("规则星曜须为 Star 成员")
+    if not stars or len(set(stars)) != len(stars):
+      raise ValueError("规则星曜须非空且不重复")
+    if any(not isinstance(condition, str) for condition in conditions):
+      raise TypeError("规则条件须为字符串")
+    if any(not condition.strip() for condition in conditions):
+      raise ValueError("规则条件不得为空")
+    if self.tianma_rule is not None:
+      if not isinstance(self.tianma_rule, TianmaRule):
+        raise TypeError("天马选择须为 TianmaRule 成员")
+      if stars != (Star.天马,):
+        raise ValueError("天马选择只适用于天马规则")
+    elif Star.天马 in stars:
+      raise ValueError("天马规则须声明查法选择")
+    object.__setattr__(self, "stars", stars)
+    object.__setattr__(self, "conditions", conditions)
 
 
 # 顺逆均按地支子丑寅……亥；偏移为宫数，不含起点。
@@ -149,7 +180,7 @@ FIRE_BELL_STARTS: Final[tuple[tuple[Dizhi, Dizhi], ...]] = (
 )
 TIANMA_BY_GROUP: Final[tuple[Dizhi, ...]] = (Dizhi.申, Dizhi.寅, Dizhi.亥, Dizhi.巳)
 
-_ZIWEI = _Rule(
+_ZIWEI = StarRule(
   "variant.star.ziwei-bureau-day",
   "五局逐日紫微",
   (Star.紫微,),
@@ -157,64 +188,64 @@ _ZIWEI = _Rule(
   "ziwei.stars.ziwei_dizhi",
   conditions=("五行局已定；农历日1至30，闰月不累加日数",),
 )
-_ZIWEI_SERIES = _Rule(
+_ZIWEI_SERIES = StarRule(
   "variant.star.ziwei-series",
   "紫微系固定关系",
-  tuple(star for star, _ in ZIWEI_OFFSETS[1:]),
+  tuple(star for star, _ in ZIWEI_OFFSETS if star is not Star.紫微),
   "自紫微按紫微系固定宫数偏移安入其余五星。",
   "ziwei.stars.place_major_stars",
 )
-_TIANFU = _Rule(
+_TIANFU = StarRule(
   "variant.star.tianfu-reflection",
   "天府与紫微对应",
   (Star.天府,),
   "紫微与天府关于寅申轴对称，寅申同宫。",
   "ziwei.stars.tianfu_dizhi",
 )
-_TIANFU_SERIES = _Rule(
+_TIANFU_SERIES = StarRule(
   "variant.star.tianfu-series",
   "天府系固定关系",
-  tuple(star for star, _ in TIANFU_OFFSETS[1:]),
+  tuple(star for star, _ in TIANFU_OFFSETS if star is not Star.天府),
   "自天府按天府系固定宫数偏移安入其余七星。",
   "ziwei.stars.place_major_stars",
 )
-_FUBI = _Rule(
+_FUBI = StarRule(
   "variant.star.fubi-effective-month",
   "辅弼按有效生月",
-  (Star.左辅, Star.右弼),
+  tuple(star for star, _, _ in MONTH_STARS),
   "辰起正月顺安辅、戌起正月逆安弼；本项目统一消费所选归月口径。",
   "ziwei.stars.place_month_stars",
   conditions=("月参数为已按所选口径解析的有效生月",),
 )
-_WEN = _Rule(
+_WEN = StarRule(
   "variant.star.wenchang-wenqu-hour",
   "昌曲按生时",
   (Star.文昌, Star.文曲),
   "戌起子时逆安昌、辰起子时顺安曲。",
   "ziwei.stars.place_hour_stars",
 )
-_KUIYUE = _Rule(
+_KUIYUE = StarRule(
   "variant.star.kuiyue-modern",
   "魁钺现代表",
   (Star.天魁, Star.天钺),
   "依年干查现代表，前魁后钺；不执行电子全书异文。",
   "ziwei.stars.place_stem_stars",
 )
-_LUCUN = _Rule(
+_LUCUN = StarRule(
   "variant.star.lucun-stem",
   "禄存按年干",
   (Star.禄存,),
   "依已经确定的年干查禄存。",
   "ziwei.stars.place_stem_stars",
 )
-_YANGTUO = _Rule(
+_YANGTUO = StarRule(
   "variant.star.yangtuo-lucun",
   "羊陀随禄存",
   (Star.擎羊, Star.陀罗),
   "禄存顺一宫为擎羊、逆一宫为陀罗。",
   "ziwei.stars.place_stem_stars",
 )
-_HUOLING = _Rule(
+_HUOLING = StarRule(
   "variant.star.huoling-forward",
   "火铃年支起点顺生时",
   (Star.火星, Star.铃星),
@@ -222,14 +253,14 @@ _HUOLING = _Rule(
   "ziwei.stars.place_fire_bell",
   conditions=("年支已由换年口径确定；时辰已知",),
 )
-_KONGJIE = _Rule(
+_KONGJIE = StarRule(
   "variant.star.kongjie-hour",
   "时系地空地劫",
   (Star.地空, Star.地劫),
   "亥起子时逆安地空、顺安地劫；古籍时系旧称天空不作全局别名。",
   "ziwei.stars.place_hour_stars",
 )
-_YEAR_MA = _Rule(
+_YEAR_MA = StarRule(
   "variant.tianma.year-branch",
   "年支天马",
   (Star.天马,),
@@ -238,7 +269,7 @@ _YEAR_MA = _Rule(
   conditions=("锚为已经确定的年支",),
   tianma_rule=TianmaRule.YEAR_BRANCH,
 )
-_MONTH_MA = _Rule(
+_MONTH_MA = StarRule(
   "variant.tianma.month-branch",
   "月支天马",
   (Star.天马,),
@@ -247,7 +278,7 @@ _MONTH_MA = _Rule(
   conditions=("有效生月按本项目三个归月口径组合，非整套原书口径",),
   tianma_rule=TianmaRule.MONTH_BRANCH,
 )
-STAR_RULES: Final[tuple[_Rule, ...]] = (
+STAR_RULES: Final[tuple[StarRule, ...]] = (
   _ZIWEI,
   _ZIWEI_SERIES,
   _TIANFU,
@@ -286,6 +317,15 @@ def _move(start: Dizhi, offset: int) -> Dizhi:
   return tuple(Dizhi)[(tuple(Dizhi).index(start) + offset) % 12]
 
 
+def _placement(star: Star, dizhi: Dizhi, tianma_rule: TianmaRule | None = None) -> StarPlacement:
+  rules = tuple(
+    rule for rule in STAR_RULES if star in rule.stars and rule.tianma_rule is tianma_rule
+  )
+  if len(rules) != 1:
+    raise ValueError(f"星曜与查法须恰有一条规则：{star} / {tianma_rule}")
+  return StarPlacement(star, dizhi, rules[0].id)
+
+
 def ziwei_dizhi(ju: WuxingJu, day: int) -> Dizhi:
   """由五行局与农历日安紫微；日限1至30，拒绝bool。"""
   if not isinstance(ju, WuxingJu):
@@ -312,16 +352,8 @@ def place_major_stars(ju: WuxingJu, day: int) -> tuple[StarPlacement, ...]:
   ziwei = ziwei_dizhi(ju, day)
   tianfu = tianfu_dizhi(ziwei)
   return (
-    *(
-      StarPlacement(star, _move(ziwei, offset), (_ZIWEI if star is Star.紫微 else _ZIWEI_SERIES).id)
-      for star, offset in ZIWEI_OFFSETS
-    ),
-    *(
-      StarPlacement(
-        star, _move(tianfu, offset), (_TIANFU if star is Star.天府 else _TIANFU_SERIES).id
-      )
-      for star, offset in TIANFU_OFFSETS
-    ),
+    *(_placement(star, _move(ziwei, offset)) for star, offset in ZIWEI_OFFSETS),
+    *(_placement(star, _move(tianfu, offset)) for star, offset in TIANFU_OFFSETS),
   )
 
 
@@ -329,7 +361,7 @@ def place_month_stars(month: int) -> tuple[StarPlacement, ...]:
   """安左辅右弼；month为有效生月1至12，闰月须先调用effective_month。"""
   month_palace_index(month)
   return tuple(
-    StarPlacement(star, _move(start, direction * (month - 1)), _FUBI.id)
+    _placement(star, _move(start, direction * (month - 1)))
     for star, start, direction in MONTH_STARS
   )
 
@@ -340,8 +372,7 @@ def place_hour_stars(shichen: Dizhi) -> tuple[StarPlacement, ...]:
     raise TypeError("时辰须为 Dizhi 成员")
   offset = tuple(Dizhi).index(shichen)
   return tuple(
-    StarPlacement(star, _move(start, direction * offset), (_WEN if index < 2 else _KONGJIE).id)
-    for index, (star, start, direction) in enumerate(HOUR_STARS)
+    _placement(star, _move(start, direction * offset)) for star, start, direction in HOUR_STARS
   )
 
 
@@ -353,11 +384,11 @@ def place_stem_stars(year_tiangan: Tiangan) -> tuple[StarPlacement, ...]:
   kui, yue = KUIYUE_BY_STEM[index]
   lucun = LUCUN_BY_STEM[index]
   return (
-    StarPlacement(Star.天魁, kui, _KUIYUE.id),
-    StarPlacement(Star.天钺, yue, _KUIYUE.id),
-    StarPlacement(Star.禄存, lucun, _LUCUN.id),
-    StarPlacement(Star.擎羊, _move(lucun, 1), _YANGTUO.id),
-    StarPlacement(Star.陀罗, _move(lucun, -1), _YANGTUO.id),
+    _placement(Star.天魁, kui),
+    _placement(Star.天钺, yue),
+    _placement(Star.禄存, lucun),
+    _placement(Star.擎羊, _move(lucun, 1)),
+    _placement(Star.陀罗, _move(lucun, -1)),
   )
 
 
@@ -375,8 +406,8 @@ def place_fire_bell(year_dizhi: Dizhi, shichen: Dizhi) -> tuple[StarPlacement, .
   offset = tuple(Dizhi).index(shichen)
   fire, bell = FIRE_BELL_STARTS[group]
   return (
-    StarPlacement(Star.火星, _move(fire, offset), _HUOLING.id),
-    StarPlacement(Star.铃星, _move(bell, offset), _HUOLING.id),
+    _placement(Star.火星, _move(fire, offset)),
+    _placement(Star.铃星, _move(bell, offset)),
   )
 
 
@@ -392,6 +423,7 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
   农历日day>=16；不累加上月天数。闰十二归下月等不可用组合显式失败，不返回部分结果。
   每颗星恰一位置，天马的rule_id记录实际选择，不依赖以后配置的默认值。
   """
+  # 知识查询导入规则时不得加载出生与历法边界。
   from ziwei.birth import CalculationInput
 
   if not isinstance(value, CalculationInput):
@@ -405,16 +437,18 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
   ju = bureau_of(palace_ganzhi(minggong, value.ganzhi_year))
   year = value.year_ganzhi
   if value.config.tianma_rule is TianmaRule.YEAR_BRANCH:
-    ma_branch, ma_rule = year.dizhi, _YEAR_MA
+    ma_branch = year.dizhi
+  elif value.config.tianma_rule is TianmaRule.MONTH_BRANCH:
+    ma_branch = tuple(Dizhi)[month_palace_index(month)]
   else:
-    ma_branch, ma_rule = tuple(Dizhi)[month_palace_index(month)], _MONTH_MA
+    raise ValueError("不支持的天马查法选择")
   positions = (
     *place_major_stars(ju, value.day),
     *place_month_stars(month),
     *place_hour_stars(value.shichen),
     *place_stem_stars(year.tiangan),
     *place_fire_bell(year.dizhi, value.shichen),
-    StarPlacement(Star.天马, tianma_dizhi(ma_branch), ma_rule.id),
+    _placement(Star.天马, tianma_dizhi(ma_branch), value.config.tianma_rule),
   )
   if len(positions) != len(Star) or {item.star for item in positions} != set(Star):
     raise ValueError("安星结果须恰有28颗不同星曜")

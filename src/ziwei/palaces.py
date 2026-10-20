@@ -93,7 +93,7 @@ class Palace:
 
 
 def month_palace_index(month: int) -> int:
-  """农历生月对应的宫位下标（寅为0）；只接受1至12。"""
+  """农历生月对应的地支下标（子为0、寅为2，正月返回2）；只接受1至12。"""
   if type(month) is not int:
     raise TypeError("农历生月须为整数，不接受 bool")
   if not 1 <= month <= 12:

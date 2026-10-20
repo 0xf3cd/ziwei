@@ -122,7 +122,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.stars
-   :members: Star, StarPlacement, ziwei_dizhi, tianfu_dizhi, place_major_stars, place_month_stars, place_hour_stars, place_stem_stars, place_fire_bell, tianma_dizhi, place_stars
+   :members: Star, StarRule, StarPlacement, ziwei_dizhi, tianfu_dizhi, place_major_stars, place_month_stars, place_hour_stars, place_stem_stars, place_fire_bell, tianma_dizhi, place_stars
    :undoc-members:
    :member-order: bysource
 

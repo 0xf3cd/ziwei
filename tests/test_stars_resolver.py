@@ -7,6 +7,7 @@ from datetime import date, time, timedelta
 
 import pytest
 
+from ziwei import stars
 from ziwei.birth import (
   CalculationInput,
   Gender,
@@ -124,6 +125,32 @@ def test_default_year_horse_and_explicit_month_horse_are_recorded(choices: Chart
   assert choices.tianma_rule is TianmaRule.年支天马
   assert place_stars(value) == year  # 后续配置选择不改变已返回的值。
   assert value.gender is Gender.未知  # 安星不依赖性别。
+
+
+@pytest.mark.parametrize("defect", ["missing", "duplicate"])
+def test_internal_bad_composition_is_rejected(
+  choices: ChartConfig, monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  record = LunarBirthRecord(
+    year=2024, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.未知
+  )
+  value = resolve(record, choices)
+  original = stars.place_hour_stars(Dizhi.子)
+  broken = original[:-1] if defect == "missing" else (original[0], original[0], *original[2:])
+  monkeypatch.setattr(stars, "place_hour_stars", lambda _: broken)
+  with pytest.raises(ValueError, match="28颗"):
+    stars.place_stars(value)
+
+
+def test_unknown_internal_tianma_selection_is_not_month_horse(choices: ChartConfig) -> None:
+  record = LunarBirthRecord(
+    year=2024, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.未知
+  )
+  value = resolve(record, choices)
+  invalid = replace(choices)
+  object.__setattr__(invalid, "tianma_rule", object())
+  with pytest.raises(ValueError, match="不支持的天马查法"):
+    stars.place_stars(replace(value, config=invalid))
 
 
 @pytest.mark.parametrize("day", [15, 16])
