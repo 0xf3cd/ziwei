@@ -7,12 +7,41 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from ziwei import config, ganzhi, stars
+from ziwei import config, decades, ganzhi, sihua, stars
+from ziwei.birth import Gender
 from ziwei.bureau import WuxingJu
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.palaces import month_palace_index
+
+
+def _sihua_rows() -> list[tuple[str, ...]]:
+  return [
+    (table.id, table.variant.value, stem.value, *(star.value for star in row))
+    for table in sihua.SIHUA_TABLES
+    for stem, row in zip(Tiangan, table.rows, strict=True)
+  ]
+
+
+def _decade_rows() -> list[tuple[str, ...]]:
+  rows = []
+  for ju in WuxingJu:
+    for stem in (Tiangan.甲, Tiangan.乙):
+      for gender in (Gender.男, Gender.女):
+        periods = decades.decade_periods(Dizhi.寅, ju, stem, gender)
+        rows.append(
+          (
+            stem.value,
+            gender.value,
+            ju.value,
+            periods[0].direction.value,
+            *(f"{p.dizhi.value}：{p.start_age}-{p.end_age}" for p in periods[:2]),
+            periods[0].age_convention,
+            periods[0].rule_id,
+          )
+        )
+  return rows
 
 
 def _star_rows() -> list[tuple[str, ...]]:
@@ -120,6 +149,25 @@ def render_catalog(catalog: Catalog) -> str:
   for row in _star_rows():
     parts.append("<tr>" + "".join(f"<td>{_value(value, ids)}</td>" for value in row) + "</tr>")
   parts.append("</table></section>")
+  for identifier, title, headers, rows in (
+    (
+      "implemented-sihua",
+      "完整生年四化表",
+      ("规则", "所见转录", "生年干", "禄", "权", "科", "忌"),
+      _sihua_rows(),
+    ),
+    (
+      "implemented-decades",
+      "大限示例（命宫寅，虚岁首尾包含）",
+      ("年干", "性别", "五行局", "方向", "首限", "次限", "年龄计法", "规则"),
+      _decade_rows(),
+    ),
+  ):
+    parts.append(f'<section id="{identifier}"><h2>{title}</h2><table>')
+    parts.append("<tr>" + "".join(f"<th>{escape(header)}</th>" for header in headers) + "</tr>")
+    for row in rows:
+      parts.append("<tr>" + "".join(f"<td>{_value(cell, ids)}</td>" for cell in row) + "</tr>")
+    parts.append("</table></section>")
   return "\n".join(parts)
 
 
@@ -241,6 +289,12 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
     "implemented-stars"
   ) != [(), *_star_rows()]:
     raise ValueError("Star reference differs from definition")
+  for section, rows in (
+    ("implemented-sihua", _sihua_rows()),
+    ("implemented-decades", _decade_rows()),
+  ):
+    if parser.targets.get(section) != ["section"] or parser.rows.get(section) != [(), *rows]:
+      raise ValueError(f"Sihua/decade reference differs from definition: {section}")
   ids = {record.id for record in catalog.records}
   for document in directory.rglob("*.html"):
     links = KnowledgeTargets()

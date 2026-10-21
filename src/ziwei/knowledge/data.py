@@ -3,6 +3,7 @@
 from datetime import date
 
 from ziwei.config import DayRollover, LeapMonthPolicy, TianmaRule
+from ziwei.decades import DECADE_DEFINITION, DECADE_RULE_ID
 from ziwei.knowledge.model import (
   Citation,
   Concept,
@@ -17,9 +18,10 @@ from ziwei.knowledge.model import (
   SourceStatus,
   TextLayer,
 )
+from ziwei.sihua import SIHUA_TABLES, SihuaVariant
 from ziwei.stars import STAR_RULES, Star, StarRule
 
-CATALOG_VERSION = "2026.10.20.1"
+CATALOG_VERSION = "2026.10.20.2"
 """语料版本，与开发包版本分别记录。"""
 
 CONCEPTS = (
@@ -58,6 +60,12 @@ CONCEPTS = (
   Concept(id="concept.sihua.shengnian", name="生年四化", aliases=("四化",), kind=ConceptKind.四化),
   Concept(id="concept.wuxingju", name="五行局", kind=ConceptKind.五行局),
   Concept(
+    id="concept.decades",
+    name="大限",
+    kind=ConceptKind.运限,
+    related_ids=("concept.wuxingju", "concept.palace.minggong"),
+  ),
+  Concept(
     id="concept.policy.leap-month",
     name="闰月归属",
     aliases=("闰月", "閏月"),
@@ -78,6 +86,32 @@ CONCEPTS = (
 )
 
 VARIANTS = (
+  *(
+    RuleVariant(
+      id=table.id,
+      name=table.variant.value,
+      definition="按生年干查完整十干表，依次取禄、权、科、忌；不连带采用同书其他规则。",
+      scope="本命生年四化，不含宫干、飞星或运限四化",
+      concept_ids=("concept.sihua.shengnian",),
+      school_ids=("concept.school.zhongzhou",)
+      if table.variant is SihuaVariant.WANGTINGZHI_LECTURE
+      else (),
+      implementation="ziwei.sihua.sihua_for_stem",
+      conditions=("显式选择完整表", "只认证所见转录，不认证整个门派或古籍各刊本"),
+      tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
+    )
+    for table in SIHUA_TABLES
+  ),
+  RuleVariant(
+    id=DECADE_RULE_ID,
+    name="命宫起限、虚岁首尾包含",
+    definition=DECADE_DEFINITION,
+    scope="十二限的宫位与岁数标签，不含日期换算、小限或童限",
+    concept_ids=("concept.decades",),
+    conditions=("性别已知", "年干阴阳来自所选换年口径"),
+    implementation="ziwei.decades.decade_periods",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
+  ),
   RuleVariant(
     id="variant.sihua.geng-wikisource",
     name="电子《全书》庚干",
@@ -238,6 +272,63 @@ VARIANTS = (
 
 SOURCES = (
   Source(
+    id="source.zhongyi999-paimingpan",
+    title="排命盘口诀（2007论坛转录）",
+    edition="2026-10-20所见thread-1744，页内2007发帖；原著作者与底本未核",
+    url="http://www.zhongyi999.com.cn/thread-1744-1-1.html",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.zhongyi999-paimingpan",
+    provenance="GBK论坛原页，HTTP取得；不以同名古籍或九千对照的全书列替代。",
+    claims="完整十干表、生年干查法、1954甲午原例四化，以及命宫起大限、顺逆、虚岁含首尾例。",
+    limits="整套组合只核到此转录；具体规则另核独立说明，不声称取得第二份完整同表或纸本。",
+    rights="只收必要短引与自撰规则说明，不转载全文。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 10, 20),
+  ),
+  Source(
+    id="source.lingdonglai-sihua",
+    title="令东来：生年四化说明（玄门转载）",
+    authors=("令东来（正文署名）",),
+    edition="2026-10-20所见archives/627网页；原书版次未核",
+    url="https://www.xuanmen.com.cn/archives/627.html",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.lingdonglai-sihua",
+    provenance="已读原HTML中的具名说明；不把转载网站视为另一作者。",
+    claims="区分生年、大限、流年查法，明确自用戊右弼科、壬左辅科，并比较王亭之三干异文。",
+    limits="作者庚干另用两颗忌，不用它认证普通四星整表；口授误读的历史归因未核。",
+    rights="必要短引，其他仅记适用范围，不收解释吉凶的全文。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 10, 20),
+  ),
+  Source(
+    id="source.cangxuan-geng",
+    title="庚干四化論（一）門派的分歧（藏玄易社）",
+    edition="页内2013-08-05；2026-10-20所见原HTML",
+    url="https://98ing.com/ziwei05show.php?id=144",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.cangxuan-geng",
+    provenance="作者独立说明三种庚干取值及自己的偏用，不只转载四列口诀。",
+    claims="逐星给太阳禄、武曲权、天同科、太阴忌，以及中州的天府科、天同忌。",
+    limits="只支持庚行；所称全书、全集或门派不等于已校各刊本。",
+    rights="仅必要短引，不收各派吉凶论证。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 10, 20),
+  ),
+  Source(
+    id="source.doushuxuantan-geng",
+    title="紫微斗數命例 六【庚干四化】（斗数玄谈）",
+    edition="页内2014-12-10；2026-10-20所见原图与母页",
+    url="https://doushuxuantan.com/庚干四化/",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.doushuxuantan-geng",
+    provenance="原图独立写1970庚戌，不从四化反推年干；非王亭之本人作品。",
+    claims="原图的庚年输入与太阳禄、武曲权、天府科、天同忌，可检验讲义表庚行。",
+    limits="没有完整生日，不重排全星位，不以一盘证明作者采用其余九干或整套讲义口径。",
+    rights="只写图内必要事实，不收人物叙事或转载图片。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 10, 20),
+  ),
+  Source(
     id="source.quanshu-wikisource",
     title="紫微斗數全書/卷二（维基文库电子录文）",
     edition="oldid=1963110；修订时间2020-09-04T14:06:27Z；正文为简体录文",
@@ -274,7 +365,7 @@ SOURCES = (
     layer=TextLayer.今人说明,
     lineage_id="lineage.jiuqian-42",
     provenance="转录作者列各版本对照；未核原论坛或原著纸本。",
-    claims="支持所见庚干不同列的原字与该转录作者所用的列名。",
+    claims="支持所见十干四列对照及该转录作者的列名；王亭之列与讲义完整表逐干核对。",
     limits="归派标签是作者说法；不能替代对被引古籍版本的核验。",
     rights="仅两处必要短引；不转载全文或完整四化表。",
     status=SourceStatus.待核,
@@ -318,7 +409,7 @@ SOURCES = (
     layer=TextLayer.今人说明,
     lineage_id="lineage.zhongzhou-wangtingzhi",
     provenance="与既有王亭之博客转录同路；星侨网站的多条口诀与之同文，不计为另一独立传承。",
-    claims="第6至13条支持紫微例解、两系、辅弼昌曲空劫、现代表魁钺、禄羊陀与火铃方向；第18条支持年马。",
+    claims="第6至13条中除第10条外，支持紫微例解、两系、辅弼昌曲空劫、现代表魁钺、禄羊陀与火铃方向；第18条支持年马。第10条安四化星诀提供完整十干表，年干四化和本命安星语境另见前言。",
     limits="只核网页所引片段；条号和印刷页码据网页转录页眉，未见纸本，不认证完整章节。未核原著版次、OCR忠实度或转载授权。博客原页未覆盖的章节不归给博客。",
     rights="仅必要短引与自撰事实说明，不收讲义全文。",
     status=SourceStatus.待核,
@@ -341,6 +432,87 @@ SOURCES = (
 )
 
 CITATIONS = (
+  Citation(
+    id="citation.zhongyi999.sihua",
+    source_id="source.zhongyi999-paimingpan",
+    locator="安干系诸星诀/四、安化禄化权化科化忌诀，两套完整口诀及散文",
+    quote="关于庚干的化科化忌，争议较多，作者采用的是天同化科、太阴化忌。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="按出生年干，顺序禄权科忌。引文只截庚的说明，壬左辅科见紧接下句，戊右弼科见同节完整口诀；口诀里的左、辅都是左辅的简称，不校改引文。",
+  ),
+  Citation(
+    id="citation.zhongzhou.sihua-table",
+    source_id="source.zhongzhou-5shubook",
+    locator="网页提取稿第39段/印刷页标39/10安四化星诀；前言年干四化及本命安星语境",
+    quote="戊贪阴阳机",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="提取稿完整十干表与九千王亭之列逐干一致：庚为天府科、天同忌，壬为天府科、武曲忌。未核PDF图像，不由盘例反推戊科。",
+  ),
+  Citation(
+    id="citation.jiuqian.full-wangtingzhi",
+    source_id="source.jiuqian-dushu",
+    locator="飞星漫谈四十二/四列十干表的中州派（王亭之）列",
+    quote="贪阴阳机",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="只作完整表的独立对照，列名为作者归类；不是各版本原著认证，查法另据讲义语境。",
+  ),
+  Citation(
+    id="citation.lingdonglai.wu-ren",
+    source_id="source.lingdonglai-sihua",
+    locator="比较王亭之戊庚壬与作者自身选择的段落",
+    quote="仍沿用《紫微斗数全书》中“戊干右弼化科”、“壬干左辅化科”的传统。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="只支持具体戊壬异文；不据作者所称全书认证所有刊本，不借用其庚五化说补整表。",
+  ),
+  Citation(
+    id="citation.lingdonglai.birth-stem",
+    source_id="source.lingdonglai-sihua",
+    locator="2016丙申例，接流年四化之后说明同年出生的生年四化",
+    quote="如果出生在这一年，那么命盘上的生年四化（又称原局四化）也是",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="例句后列天同禄、天机权、文昌科、廉贞忌，支持生年干锚，不把流年或宫干当作本命年干。",
+  ),
+  Citation(
+    id="citation.cangxuan.geng",
+    source_id="source.cangxuan-geng",
+    locator="全书一项逐星展开及作者偏用说明",
+    quote="太陽化祿、武曲化權、天同化科、太陰化忌。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="作者独立解释并偏用这一庚行，只支持该行，不补出其余九行。",
+  ),
+  Citation(
+    id="citation.doushuxuantan.geng-example",
+    source_id="source.doushuxuantan-geng",
+    locator="正文命例如图所示/内标1970庚戌的本命盘图",
+    quote="且看命例如圖所示",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="图内年干独立给定；太阳禄亥、武曲权戌、天府科寅、天同忌酉。仅作庚行跨来源盘例，不虚构生日或认证全表。",
+  ),
+  Citation(
+    id="citation.zhongyi999.decades",
+    source_id="source.zhongyi999-paimingpan",
+    locator="起大限诀/命宫起限口诀、木三局顺逆例及末段1954原例",
+    quote="宜注意之点：此处之岁数为虚岁，而非实岁。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="命宫寅木三局3至12，顺行卯13至22、逆行丑13至22；1954原例戌火六局6至15、亥16至25。只据区间标签，不采用其公历换算。",
+  ),
+  Citation(
+    id="citation.zhongzhou.decades-figure4",
+    source_id="source.zhongzhou-wangtingzhi",
+    locator="讲义转录图四/安大限；金四局阳男命宫丑的大限岁数",
+    quote="安大限",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="短引只是图题，岁数证据在图中：丑4至13、寅14至23，支持局数起限、命宫起及含首尾；酉宫未见岁数，不补写。此图不单独定义换岁日。",
+  ),
   Citation(
     id="citation.quanshu.geng",
     layer=TextLayer.原文,
@@ -783,6 +955,59 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
 
 
 ENTRIES = (
+  KnowledgeEntry(
+    id="entry.sihua.zhongyi999",
+    statement="采用《排命盘口诀》所见转录的完整十干表。每行按生年干取禄权科忌，具体规则另核独立说明；不把不同作者的格子拼为一表。",
+    concept_ids=("concept.sihua.shengnian",),
+    variant_ids=(SihuaVariant.ZHONGYI999.rule_id,),
+    citation_ids=(
+      "citation.zhongyi999.sihua",
+      "citation.zhongzhou.sihua-table",
+      "citation.cangxuan.geng",
+      "citation.lingdonglai.wu-ren",
+      "citation.lingdonglai.birth-stem",
+    ),
+    premises=("只选择此完整四化表，不连带选择同书其他规则",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="整套组合只见此转录；甲乙丙丁己辛癸七干以讲义和九千对照，戊壬科另据令东来，庚科忌另据藏玄易社独立说明。1954甲午原例只验证共有甲行，不区分庚壬异文；不认证所有全书刊本。",
+    recheck="取得论坛转录所据原著的书名、版次和安四化页影像，逐干核对；取得庚或壬干独立原盘以进一步区分异文。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
+  ),
+  KnowledgeEntry(
+    id="entry.sihua.wangtingzhi-lecture",
+    statement="采用王亭之讲义提取稿的完整十干四化表，并与九千的王亭之列逐干对照；不以中州派名称代替具体转录版本。",
+    concept_ids=("concept.sihua.shengnian",),
+    variant_ids=(SihuaVariant.WANGTINGZHI_LECTURE.rule_id,),
+    citation_ids=(
+      "citation.zhongzhou.sihua-table",
+      "citation.jiuqian.full-wangtingzhi",
+      "citation.lingdonglai.birth-stem",
+      "citation.doushuxuantan.geng-example",
+    ),
+    premises=("讲义网页提取层，纸本与PDF图像未校",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="戊太阳科有直接文字，不由盘例反推。斗数玄谈1970庚戌图仅检验此表庚行，非王亭之原图，也不证明图作者采用其余九干。选择此表不连带采用讲义的其他时间、闰月或年界规则。",
+    recheck="取得具版次的王亭之讲义安四化星诀页影像，逐字校网页提取稿；另取戊或壬年、年干独立给定的原盘以区分余下异文。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
+  ),
+  KnowledgeEntry(
+    id="entry.decades.xusui-inclusive",
+    statement=DECADE_DEFINITION,
+    concept_ids=("concept.decades",),
+    variant_ids=(DECADE_RULE_ID,),
+    citation_ids=("citation.zhongyi999.decades", "citation.zhongzhou.decades-figure4"),
+    premises=("命宫、五行局与年干已经按所选口径确定，性别已知",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="只输出十二限的虚岁标签，首尾包含；首限之前不补小限或童限，不换算当前虚岁或起止日期，也不指定换岁日。转录原著版次未核。",
+    recheck="取得两份转录所据纸本的大限起算及年龄说明页；若需日期换算，先取得明确换岁日的具名口径，不从岁数标签推定。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
+  ),
   KnowledgeEntry(
     id="entry.sihua.geng-wikisource",
     statement="所见电子全书庚干句与九千转引全书列不同，按具体文本分开登记。",

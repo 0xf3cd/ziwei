@@ -70,7 +70,8 @@ True
 `KnowledgeEntry.statement`保存整理者的陈述；逐字原文单独保存在`Citation.quote`。
 `RuleVariant.option`只关联闰月归属、子时换日和换年界线的枚举选项；`implementation`可保存已实现规则的公开对象路径，
 查询时不动态导入或运行。28星的概念标识、规则标识、公开实现链接从`stars`定义引用，
-没有实现的魁钺古籍异文与四化材料仍保留`implementation=None`。
+完整四化表与大限也链接所属模块的执行入口；既有单行四化异文和魁钺古籍异文仍保留`implementation=None`，
+不因某行与执行表相同就改变原记录的含义。完整表、盘例与转录限度见[四化与大限](sihua-decades.md)。
 口径概念的`options`从配置定义取值；目录拒绝把变体链接到该概念之外的配置选项。
 [口径选项及六十甲子参考](knowledge-reference.md#implemented-policies)直接读取现有定义。
 

@@ -22,12 +22,14 @@ class ConceptKind(StrEnum):
   PALACE = "宫位"
   SIHUA = "四化"
   WUXINGJU = "五行局"
+  LUCK_PERIOD = "运限"
   POLICY = "口径"
   SCHOOL = "流派"
   星曜 = STAR
   宫位 = PALACE
   四化 = SIHUA
   五行局 = WUXINGJU
+  运限 = LUCK_PERIOD
   口径 = POLICY
   流派 = SCHOOL
 

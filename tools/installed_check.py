@@ -8,11 +8,15 @@ from pathlib import Path
 
 import ziwei
 from ziwei.birth import CalculationInput, Gender, GregorianBirthRecord, TimePrecision
+from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
-from ziwei.ganzhi import Dizhi
+from ziwei.decades import Direction, decade_periods, place_decades
+from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import PremiseStatus
+from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
+from ziwei.stars import Star
 from ziwei.timezone import AmbiguousTimeError, IanaTimezone, NonexistentTimeError
 
 
@@ -74,6 +78,24 @@ def check_inputs() -> None:
     lichun_jd=None,
   )
   value.require_complete()
+  check_sihua_decades()
+
+
+def check_sihua_decades() -> None:
+  """在原生历法初始化前消费四化、大限与其知识关联。"""
+  catalog = load_catalog()
+  for variant, expected in (
+    (SihuaVariant.排命盘口诀转录, (Star.天同, Star.太阴)),
+    (SihuaVariant.王亭之讲义转录, (Star.天府, Star.天同)),
+  ):
+    result = sihua_for_stem(Tiangan.庚, variant)
+    if (result.ke, result.ji) != expected or not catalog.references(result.rule_id):
+      raise ValueError("Installed sihua variant or source association differs")
+  periods = decade_periods(Dizhi.亥, WuxingJu.水二局, Tiangan.甲, Gender.男)
+  if len(periods) != 12 or (periods[1].dizhi, periods[0].end_age) != (Dizhi.子, 11):
+    raise ValueError("Installed decade direction or age labels differ")
+  if periods[0].age_convention != "虚岁" or not catalog.references(periods[0].rule_id):
+    raise ValueError("Installed decade convention or source association differs")
 
 
 def check_calendar() -> None:
@@ -109,6 +131,16 @@ def check_calendar() -> None:
     raise ValueError("Installed palace rule produced a wrong minggong")
   if bureau_of(palace_ganzhi(Dizhi.子, value.ganzhi_year)) is not WuxingJu.JIN_SI:
     raise ValueError("Installed bureau rule produced a wrong wuxingju")
+  if shengnian_sihua(value, SihuaVariant.排命盘口诀转录).ke is not Star.右弼:
+    raise ValueError("Installed sihua did not use the resolved birth year")
+  periods = place_decades(value)
+  if (periods[0].dizhi, periods[0].start_age, periods[1].dizhi, periods[0].direction) != (
+    Dizhi.子,
+    4,
+    Dizhi.丑,
+    Direction.顺行,
+  ):
+    raise ValueError("Installed decade composition differs")
 
 
 def main(expected_version: str) -> None:

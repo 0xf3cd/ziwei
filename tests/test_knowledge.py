@@ -95,7 +95,7 @@ def catalog() -> Catalog:
 
 def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   catalog = load_catalog()
-  assert catalog.version == "2026.10.20.1"
+  assert catalog.version == "2026.10.20.2"
   assert {item.kind for item in catalog.concepts} == set(ConceptKind)
   assert len({item.id for item in catalog.records}) == len(catalog.records)
   assert catalog.find("天馬") == catalog.find("tianma")
@@ -126,8 +126,9 @@ def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   assert citations["citation.quanshu.geng"].quote == "庚日武阴同为首"
   assert citations["citation.quanshu.ren"].quote == "壬梁紫府武宿是"
   assert citations["citation.quanshu.tianma-text"].quote == "寅午戍人马居申"
-  assert "1963110" in catalog.sources[0].edition
-  assert "oldid=1963110" in catalog.sources[0].url
+  quanshu = catalog.get("source.quanshu-wikisource")
+  assert isinstance(quanshu, Source) and "1963110" in quanshu.edition
+  assert "oldid=1963110" in quanshu.url
   assert {
     item.option for item in catalog.variants if isinstance(item.option, LeapMonthPolicy)
   } == set(LeapMonthPolicy)
@@ -548,7 +549,7 @@ def test_builtin_filters_intersect_individually_nonempty_sets() -> None:
   assert [
     variant.id
     for variant in catalog.list_variants(concept_id="concept.sihua.shengnian", school_id=school)
-  ] == ["variant.sihua.geng-jiuqian-zhongzhou"]
+  ] == ["variant.sihua.wangtingzhi-lecture", "variant.sihua.geng-jiuqian-zhongzhou"]
   assert catalog.filter_entries(concept_id="concept.star.tianma")
   assert catalog.filter_entries(source_id="source.lifedna-flying")
   assert [
