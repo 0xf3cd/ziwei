@@ -65,6 +65,13 @@ class TimezoneData:
         raise ValueError("时区数据版本不得为空")
 
 
+def current_timezone_data() -> TimezoneData:
+  """读取当前tzdata的数据包与IANA发布版本；不加载时区文件或原生历法库。"""
+  import tzdata  # type: ignore[import-untyped]
+
+  return TimezoneData(tzdata.__version__, tzdata.IANA_VERSION)
+
+
 def _check_wall(wall: datetime) -> None:
   if type(wall) is not datetime:
     raise TypeError("本地钟面须为 datetime")
@@ -120,8 +127,6 @@ class AmbiguousTimeError(ValueError):
 
 
 def _load_zone(key: str) -> tuple[ZoneInfo, TimezoneData]:
-  import tzdata  # type: ignore[import-untyped]
-
   try:
     resource = files("tzdata.zoneinfo").joinpath(*key.split("/"))
     if not resource.is_file():
@@ -130,7 +135,7 @@ def _load_zone(key: str) -> tuple[ZoneInfo, TimezoneData]:
       zone = ZoneInfo.from_file(stream, key=key)
   except (FileNotFoundError, IsADirectoryError, ValueError) as error:
     raise ZoneInfoNotFoundError(key) from error
-  return zone, TimezoneData(tzdata.__version__, tzdata.IANA_VERSION)
+  return zone, current_timezone_data()
 
 
 def resolve_civil_time(wall: datetime, zone: IanaTimezone | FixedOffset) -> ResolvedTime:

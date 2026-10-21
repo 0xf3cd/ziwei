@@ -40,7 +40,7 @@
 
 ```{eval-rst}
 .. automodule:: ziwei.timezone
-   :members: IanaTimezone, FixedOffset, TimezoneData, ResolvedTime, NonexistentTimeError, AmbiguousTimeError, resolve_civil_time
+   :members: IanaTimezone, FixedOffset, TimezoneData, ResolvedTime, NonexistentTimeError, AmbiguousTimeError, resolve_civil_time, current_timezone_data
    :undoc-members:
    :member-order: bysource
 ```

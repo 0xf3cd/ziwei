@@ -155,7 +155,7 @@ BirthRecord = GregorianBirthRecord | LunarBirthRecord
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CalculationInput:
-  """解析层的输出形状；本批由 resolver 从原始记录生成。
+  """解析层的输出形状，由resolver.resolve从原始记录生成。
 
   ganzhi_year 是解析层按所选换年口径得到的纪年编号，不一定等于 lunar_year。
   原始记录和实际口径随值保存；阴阳及年干支由该编号派生，不维护可互相矛盾的副本。
@@ -165,7 +165,7 @@ class CalculationInput:
   ut1_jd 与 lichun_jd 记录立春换年所比较的出生瞬间与立春时刻（UT1 日数），
   纯民用正月初一路径为 None。
   resolved_time保留解析层实际取得的钟面、UTC、偏移和时区数据版本；没有取得瞬间时为None。
-  为兼容直接构造，本类型只核其类型；完整盘另核它的存在性及与原始记录的关系。
+  为兼容直接构造，对resolved_time只检查它是ResolvedTime或None；完整盘另核其存在性及与原始记录的关系。
   """
 
   record: BirthRecord

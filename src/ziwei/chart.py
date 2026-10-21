@@ -5,6 +5,7 @@ from datetime import datetime, time
 from importlib.metadata import version
 from math import isfinite
 from typing import cast
+from zoneinfo import ZoneInfoNotFoundError
 
 from ziwei.birth import BirthRecord, CalculationInput, LunarBirthRecord
 from ziwei.bureau import WuxingJu, bureau_of
@@ -24,10 +25,11 @@ from ziwei.palaces import (
 from ziwei.resolver import DEFAULT_LUNAR_ALGORITHM, resolve
 from ziwei.sihua import SihuaResult, SihuaVariant, shengnian_sihua
 from ziwei.stars import StarPlacement, place_stars
+from ziwei.timezone import current_timezone_data
 
 
 def _check_calculation(value: CalculationInput) -> None:
-  """核完整盘的结构政策；不读取历法或时区数据，不认证其已存原值。"""
+  """核完整盘计算输入的一致性；不读取历法或时区数据，不认证其已存原值。"""
   value.require_complete()
   minimum, maximum = supported_lunar_year_range(value.lunar_algorithm)
   if not minimum <= value.lunar_year <= maximum:
@@ -173,22 +175,30 @@ def recalculate(chart: ZiweiChart) -> ZiweiChart:
   if not isinstance(chart, ZiweiChart):
     raise TypeError("重算须使用 ZiweiChart")
   value = chart.calculation
-  if value.lunar_algorithm_version != celestial_version():
+  try:
+    installed_calendar_version = celestial_version()
+  except ImportError as error:
+    raise ValueError("重算所需的 celestial 版本不可用") from error
+  if value.lunar_algorithm_version != installed_calendar_version:
     raise ValueError("重算所需的 celestial 版本不可用")
   if value.resolved_time is not None and value.resolved_time.data is not None:
-    import tzdata  # type: ignore[import-untyped]
-
-    data = value.resolved_time.data
-    if (data.package_version, data.iana_version) != (tzdata.__version__, tzdata.IANA_VERSION):
+    try:
+      installed_timezone_data = current_timezone_data()
+    except ImportError as error:
+      raise ValueError("重算所需的 tzdata 版本不可用") from error
+    if value.resolved_time.data != installed_timezone_data:
       raise ValueError("重算所需的 tzdata 版本不可用")
   # 先核当前纯规则仍能表示原结果，再执行历法与时区求值。
   replace(chart)
-  result = create_chart(
-    value.record,
-    value.config,
-    sihua_variant=chart.sihua.variant,
-    lunar_algorithm=value.lunar_algorithm,
-  )
+  try:
+    result = create_chart(
+      value.record,
+      value.config,
+      sihua_variant=chart.sihua.variant,
+      lunar_algorithm=value.lunar_algorithm,
+    )
+  except ZoneInfoNotFoundError as error:
+    raise ValueError("重算所需的 IANA 时区不可用") from error
   for field in fields(chart):
     if field.name != "software_version" and getattr(result, field.name) != getattr(
       chart, field.name

@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from dataclasses import FrozenInstanceError, replace
 from datetime import date, time, timedelta
 from itertools import product
-from typing import Any
+from typing import Any, Never
 
 import pytest
 
@@ -37,7 +37,7 @@ def test_external_1954_full_chart(
   """http://www.zhongyi999.com.cn/thread-1744-1-1.html，举例1-13步；底本未核。
 
   1954九月初七子时男命，甲午、火六局、命身同戌。大限按同页局数及阳男顺行定义推得，
-  不是原图逐限转录。年马/月马此例相同，不用于证明切换。未包含后续杂曜。
+  不是原图逐限转录。年马/月马此例相同，不用于证明切换。只验证已实现的28星，其他星曜不纳入。
   """
   assert lunar_chart.bureau is WuxingJu.火六局
   assert lunar_chart.shengong is Dizhi.戌
@@ -417,3 +417,49 @@ def test_other_year_sihua_is_rejected(lunar_chart: ZiweiChart, civil_chart: Ziwe
 def test_recalculate_requires_chart() -> None:
   with pytest.raises(TypeError):
     recalculate(None)  # type: ignore[arg-type]
+
+
+def test_solar_late_zi_rollover_at_solar_date(chart_choices: ChartConfig) -> None:
+  """合成例：民用3月10日00:20、105度对应真太阳晚子时；不是独立原盘。"""
+  record = GregorianBirthRecord(
+    birth_date=date(2024, 3, 10),
+    birth_time=time(0, 20),
+    time_precision=TimePrecision.分,
+    timezone=FixedOffset(timedelta(hours=8)),
+    gender=Gender.男,
+    longitude_deg=105.0,
+  )
+  same = create_chart(record, chart_choices, sihua_variant=SihuaVariant.排命盘口诀转录)
+  rolled = create_chart(
+    record,
+    replace(chart_choices, day_rollover=DayRollover.晚子时归次日),
+    sihua_variant=SihuaVariant.排命盘口诀转录,
+  )
+  assert same.calculation.apparent_solar and rolled.calculation.apparent_solar
+  assert same.calculation.shichen is rolled.calculation.shichen is Dizhi.子
+  assert (same.calculation.month, same.calculation.day, same.calculation.day_rolled) == (
+    1,
+    29,
+    False,
+  )
+  assert (rolled.calculation.month, rolled.calculation.day, rolled.calculation.day_rolled) == (
+    2,
+    1,
+    True,
+  )
+  from ziwei.serialization import dumps_chart, loads_chart
+
+  restored = loads_chart(dumps_chart(rolled))
+  assert restored == rolled and recalculate(restored) == rolled
+
+
+@pytest.mark.parametrize("boundary", ["celestial_version", "current_timezone_data"])
+def test_recalculation_reports_missing_runtime_dependency(
+  civil_chart: ZiweiChart, monkeypatch: pytest.MonkeyPatch, boundary: str
+) -> None:
+  def unavailable() -> Never:
+    raise ImportError("dependency unavailable")
+
+  monkeypatch.setattr(module, boundary, unavailable)
+  with pytest.raises(ValueError, match="版本不可用"):
+    recalculate(civil_chart)

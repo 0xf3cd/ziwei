@@ -50,7 +50,7 @@ def render_text(chart: ZiweiChart) -> str:
   width = max(_width(line) for lines in cells.values() for line in lines)
   border = "+" + "+".join("-" * (width + 2) for _ in range(4)) + "+"
   output = [
-    chart.bureau.value + " · 大限" + chart.decades[0].direction.value + " · 首尾包含",
+    chart.bureau.value + " · 大限" + chart.decades[0].direction.value + " · 虚岁首尾包含",
     border,
   ]
   for row in layout:

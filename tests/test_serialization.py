@@ -308,8 +308,9 @@ def test_missing_data_fields_rejected(civil_chart: ZiweiChart) -> None:
     loads_chart(json.dumps(data))
 
 
-def test_duplicate_nested_key_is_rejected(lunar_chart: ZiweiChart) -> None:
-  text = dumps_chart(lunar_chart).replace('"month": 9,', '"month": 9, "month": 9,', 1)
+@pytest.mark.parametrize("other", [9, 10])
+def test_duplicate_nested_key_is_rejected(lunar_chart: ZiweiChart, other: int) -> None:
+  text = dumps_chart(lunar_chart).replace('"month": 9,', f'"month": {other}, "month": 9,', 1)
   with pytest.raises(ValueError):
     loads_chart(text)
 
@@ -344,3 +345,43 @@ def test_additional_wire_boundaries(
     data["calculation"]["resolved_time"]["utc"] = "19880910T17:30:00.123456+00:00"
   with pytest.raises(ValueError):
     loads_chart(json.dumps(data))
+
+
+def test_unverified_leap_flag_is_preserved_then_recalculation_rejects(
+  civil_chart: ZiweiChart,
+) -> None:
+  data = json.loads(dumps_chart(civil_chart))
+  data["calculation"]["is_leap_month"] = not data["calculation"]["is_leap_month"]
+  restored = loads_chart(json.dumps(data))
+  assert restored.calculation.is_leap_month != civil_chart.calculation.is_leap_month
+  with pytest.raises(ValueError, match="不一致"):
+    recalculate(restored)
+
+
+def test_unavailable_iana_key_has_valueerror_on_recalculation(civil_chart: ZiweiChart) -> None:
+  data = json.loads(dumps_chart(civil_chart))
+  data["record"]["timezone"]["key"] = "Nowhere/Land"
+  restored = loads_chart(json.dumps(data))
+  with pytest.raises(ValueError, match="IANA 时区不可用"):
+    recalculate(restored)
+  assert dumps_chart(restored) == json.dumps(data, ensure_ascii=True, allow_nan=False, indent=2)
+
+
+def test_pure_civil_path_keeps_unchecked_fold_request(chart_choices: ChartConfig) -> None:
+  record = GregorianBirthRecord(
+    birth_date=date(2000, 6, 1),
+    birth_time=time(12),
+    time_precision=TimePrecision.时,
+    timezone=IanaTimezone("Asia/Shanghai", fold=1),
+    gender=Gender.男,
+  )
+  chart = create_chart(record, chart_choices, sihua_variant=SihuaVariant.排命盘口诀转录)
+  restored = loads_chart(dumps_chart(chart))
+  assert restored.calculation.resolved_time is None
+  assert restored.calculation.record == record and recalculate(restored) == chart
+  with pytest.raises(ValueError, match="fold"):
+    create_chart(
+      record,
+      replace(chart_choices, year_boundary=YearBoundary.立春),
+      sihua_variant=SihuaVariant.排命盘口诀转录,
+    )

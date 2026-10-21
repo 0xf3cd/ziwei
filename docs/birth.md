@@ -114,7 +114,7 @@ True
 `lunar_algorithm` 与 `lunar_algorithm_version` 记录所用农历算法及版本，`apparent_solar`
 与 `day_rolled` 记录真太阳时路径与晚子时顺延，`ut1_jd` 与 `lichun_jd` 记录立春换年
 比较的出生瞬间与立春时刻。换年口径为立春时 `ut1_jd` 与 `lichun_jd` 不可缺省；
-以下合成例用正月初一口径，只示范保存字段与拒绝缺项，不是历法转换或参考盘例。
+以下合成例用立春口径，两个UT1数值只作占位；只示范低层字段保存与缺项拒绝，不是历法转换或参考盘例。
 
 ```{doctest}
 >>> from ziwei.birth import CalculationInput, LunarBirthRecord
@@ -149,7 +149,7 @@ True
 ```
 
 普通记录可以保留未知，`require_complete()` 才检查完整命盘的必要项；它不排盘。
-调用完整命盘入口时须先完成历法解析，再执行该检查。公开校验在 `python -O` 下同样有效。
+`create_chart()`内部先完成历法解析，再执行该检查。公开校验在 `python -O` 下同样有效。
 当前`place_stars()`只要求时辰已知，不调用`require_complete()`，因此可安性别未知的记录。
 `CalculationInput.resolved_time`保留解析层实际取得的时刻及来源，未取瞬间的路径为`None`。
 旧的直接构造仍可省略它；[完整盘](chart.md)构造会进一步核其存在性、原始钟面和立春比较关系。

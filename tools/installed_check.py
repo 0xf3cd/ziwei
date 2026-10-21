@@ -2,13 +2,20 @@
 
 import json
 import sys
+from dataclasses import replace
 from datetime import UTC, date, datetime, time, timedelta
 from importlib import import_module
 from importlib.metadata import distribution
 from pathlib import Path
 
 import ziwei
-from ziwei.birth import CalculationInput, Gender, GregorianBirthRecord, TimePrecision
+from ziwei.birth import (
+  CalculationInput,
+  Gender,
+  GregorianBirthRecord,
+  LunarBirthRecord,
+  TimePrecision,
+)
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
 from ziwei.chart import create_chart, recalculate
@@ -207,6 +214,39 @@ def check_chart() -> None:
     pass
   else:
     raise ValueError("Installed chart loader accepted an invalid schema version")
+  unavailable = replace(
+    restored,
+    calculation=replace(
+      restored.calculation,
+      lunar_algorithm_version="unavailable-version",
+    ),
+  )
+  try:
+    recalculate(unavailable)
+  except ValueError:
+    pass
+  else:
+    raise ValueError("Installed recalculation accepted an unavailable version")
+  # 论坛《排命盘口诀》1954例第6至9步的独立星位；大限按同页规则推得，不由待测实现生成。
+  reference = create_chart(
+    LunarBirthRecord(
+      year=1954, month=9, day=7, is_leap_month=False, shichen=Dizhi.子, gender=Gender.男
+    ),
+    replace(choices, year_boundary=YearBoundary.农历正月初一),
+    sihua_variant=SihuaVariant.排命盘口诀转录,
+  )
+  positions = {p.star: p.dizhi for p in reference.stars}
+  if (positions[Star.紫微], positions[Star.天机], positions[Star.天府]) != (
+    Dizhi.戌,
+    Dizhi.酉,
+    Dizhi.午,
+  ):
+    raise ValueError("Installed full chart differs from independent star positions")
+  if [(p.dizhi.value, p.start_age, p.end_age) for p in reference.decades] != [
+    (branch, 6 + 10 * index, 15 + 10 * index)
+    for index, branch in enumerate("戌亥子丑寅卯辰巳午未申酉")
+  ]:
+    raise ValueError("Installed full chart differs from independent decade labels")
   print(
     "Installed full chart: calculated, saved, restored, recalculated, rendered; invalid schema rejected"
   )

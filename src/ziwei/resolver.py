@@ -52,8 +52,7 @@ def _shichen_from_fraction(fraction: float) -> tuple[Dizhi, bool]:
 
 def _roll_lunar_date(algorithm: LunarAlgorithm, anchor: date) -> tuple[int, int, int, bool]:
   """取 anchor 次日（公历日+1）的农历日。"""
-  year, month, day, is_leap = gregorian_to_lunar(algorithm, anchor + timedelta(days=1))
-  return year, month, day, is_leap
+  return gregorian_to_lunar(algorithm, anchor + timedelta(days=1))
 
 
 def _resolve_gregorian(

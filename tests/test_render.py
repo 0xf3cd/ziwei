@@ -6,10 +6,13 @@ from unicodedata import east_asian_width
 
 import pytest
 
-from ziwei.chart import ZiweiChart
+from ziwei.birth import Gender, LunarBirthRecord
+from ziwei.chart import ZiweiChart, create_chart
+from ziwei.config import ChartConfig
 from ziwei.ganzhi import Dizhi
 from ziwei.render import render_text
 from ziwei.serialization import dumps_chart, loads_chart
+from ziwei.sihua import SihuaVariant
 
 
 def test_grid_shows_twelve_palaces_and_all_stars(lunar_chart: ZiweiChart) -> None:
@@ -52,3 +55,21 @@ def test_render_uses_stored_palaces_not_name_sorting(lunar_chart: ZiweiChart) ->
 def test_render_rejects_non_chart() -> None:
   with pytest.raises(TypeError):
     render_text(None)  # type: ignore[arg-type]
+
+
+def test_body_palace_marker_is_not_always_on_minggong(chart_choices: ChartConfig) -> None:
+  result = create_chart(
+    LunarBirthRecord(
+      year=1984, month=1, day=1, is_leap_month=False, shichen=Dizhi.丑, gender=Gender.女
+    ),
+    chart_choices,
+    sihua_variant=SihuaVariant.排命盘口诀转录,
+  )
+  assert result.palaces[0].dizhi is Dizhi.丑 and result.shengong is Dizhi.卯
+  marked = [
+    cell.strip()
+    for line in render_text(result).splitlines()
+    for cell in line.split("|")
+    if "身宫" in cell
+  ]
+  assert marked == ["福德 丁卯 身宫"]
