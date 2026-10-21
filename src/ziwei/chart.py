@@ -86,7 +86,8 @@ def _check_calculation(value: CalculationInput) -> None:
 class ZiweiChart:
   """完整本命盘，按当前纯规则核对组合，不重做历法或时区解析。
 
-  宫位按宫名序，星曜按Star序，大限按行限序；序列复制为元组。software_version只作生成说明。
+  宫位按宫名序，星曜按Star序，大限按起限先后（自命宫起，随顺逆）；序列复制为元组。
+  software_version只作生成说明。
   calculation中的农历、UT1和IANA偏移仍是已存原值，构造成功不表示这些原值已经重新认证。
   """
 
