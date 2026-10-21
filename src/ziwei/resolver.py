@@ -79,8 +79,10 @@ def _resolve_gregorian(
     apparent = False
 
   rolled = shichen is Dizhi.子 and late_zi and config.day_rollover is DayRollover.晚子时归次日
-  lunar_day = anchor + timedelta(days=1) if rolled else anchor
-  lunar_year, month, day, is_leap = gregorian_to_lunar(algorithm, lunar_day)
+  if rolled and anchor == date.max:
+    raise ValueError("晚子时顺延超出可表示日期范围")
+  day_label = anchor + timedelta(days=1) if rolled else anchor
+  lunar_year, month, day, is_leap = gregorian_to_lunar(algorithm, day_label)
 
   if config.year_boundary is YearBoundary.立春:
     if resolved is None:

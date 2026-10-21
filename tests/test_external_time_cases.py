@@ -42,7 +42,7 @@ def test_lichun_matches_hko_minute_with_conservative_window() -> None:
   """HKO 24SolarTerms_2024.xml第三行：02/04 16:27香港时间；不认证秒级边界。
 
   https://www.hko.gov.hk/en/gts/astronomy/data/files/24SolarTerms_2024.xml
-  页面https://www.hko.gov.hk/en/gts/time/24solarterms.htm说明时区及资料来源。
+  页面https://www.hko.gov.hk/en/gts/astronomy/Solar_Term.htm说明时区及资料来源。
   """
   minute = datetime(2024, 2, 4, 8, 27, tzinfo=UTC)
   assert abs(lichun_jd(2024) - utc_to_ut1_jd(minute)) * 86400 < 60

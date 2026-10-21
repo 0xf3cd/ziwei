@@ -225,7 +225,7 @@ def test_civil_path_rejects_non_tzif_iana() -> None:
 
 
 def test_leap_twelfth_month_next_month_policy_rejected() -> None:
-  """闰十二月按归下月口径无对应命宫月：显式失败，不合成来年正月规则。"""
+  """闰十二月按归下月口径无对应安星月：显式失败，不合成来年正月规则。"""
   with pytest.raises(ValueError, match="闰十二月"):
     effective_month(12, 1, True, LeapMonthPolicy.全月归下月)
   with pytest.raises(ValueError, match="闰十二月"):
@@ -377,6 +377,13 @@ def test_late_zi_only_requires_final_date_in_algorithm_range(algorithm: LunarAlg
 
 
 @pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
+def test_late_zi_rejects_unrepresentable_next_day(algorithm: LunarAlgorithm) -> None:
+  record = gregorian(date.max, time(23, 30))
+  with pytest.raises(ValueError, match="晚子时顺延超出可表示日期范围"):
+    resolve(record, config(), algorithm)
+
+
+@pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
 def test_solar_final_date_uses_solar_not_civil_anchor(
   monkeypatch: pytest.MonkeyPatch, algorithm: LunarAlgorithm
 ) -> None:
@@ -394,6 +401,26 @@ def test_solar_final_date_uses_solar_not_civil_anchor(
     1,
   )
   assert value.apparent_solar and value.day_rolled and value.shichen is Dizhi.子
+
+
+@pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
+def test_solar_late_zi_rejects_final_date_above_algorithm_range(
+  monkeypatch: pytest.MonkeyPatch, algorithm: LunarAlgorithm
+) -> None:
+  from ziwei import resolver as module
+
+  end_year = supported_lunar_year_range(algorithm)[1]
+  first, _, lengths = lunar_year_info(algorithm, end_year)
+  last = first + timedelta(days=sum(lengths) - 1)
+  monkeypatch.setattr(
+    module, "apparent_solar", lambda *args: (last.year, last.month, last.day, 23.5 / 24)
+  )
+  record = gregorian(date(2024, 11, 3), time(0, 20), longitude_deg=100.0)
+  same = resolve(record, config(rollover=DayRollover.早晚子时同日), algorithm)
+  assert (same.lunar_year, same.month, same.day) == (end_year, 12, lengths[-1])
+  assert same.apparent_solar and not same.day_rolled and same.shichen is Dizhi.子
+  with pytest.raises(ValueError, match=r"超出.*支持范围"):
+    resolve(record, config(), algorithm)
 
 
 def test_leap_month_split_boundary_day16() -> None:

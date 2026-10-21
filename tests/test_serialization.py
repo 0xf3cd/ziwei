@@ -322,6 +322,16 @@ def test_non_string_inputs_rejected() -> None:
     dumps_chart(None)  # type: ignore[arg-type]
 
 
+def test_string_subclass_with_valid_json_is_rejected(lunar_chart: ZiweiChart) -> None:
+  class StringSubclass(str):
+    pass
+
+  payload = dumps_chart(lunar_chart)
+  assert loads_chart(payload) == lunar_chart
+  with pytest.raises(TypeError, match="命盘JSON须为str"):
+    loads_chart(StringSubclass(payload))
+
+
 @pytest.mark.parametrize(
   "kind", ["lunar-instant", "calendar", "zone-object", "zone-kind", "noncanonical-instant"]
 )

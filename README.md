@@ -24,7 +24,8 @@ celestial-calendar 0.8.0在PyPI只提供下列原生wheel，没有源码分发�
 | Windows | amd64 |
 
 Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖范围内，不能依靠pip自动回退源码构建。
-请使用独立虚拟环境；与不同精确版本的celestial-calendar或tzdata显式共装会冲突，普通安装也可能将环境中较新的版本降级。
+请使用独立虚拟环境；与不同精确版本的celestial-calendar或tzdata显式共装会冲突。
+安装ziwei时，pip也可能将环境中已有的较新celestial-calendar或tzdata降到上述精确版本。
 当前源代码开发安装与检查见[参与开发](docs/contributing.md)，版本与首次发布仍以发布记录为准。
 
 ## 首版目标

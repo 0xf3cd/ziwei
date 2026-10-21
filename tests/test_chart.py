@@ -292,6 +292,7 @@ def test_recalculation_detects_wrong_civil_lunar_relation(lunar_chart: ZiweiChar
 
 def test_software_version_is_information_only(lunar_chart: ZiweiChart) -> None:
   saved = replace(lunar_chart, software_version="older-software")
+  assert saved != lunar_chart
   assert recalculate(saved) == lunar_chart
 
 
