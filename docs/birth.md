@@ -143,9 +143,9 @@ True
 >>> partial = replace(value, shichen=None, record=replace(lunar, gender=Gender.未知))
 >>> try:
 ...   partial.require_complete()
-... except ValueError:
-...   print("完整命盘需要时辰与性别")
-完整命盘需要时辰与性别
+... except ValueError as error:
+...   print(error)
+完整命盘需要已知时辰与性别
 ```
 
 普通记录可以保留未知，`require_complete()` 才检查完整命盘的必要项；它不排盘。

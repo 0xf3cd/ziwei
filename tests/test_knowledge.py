@@ -95,7 +95,7 @@ def catalog() -> Catalog:
 
 def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   catalog = load_catalog()
-  assert catalog.version == "2026.10.20.2"
+  assert catalog.version == "2026.10.21.1"
   assert {item.kind for item in catalog.concepts} == set(ConceptKind)
   assert len({item.id for item in catalog.records}) == len(catalog.records)
   assert catalog.find("天馬") == catalog.find("tianma")
@@ -103,10 +103,13 @@ def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   assert catalog.filter_entries(default_only=True) == ()
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
   assert [item.id for item in pending] == [
+    "entry.decades.quanshu-adjacent",
     "entry.leap-month.month-stars-scope",
     "entry.star.kuiyue-quanshu-pending",
   ]
-  assert pending[0].alternatives == ("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星")
+  leap = catalog.get("entry.leap-month.month-stars-scope")
+  assert isinstance(leap, KnowledgeEntry)
+  assert leap.alternatives == ("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星")
   month = catalog.get("entry.tianma.month-branch")
   assert isinstance(month, KnowledgeEntry)
   assert month.premise_status is PremiseStatus.已明确
@@ -135,7 +138,40 @@ def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   assert {item.option for item in catalog.variants if isinstance(item.option, DayRollover)} == set(
     DayRollover
   )
+  assert {item.option for item in catalog.variants if isinstance(item.option, YearBoundary)} == set(
+    YearBoundary
+  )
   assert load_catalog() == catalog
+
+
+def test_year_boundary_queries_keep_project_choice_separate_from_source() -> None:
+  catalog = load_catalog()
+  concept = catalog.get("concept.policy.year-boundary")
+  assert isinstance(concept, Concept) and concept.options == tuple(YearBoundary)
+  assert catalog.find("换年") == catalog.find("換年") == (concept,)
+  variants = catalog.list_variants(concept_id=concept.id)
+  assert {item.option for item in variants} == set(YearBoundary)
+  lichun = catalog.get("variant.year-boundary.lichun")
+  assert catalog.find("立春") == (lichun,)
+  assert catalog.find("农历正月初一") == (catalog.get("variant.year-boundary.lunar-new-year"),)
+  assert catalog.references("entry.year-boundary.lichun") == ()
+  new_year = catalog.references("entry.year-boundary.lunar-new-year")
+  assert len(new_year) == 1 and new_year[0].quote == "紫微斗數生年以春節為基準"
+  source = catalog.get(new_year[0].source_id)
+  assert isinstance(source, Source) and source.status is SourceStatus.待核
+
+
+def test_adjacent_decades_stays_pending_without_borrowing_current_implementation() -> None:
+  catalog = load_catalog()
+  variant = catalog.get("variant.decades.quanshu-adjacent")
+  assert isinstance(variant, RuleVariant) and variant.implementation is None
+  entry = catalog.get("entry.decades.quanshu-adjacent")
+  assert isinstance(entry, KnowledgeEntry)
+  assert entry.premise_status is PremiseStatus.待定
+  assert entry.display is DisplayEligibility.暂不默认展示
+  assert entry not in catalog.filter_entries(default_only=True)
+  quote = catalog.references(entry.id)[0].quote
+  assert quote == "阳男阴女从命前一宫起顺行 是父母宫。阴男阳女从命后一宫起逆行 是兄弟宫"
 
 
 def test_queries_preserve_alias_ambiguity_and_intersection(catalog: Catalog) -> None:

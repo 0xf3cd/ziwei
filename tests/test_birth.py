@@ -254,6 +254,31 @@ def test_partial_parsed_inputs_do_not_gain_defaults() -> None:
       value.require_complete()
 
 
+def test_birth_instant_requires_lichun_value() -> None:
+  valid = calculation_input()
+  assert valid.ut1_jd is not None and valid.lichun_jd is not None
+  with pytest.raises(ValueError, match="记录出生瞬间时必须同时记录立春时刻"):
+    replace(valid, lichun_jd=None)
+
+
+def test_lichun_value_requires_lichun_policy() -> None:
+  valid = calculation_input(config=replace(config(), year_boundary=YearBoundary.农历正月初一))
+  assert valid.ut1_jd is valid.lichun_jd is None
+  with pytest.raises(ValueError, match="立春时刻只属于立春换年口径"):
+    replace(valid, lichun_jd=0.0)
+
+
+def test_rolled_day_requires_zi_shichen() -> None:
+  valid = calculation_input(
+    record=gregorian_record(birth_time=time(23, 30)),
+    shichen=Dizhi.子,
+    config=replace(config(), day_rollover=DayRollover.晚子时归次日),
+    day_rolled=True,
+  )
+  with pytest.raises(ValueError, match="晚子时顺延只发生在子时"):
+    replace(valid, shichen=Dizhi.丑)
+
+
 @pytest.mark.parametrize("shichen", [Dizhi.子, Dizhi.午])
 def test_unknown_original_time_cannot_become_known(shichen: Dizhi) -> None:
   originals = (

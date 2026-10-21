@@ -20,9 +20,10 @@
 >>> [item.id for item in catalog.find("庚干四化")]
 ['variant.sihua.geng-wikisource', 'variant.sihua.geng-jiuqian-quanshu', 'variant.sihua.geng-jiuqian-zhongzhou']
 >>> pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
->>> pending[0].alternatives
+>>> leap = catalog.get("entry.leap-month.month-stars-scope")
+>>> leap.alternatives
 ('闰月例只约束命宫与身宫', '闰月例同时约束其他月系星')
->>> pending[0].chart_match
+>>> leap.chart_match
 '未评估'
 >>> reference = catalog.references("entry.tianma.year-branch")[0]
 >>> reference.quote
@@ -49,6 +50,8 @@ True
 本项目让左辅右弼、月马和命宫使用同一种闰月处理方式，调用者可在三种闰月归属选项中选择，
 另记为[项目组合](knowledge-reference.md#entry.star.month-policy-composition)。这项实现选择不用于判定古籍原意。
 [晚子时归次日](knowledge-reference.md#entry.day-rollover.late-zi)登记项目已有选项，但不编造其外部出处。
+[换年](knowledge-reference.md#concept.policy.year-boundary)区分正月初一与立春：前者记录《精成》网页的春节生年句，
+后者只登记项目已有选项。历书能给立春时刻，不能证明术数应采用立春换年。
 待决条目保存具体复核动作（`recheck`）与跟进讨论入口（`tracking_url`）；issue关闭不表示争议已经解决。
 
 ## 记录与归属
@@ -135,5 +138,6 @@ True
   给出取得底本影像和另一具版次古籍同段的复核动作。现代表多见同族歌诀，不声称异文各有双源。
 - 火星、铃星在子时的起始宫位按年支分为四组，参照《全书》、中州派讲义和《精成》的表或口诀。
   两星都顺数到出生时辰的做法，由讲义的壬辰年卯时例和《精成》明文支持；《全书》该段没有说明方向。
-- 月马只核到《精成》一路独立出处，仍作为可选的安星规则提供，但条目暂不默认展示。
+- 月马见于《精成》与论坛两页明文；三合月口诀同文，按一路文本计，传承关系与原书版本未核。
+  仍作为可选的安星规则提供，但条目暂不默认展示。
   默认使用年马、允许选月马，都不会把未核实的来源改标为已核。

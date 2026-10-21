@@ -53,7 +53,7 @@ POLICY_ENUMS: Final[tuple[type[StrEnum], ...]] = get_args(PolicyOption)
 class TianmaRule(StrEnum):
   """选择按年支还是农历生月对应的地支安天马。
 
-  默认按年支；也可选择月支天马，但目前只核到一路独立出处。闰月用哪个月由LeapMonthPolicy决定。
+  默认按年支；也可选择月支天马，来源与同文限度见知识目录。闰月用哪个月由LeapMonthPolicy决定。
   """
 
   YEAR_BRANCH = "年支天马"

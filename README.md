@@ -12,6 +12,22 @@
 [四化与大限](docs/sihua-decades.md)、[完整命盘与记录](docs/chart.md)和[知识查询](docs/knowledge.md)，
 开发检查与协作约定见[参与开发](docs/contributing.md)。
 
+## 安装要求
+
+支持Python 3.11–3.14。运行时精确依赖`celestial-calendar==0.8.0`与`tzdata==2026.5`。
+celestial-calendar 0.8.0在PyPI只提供下列原生wheel，没有源码分发包；ziwei自身的纯Python wheel不扩大这个范围：
+
+| 平台 | 架构与最低系统要求 |
+|---|---|
+| macOS | arm64，macOS 14或更新 |
+| Linux | x86_64，glibc 2.26或更新；aarch64，glibc 2.24或更新 |
+| Windows | amd64 |
+
+Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖范围内，不能依靠pip自动回退源码构建。
+请使用独立虚拟环境；与不同精确版本的celestial-calendar或tzdata显式共装会冲突。
+安装ziwei时，pip也可能将环境中已有的较新celestial-calendar或tzdata降到上述精确版本。
+当前源代码开发安装与检查见[参与开发](docs/contributing.md)，版本与首次发布仍以发布记录为准。
+
 ## 首版目标
 
 已知出生时刻与性别，排出可复现的本命盘：

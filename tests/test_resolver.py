@@ -12,7 +12,12 @@ from ziwei.birth import (
   LunarBirthRecord,
   TimePrecision,
 )
-from ziwei.calendar import LunarAlgorithm, utc_to_ut1_jd
+from ziwei.calendar import (
+  LunarAlgorithm,
+  lunar_year_info,
+  supported_lunar_year_range,
+  utc_to_ut1_jd,
+)
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.ganzhi import Dizhi, Ganzhi
 from ziwei.palaces import effective_month, minggong_dizhi
@@ -125,8 +130,8 @@ def test_lichun_equal_instant_belongs_to_new_year(monkeypatch: pytest.MonkeyPatc
   assert value.ut1_jd is not None and value.lichun_jd is not None
 
 
-def test_lichun_second_precision_both_sides() -> None:
-  """立春秒级两侧（同一时标）：上海 16:27 在立春前约 0.44s、16:28 在立春后约 0.56s。"""
+def test_lichun_adjacent_minutes_both_sides() -> None:
+  """库内部对照：16:27与16:28在立春两侧，输入相隔一分钟，不是相邻秒。"""
   before = resolve(
     gregorian(date(2024, 2, 4), time(16, 27)),
     config(year=YearBoundary.立春),
@@ -220,7 +225,7 @@ def test_civil_path_rejects_non_tzif_iana() -> None:
 
 
 def test_leap_twelfth_month_next_month_policy_rejected() -> None:
-  """闰十二月按归下月口径无对应命宫月：显式失败，不合成来年正月规则。"""
+  """闰十二月按归下月口径无对应安星月：显式失败，不合成来年正月规则。"""
   with pytest.raises(ValueError, match="闰十二月"):
     effective_month(12, 1, True, LeapMonthPolicy.全月归下月)
   with pytest.raises(ValueError, match="闰十二月"):
@@ -248,8 +253,8 @@ def test_effective_month_validates_inputs(
     effective_month(**base)  # type: ignore[arg-type]
 
 
-def test_apparent_solar_crosses_midnight_changes_zi_anchor() -> None:
-  """真太阳时跨日：东经 120 度 07:45+08 对应 UTC 23:45 前夜，真太阳次日清晨，时辰取真太阳钟。"""
+def test_apparent_solar_morning_changes_shichen_without_changing_date() -> None:
+  """东经120度07:45+08的真太阳钟仍在当日辰时；此例不跨当地日界。"""
   record = gregorian(
     date(2024, 2, 4),
     time(7, 45),
@@ -260,6 +265,7 @@ def test_apparent_solar_crosses_midnight_changes_zi_anchor() -> None:
   assert value.apparent_solar is True
   assert value.ut1_jd is None  # 正月初一口径不记录立春比较用的 UT1 日数
   assert value.shichen is Dizhi.辰  # 真太阳 07:31 附近 → 辰时
+  assert (value.lunar_year, value.month, value.day, value.day_rolled) == (2023, 12, 25, False)
 
 
 def test_apparent_solar_uses_record_longitude() -> None:
@@ -344,7 +350,77 @@ def test_leap_month_policies_affect_minggong(policy: LeapMonthPolicy, expected_m
   assert effective == expected_month
   # 有效生月不同则命宫不同（同年同日同时）
   assert value.shichen is not None
-  assert minggong_dizhi(2, value.shichen) != minggong_dizhi(3, value.shichen)
+  assert minggong_dizhi(effective, value.shichen) is (Dizhi.酉 if expected_month == 2 else Dizhi.戌)
+
+
+@pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
+def test_late_zi_only_requires_final_date_in_algorithm_range(algorithm: LunarAlgorithm) -> None:
+  start_year, end_year = supported_lunar_year_range(algorithm)
+  first, _, _ = lunar_year_info(algorithm, start_year)
+  end_first, _, lengths = lunar_year_info(algorithm, end_year)
+  last = end_first + timedelta(days=sum(lengths) - 1)
+  before = gregorian(first - timedelta(days=1), time(23, 30))
+  value = resolve(before, config(), algorithm)
+  assert (value.lunar_year, value.month, value.day, value.day_rolled) == (start_year, 1, 1, True)
+  with pytest.raises(ValueError, match=r"超出.*支持范围"):
+    resolve(before, config(rollover=DayRollover.早晚子时同日), algorithm)
+  end = gregorian(last, time(23, 30))
+  same = resolve(end, config(rollover=DayRollover.早晚子时同日), algorithm)
+  assert (same.lunar_year, same.month, same.day, same.day_rolled) == (
+    end_year,
+    12,
+    lengths[-1],
+    False,
+  )
+  with pytest.raises(ValueError, match=r"超出.*支持范围"):
+    resolve(end, config(), algorithm)
+
+
+@pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
+def test_late_zi_rejects_unrepresentable_next_day(algorithm: LunarAlgorithm) -> None:
+  record = gregorian(date.max, time(23, 30))
+  with pytest.raises(ValueError, match="晚子时顺延超出可表示日期范围"):
+    resolve(record, config(), algorithm)
+
+
+@pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
+def test_solar_final_date_uses_solar_not_civil_anchor(
+  monkeypatch: pytest.MonkeyPatch, algorithm: LunarAlgorithm
+) -> None:
+  from ziwei import resolver as module
+
+  first, _, _ = lunar_year_info(algorithm, supported_lunar_year_range(algorithm)[0])
+  monkeypatch.setattr(
+    module, "apparent_solar", lambda *args: (first.year, first.month, first.day - 1, 23.5 / 24)
+  )
+  record = gregorian(date(2024, 11, 3), time(0, 20), longitude_deg=100.0)
+  value = resolve(record, config(), algorithm)
+  assert (value.lunar_year, value.month, value.day) == (
+    supported_lunar_year_range(algorithm)[0],
+    1,
+    1,
+  )
+  assert value.apparent_solar and value.day_rolled and value.shichen is Dizhi.子
+
+
+@pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
+def test_solar_late_zi_rejects_final_date_above_algorithm_range(
+  monkeypatch: pytest.MonkeyPatch, algorithm: LunarAlgorithm
+) -> None:
+  from ziwei import resolver as module
+
+  end_year = supported_lunar_year_range(algorithm)[1]
+  first, _, lengths = lunar_year_info(algorithm, end_year)
+  last = first + timedelta(days=sum(lengths) - 1)
+  monkeypatch.setattr(
+    module, "apparent_solar", lambda *args: (last.year, last.month, last.day, 23.5 / 24)
+  )
+  record = gregorian(date(2024, 11, 3), time(0, 20), longitude_deg=100.0)
+  same = resolve(record, config(rollover=DayRollover.早晚子时同日), algorithm)
+  assert (same.lunar_year, same.month, same.day) == (end_year, 12, lengths[-1])
+  assert same.apparent_solar and not same.day_rolled and same.shichen is Dizhi.子
+  with pytest.raises(ValueError, match=r"超出.*支持范围"):
+    resolve(record, config(), algorithm)
 
 
 def test_leap_month_split_boundary_day16() -> None:

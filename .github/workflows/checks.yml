@@ -18,12 +18,16 @@ jobs:
         include:
           - os: ubuntu-latest
             python: "3.11"
+            uv-checksum: "68a509da24b06b4223a1c0175fb5eb5bc79342b76cbeff0cfe51ac3f5b17b6b2" # uv-x86_64-unknown-linux-gnu.tar.gz
           - os: ubuntu-latest
             python: "3.14"
+            uv-checksum: "68a509da24b06b4223a1c0175fb5eb5bc79342b76cbeff0cfe51ac3f5b17b6b2" # uv-x86_64-unknown-linux-gnu.tar.gz
           - os: macos-latest
             python: "3.14"
+            uv-checksum: "5bb0e5fe008a773c3dbcb97ff79cd89e1241464fe9d2f986d52ad8f1b037bd62" # uv-aarch64-apple-darwin.tar.gz
           - os: windows-latest
             python: "3.14"
+            uv-checksum: "4c4d49d8738847d9b71ba319e49a5688c93eac0fe6204b1df24e98528dddf39a" # uv-x86_64-pc-windows-msvc.zip
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,9 +35,10 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python }}
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           version: "0.12.5"
+          checksum: ${{ matrix.uv-checksum }}
           enable-cache: false
       - run: uv sync --locked --python ${{ matrix.python }}
       - run: uv run --locked python tools/check.py

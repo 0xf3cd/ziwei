@@ -24,7 +24,7 @@ celestial 的节气时刻是 UT1，民用输入是 UTC 或固定偏移；本模�
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 from typing import Any, Final
 
@@ -89,10 +89,16 @@ def gregorian_to_lunar(algorithm: LunarAlgorithm, day: date) -> tuple[int, int, 
 
   换算以传入的当地民用日标签为基准：民用路径传 `BirthRecord.birth_date`，真太阳时
   路径由解析层传真太阳钟的民用日（见 resolver）。超出算法支持范围或日期不可表示时
-  显式失败。
+  抛ValueError；年历查询或原生转换的内部故障原样传播。
   """
   _check_algorithm(algorithm)
   _check_day(day)
+  first_year, last_year = supported_lunar_year_range(algorithm)
+  first_day, _, _ = lunar_year_info(algorithm, first_year)
+  last_first_day, _, last_lengths = lunar_year_info(algorithm, last_year)
+  end = last_first_day + timedelta(days=sum(last_lengths))
+  if not first_day <= day < end:
+    raise ValueError(f"公历日期{day}超出{algorithm.value}支持范围")
   import celestial_calendar as celestial
 
   lunar = celestial.gregorian_to_lunar(_native_algorithm(algorithm, celestial), day)
@@ -102,8 +108,8 @@ def gregorian_to_lunar(algorithm: LunarAlgorithm, day: date) -> tuple[int, int, 
 def lunar_to_gregorian(
   algorithm: LunarAlgorithm, year: int, month: int, day: int, is_leap: bool
 ) -> date:
-  """农历年月日与闰月标志换公历日期标签；组合不存在时显式失败。"""
-  _check_algorithm(algorithm)
+  """农历年月日与闰月标志换公历标签；组合不存在时抛ValueError，内部故障原样传播。"""
+  validate_lunar_date(algorithm, year, month, day, is_leap)
   import celestial_calendar as celestial
 
   lunar = celestial.LunarDate(year, month, day, is_leap)

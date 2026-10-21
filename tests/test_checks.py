@@ -272,6 +272,38 @@ def test_built_artifacts_pair(tmp_path: Path) -> None:
   )
 
 
+def test_distribution_dispatches_both_isolated_modes_outside_repository(
+  tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  calls: list[tuple[tuple[str, ...], Path]] = []
+  source = tmp_path / "source"
+  source.mkdir()
+  (source / "pyproject.toml").write_bytes((check.ROOT / "pyproject.toml").read_bytes())
+  monkeypatch.setattr(check, "ROOT", source)
+  artifacts = tmp_path / "artifacts"
+  sdist, wheel = artifacts / "ziwei.tar.gz", artifacts / "ziwei.whl"
+
+  def fake_run(command: Sequence[str], *, cwd: Path = check.ROOT) -> None:
+    calls.append((tuple(command), cwd))
+
+  monkeypatch.setattr(check, "run", fake_run)
+  monkeypatch.setattr(check, "built_artifacts", lambda path: (sdist, wheel))
+  monkeypatch.setattr(check, "source_members", lambda path: ())
+  monkeypatch.setattr(check, "check_sdist", lambda *args: None)
+  monkeypatch.setattr(check, "check_wheel", lambda *args: None)
+  check.check_distribution(tmp_path)
+  python = (
+    tmp_path / "consumer" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+  )
+  script = str(check.ROOT / "tools/installed_check.py")
+  assert calls[-2:] == [
+    ((str(python), "-I", script, "0.0.0"), tmp_path),
+    ((str(python), "-O", "-I", script, "0.0.0"), tmp_path),
+  ]
+  assert tmp_path != check.ROOT and not tmp_path.is_relative_to(check.ROOT)
+  assert str(wheel) in calls[-3][0]
+
+
 def test_main_runs_every_gate_in_order(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
   calls: list[object] = []
 

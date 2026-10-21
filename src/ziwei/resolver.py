@@ -7,9 +7,9 @@
 2. 时辰：民用路径取记录钟面；真太阳时路径取真太阳钟（`apparent_solar`）的钟面。
    时辰所附民用日：民用路径取出生地当地民用日（`record.birth_date`），真太阳时路径取
    真太阳钟的民用日。
-3. 农历日：由时辰所附民用日标签换算（`gregorian_to_lunar`），不随时刻或时区另选日期。
-4. 子时换日：时辰为子且落在所附民用日 23:00-24:00（晚子时）时，`晚子时归次日` 取该日
-   次日的农历日，`早晚子时同日` 不改；`day_rolled` 记录是否顺延。
+3. 子时换日：时辰为子且落在所附民用日 23:00-24:00（晚子时）时，`晚子时归次日` 取次日日标签，
+   `早晚子时同日` 不改；`day_rolled` 记录是否顺延。
+4. 农历日：只换算最终取用的日标签（`gregorian_to_lunar`），不要求未取用的前一日也在算法范围内。
 5. 换年：立春 -> 出生瞬间按 modelled-UT1 换算（`utc_to_ut1_jd`）与立春时刻
    （`lichun_jd`）比较，左闭右开（出生瞬间等于立春时刻归新年）；正月初一 -> 按换日
    调整后的农历日所属年。
@@ -50,11 +50,6 @@ def _shichen_from_fraction(fraction: float) -> tuple[Dizhi, bool]:
   return tuple(Dizhi)[((hour + 1) // 2) % 12], hour == 23
 
 
-def _roll_lunar_date(algorithm: LunarAlgorithm, anchor: date) -> tuple[int, int, int, bool]:
-  """取 anchor 次日（公历日+1）的农历日。"""
-  return gregorian_to_lunar(algorithm, anchor + timedelta(days=1))
-
-
 def _resolve_gregorian(
   record: GregorianBirthRecord, config: ChartConfig, algorithm: LunarAlgorithm
 ) -> CalculationInput:
@@ -83,11 +78,11 @@ def _resolve_gregorian(
     anchor = record.birth_date
     apparent = False
 
-  lunar_year, month, day, is_leap = gregorian_to_lunar(algorithm, anchor)
-  rolled = False
-  if shichen is Dizhi.子 and late_zi and config.day_rollover is DayRollover.晚子时归次日:
-    lunar_year, month, day, is_leap = _roll_lunar_date(algorithm, anchor)
-    rolled = True
+  rolled = shichen is Dizhi.子 and late_zi and config.day_rollover is DayRollover.晚子时归次日
+  if rolled and anchor == date.max:
+    raise ValueError("晚子时顺延超出可表示日期范围")
+  day_label = anchor + timedelta(days=1) if rolled else anchor
+  lunar_year, month, day, is_leap = gregorian_to_lunar(algorithm, day_label)
 
   if config.year_boundary is YearBoundary.立春:
     if resolved is None:
