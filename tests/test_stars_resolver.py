@@ -58,7 +58,9 @@ def _civil(day: date, clock: time, longitude: float | None = None) -> GregorianB
   )
 
 
-def test_independent_1954_ninth_month_seventh_day_zi(choices: ChartConfig) -> None:
+def test_independent_1954_ninth_month_seventh_day_zi(
+  choices: ChartConfig, expected_1954: dict[Star, Dizhi]
+) -> None:
   """2007论坛转《排命盘口诀》末段第1至13步，原著/底本未核。
 
   http://www.zhongyi999.com.cn/thread-1744-1-1.html
@@ -75,36 +77,7 @@ def test_independent_1954_ninth_month_seventh_day_zi(choices: ChartConfig) -> No
     source="匿名盘例：2007论坛转《排命盘口诀》排命盘举例第1至13步",
   )
   value = resolve(record, replace(choices, tianma_rule=TianmaRule.月支天马))
-  expected = {
-    Star.紫微: Dizhi.戌,
-    Star.天机: Dizhi.酉,
-    Star.太阳: Dizhi.未,
-    Star.武曲: Dizhi.午,
-    Star.天同: Dizhi.巳,
-    Star.廉贞: Dizhi.寅,
-    Star.天府: Dizhi.午,
-    Star.太阴: Dizhi.未,
-    Star.贪狼: Dizhi.申,
-    Star.巨门: Dizhi.酉,
-    Star.天相: Dizhi.戌,
-    Star.天梁: Dizhi.亥,
-    Star.七杀: Dizhi.子,
-    Star.破军: Dizhi.辰,
-    Star.文昌: Dizhi.戌,
-    Star.文曲: Dizhi.辰,
-    Star.火星: Dizhi.丑,
-    Star.铃星: Dizhi.卯,
-    Star.地空: Dizhi.亥,
-    Star.地劫: Dizhi.亥,
-    Star.左辅: Dizhi.子,
-    Star.右弼: Dizhi.寅,
-    Star.天马: Dizhi.申,
-    Star.禄存: Dizhi.寅,
-    Star.擎羊: Dizhi.卯,
-    Star.陀罗: Dizhi.丑,
-    Star.天魁: Dizhi.丑,
-    Star.天钺: Dizhi.未,
-  }
+  expected = expected_1954
   assert _positions(value) == expected
   assert len(set(expected.values())) < len(expected)  # 同宫不丢星。
   assert _positions(replace(value, config=choices)) == expected  # 此例两种马相同，另例辨选择。

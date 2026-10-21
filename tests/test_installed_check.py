@@ -21,7 +21,8 @@ from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
-from ziwei.stars import Star
+from ziwei.serialization import loads_chart
+from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
 
 
@@ -201,6 +202,60 @@ def test_dependency_pin_is_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
   monkeypatch.setattr(installed_check, "distribution", wrong_pin)
   with pytest.raises(ValueError, match="declared pin"):
     installed_check.check_inputs()
+
+
+@pytest.mark.parametrize("kind", ["restore", "render", "schema"])
+def test_full_chart_consumer_rejects_faulty_installation(
+  monkeypatch: pytest.MonkeyPatch, kind: str
+) -> None:
+  original = loads_chart
+  if kind == "render":
+    monkeypatch.setattr(installed_check, "render_text", lambda chart: "命宫")
+  elif kind == "restore":
+    monkeypatch.setattr(
+      installed_check,
+      "loads_chart",
+      lambda payload: replace(original(payload), software_version="lost-original-version"),
+    )
+  else:
+
+    def accepts_bad(payload: str) -> Any:
+      import json
+
+      data = json.loads(payload)
+      if data["schema_version"] is True:
+        data["schema_version"] = 1
+      return original(json.dumps(data))
+
+    monkeypatch.setattr(installed_check, "loads_chart", accepts_bad)
+  with pytest.raises(
+    ValueError, match=r"Installed full chart record|Installed text chart|invalid schema"
+  ):
+    installed_check.check_chart()
+
+
+def test_installed_consumer_rejects_identity_recalculation(monkeypatch: pytest.MonkeyPatch) -> None:
+  monkeypatch.setattr(installed_check, "recalculate", lambda chart: chart)
+  with pytest.raises(ValueError, match="unavailable version"):
+    installed_check.check_chart()
+
+
+def test_installed_consumer_rejects_consistent_wrong_positions(
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  from ziwei import chart as chart_module
+
+  original = place_stars
+  branches = tuple(Dizhi)
+
+  def shifted(value: Any) -> Any:
+    return tuple(
+      replace(p, dizhi=branches[(branches.index(p.dizhi) + 1) % 12]) for p in original(value)
+    )
+
+  monkeypatch.setattr(chart_module, "place_stars", shifted)
+  with pytest.raises(ValueError, match="independent star positions"):
+    installed_check.check_chart()
 
 
 @pytest.mark.parametrize(

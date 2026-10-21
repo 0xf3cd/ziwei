@@ -40,7 +40,7 @@
 
 ```{eval-rst}
 .. automodule:: ziwei.timezone
-   :members: IanaTimezone, FixedOffset, TimezoneData, ResolvedTime, NonexistentTimeError, AmbiguousTimeError, resolve_civil_time
+   :members: IanaTimezone, FixedOffset, TimezoneData, ResolvedTime, NonexistentTimeError, AmbiguousTimeError, resolve_civil_time, current_timezone_data
    :undoc-members:
    :member-order: bysource
 ```
@@ -148,6 +148,28 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
    :members: Direction, Decade, decade_direction, decade_periods, place_decades
    :undoc-members:
    :member-order: bysource
+```
+
+## 完整命盘、记录与显示
+
+[用法、schema合同与参考盘例](chart.md)。恢复只核结构及当前纯规则，历法与时区真实性另由重算检验。
+
+```{eval-rst}
+.. automodule:: ziwei.chart
+   :members: ZiweiChart, create_chart, recalculate
+   :undoc-members:
+   :member-order: bysource
+
+.. automodule:: ziwei.serialization
+   :members: dumps_chart, loads_chart
+   :undoc-members:
+   :member-order: bysource
+
+.. autodata:: ziwei.serialization.SCHEMA_VERSION
+   :annotation:
+
+.. automodule:: ziwei.render
+   :members: render_text
 ```
 
 ## 独立知识目录

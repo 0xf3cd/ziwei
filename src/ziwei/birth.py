@@ -155,7 +155,7 @@ BirthRecord = GregorianBirthRecord | LunarBirthRecord
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CalculationInput:
-  """解析层的输出形状；本批由 resolver 从原始记录生成。
+  """解析层的输出形状，由resolver.resolve从原始记录生成。
 
   ganzhi_year 是解析层按所选换年口径得到的纪年编号，不一定等于 lunar_year。
   原始记录和实际口径随值保存；阴阳及年干支由该编号派生，不维护可互相矛盾的副本。
@@ -164,6 +164,8 @@ class CalculationInput:
   apparent_solar 记录是否采用真太阳时路径；day_rolled 记录晚子时归次日是否顺延；
   ut1_jd 与 lichun_jd 记录立春换年所比较的出生瞬间与立春时刻（UT1 日数），
   纯民用正月初一路径为 None。
+  resolved_time保留解析层实际取得的钟面、UTC、偏移和时区数据版本；没有取得瞬间时为None。
+  为兼容直接构造，对resolved_time只检查它是ResolvedTime或None；完整盘另核其存在性及与原始记录的关系。
   """
 
   record: BirthRecord
@@ -180,10 +182,13 @@ class CalculationInput:
   day_rolled: bool
   ut1_jd: float | None
   lichun_jd: float | None
+  resolved_time: ResolvedTime | None = None
 
   def __post_init__(self) -> None:
     if not isinstance(self.record, BirthRecord):
       raise TypeError("原始记录须为公历或农历出生记录")
+    if self.resolved_time is not None and not isinstance(self.resolved_time, ResolvedTime):
+      raise TypeError("已解析时刻须为 ResolvedTime 或 None")
     _check_lunar_date(self.lunar_year, self.month, self.day, self.is_leap_month, self.shichen)
     if self.record.shichen is None and self.shichen is not None:
       raise ValueError("原始记录的未知时辰不得变为已知")
