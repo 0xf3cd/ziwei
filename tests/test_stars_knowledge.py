@@ -103,7 +103,16 @@ def test_pending_quanshu_is_not_executed_and_modern_evidence_is_not_upgraded() -
   assert old.status is new.status is SourceStatus.待核
   month = catalog.get("source.jingcheng-golla")
   assert isinstance(month, Source) and month.status is SourceStatus.待核
-  assert "单源" in catalog.filter_entries(variant_id="variant.tianma.month-branch")[0].limits
+  entry = catalog.filter_entries(variant_id="variant.tianma.month-branch")[0]
+  assert "同文" in entry.limits and "一路文本" in entry.limits
+  assert "citation.zhongyi999.tianma-month" in entry.citation_ids
+  assert entry.alternatives == ()
+  forum = catalog.get("source.zhongyi999-paimingpan")
+  assert isinstance(forum, Source) and forum.status is SourceStatus.待核
+  assert forum.lineage_id == "lineage.zhongyi999-paimingpan"
+  assert "citation.zhongyi999.tianma-year" in {
+    item.id for item in catalog.references("entry.tianma.year-branch")
+  }
 
 
 def test_modern_short_quotes_stay_below_budget_per_lineage() -> None:

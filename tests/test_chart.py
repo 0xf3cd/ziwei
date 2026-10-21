@@ -36,8 +36,8 @@ def test_external_1954_full_chart(
 ) -> None:
   """http://www.zhongyi999.com.cn/thread-1744-1-1.html，举例1-13步；底本未核。
 
-  1954九月初七子时男命，甲午、火六局、命身同戌。大限按同页局数及阳男顺行定义推得，
-  不是原图逐限转录。年马/月马此例相同，不用于证明切换。只验证已实现的28星，其他星曜不纳入。
+  1954九月初七子时男命，甲午、火六局、命身同戌。第22步正文列前九限，末三限按规则推得，表23图未核。
+  年马/月马此例相同，不用于证明切换。只验证已实现的28星，其他星曜不纳入。
   """
   assert lunar_chart.bureau is WuxingJu.火六局
   assert lunar_chart.shengong is Dizhi.戌
@@ -69,8 +69,21 @@ def test_external_1954_full_chart(
     Star.武曲,
     Star.太阳,
   )
-  assert [(p.dizhi.value, p.start_age, p.end_age) for p in lunar_chart.decades] == [
-    (branch, 6 + 10 * i, 15 + 10 * i) for i, branch in enumerate("戌亥子丑寅卯辰巳午未申酉")
+  assert [(p.dizhi.value, p.start_age, p.end_age) for p in lunar_chart.decades[:9]] == [
+    ("戌", 6, 15),
+    ("亥", 16, 25),
+    ("子", 26, 35),
+    ("丑", 36, 45),
+    ("寅", 46, 55),
+    ("卯", 56, 65),
+    ("辰", 66, 75),
+    ("巳", 76, 85),
+    ("午", 86, 95),
+  ]
+  assert [(p.dizhi.value, p.start_age, p.end_age) for p in lunar_chart.decades[9:]] == [
+    ("未", 96, 105),
+    ("申", 106, 115),
+    ("酉", 116, 125),
   ]
   assert lunar_chart.decades[0].direction is Direction.顺行
 
@@ -349,7 +362,7 @@ def test_solar_time_crossing_date_is_preserved(
   assert restored == result and recalculate(restored) == result
 
 
-@pytest.mark.parametrize("defect", ["apparent", "shichen", "rolled", "resolved"])
+@pytest.mark.parametrize("defect", ["apparent", "shichen", "resolved"])
 def test_civil_chart_combination_policy_rejects_mismatches(
   civil_chart: ZiweiChart, defect: str
 ) -> None:
@@ -358,15 +371,6 @@ def test_civil_chart_combination_policy_rejects_mismatches(
     value = replace(value, record=replace(value.record, longitude_deg=100.0))
   elif defect == "shichen":
     value = replace(value, shichen=Dizhi.巳)
-  elif defect == "rolled":
-    record = value.record
-    assert isinstance(record, GregorianBirthRecord)
-    value = replace(
-      value,
-      record=replace(record, birth_time=time(23)),
-      shichen=Dizhi.子,
-      config=replace(value.config, day_rollover=DayRollover.晚子时归次日),
-    )
   else:
     resolved = value.resolved_time
     assert resolved is not None
@@ -375,6 +379,24 @@ def test_civil_chart_combination_policy_rejects_mismatches(
     )
   with pytest.raises(ValueError):
     replace(civil_chart, calculation=value)
+
+
+def test_chart_rejects_unrolled_civil_late_zi(chart_choices: ChartConfig) -> None:
+  record = GregorianBirthRecord(
+    birth_date=date(2024, 11, 2),
+    birth_time=time(23, 30),
+    time_precision=TimePrecision.分,
+    timezone=FixedOffset(timedelta(hours=8)),
+    gender=Gender.男,
+  )
+  valid = create_chart(
+    record,
+    replace(chart_choices, day_rollover=DayRollover.晚子时归次日),
+    sihua_variant=SihuaVariant.排命盘口诀转录,
+  )
+  assert valid.calculation.day_rolled
+  with pytest.raises(ValueError, match="晚子时顺延须与民用钟点和换日口径一致"):
+    replace(valid, calculation=replace(valid.calculation, day_rolled=False))
 
 
 @pytest.mark.parametrize(

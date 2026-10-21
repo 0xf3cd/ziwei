@@ -23,7 +23,7 @@ from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
-from ziwei.knowledge.model import PremiseStatus
+from ziwei.knowledge.model import KnowledgeEntry, PremiseStatus
 from ziwei.render import render_text
 from ziwei.serialization import dumps_chart, loads_chart
 from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
@@ -116,7 +116,7 @@ def check_calendar() -> None:
   from ziwei.palaces import effective_month, minggong_dizhi, palace_ganzhi
   from ziwei.resolver import resolve
 
-  if celestial_version() != "0.8.0":
+  if f"celestial-calendar=={celestial_version()}" not in (distribution("ziwei").requires or ()):
     raise ValueError("Installed celestial-calendar version differs from the declared pin")
   record = GregorianBirthRecord(
     birth_date=date(1988, 7, 1),
@@ -258,7 +258,10 @@ def check_knowledge() -> None:
   if not catalog.version or not catalog.find("天馬") or len(catalog.find("庚干四化")) != 3:
     raise ValueError("Installed knowledge corpus or aliases are incomplete")
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
-  if not pending or any(item.chart_match != "未评估" or not item.alternatives for item in pending):
+  if not pending or any(item.chart_match != "未评估" for item in pending):
+    raise ValueError("Installed knowledge lost unresolved premises")
+  leap = catalog.get("entry.leap-month.month-stars-scope")
+  if not isinstance(leap, KnowledgeEntry) or len(leap.alternatives) != 2:
     raise ValueError("Installed knowledge lost unresolved premises")
   references = catalog.references("entry.tianma.year-branch")
   if not references or references[0].quote != "论本生年支":

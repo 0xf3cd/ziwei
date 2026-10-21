@@ -2,7 +2,10 @@
 
 import sys
 from collections.abc import Iterator
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
+from importlib.metadata import version
+from pathlib import Path
+from typing import Never
 
 import pytest
 
@@ -30,7 +33,7 @@ def _unload_celestial() -> Iterator[None]:
 
 
 def test_version_is_installed_package() -> None:
-  assert celestial_version() == "0.8.0"
+  assert celestial_version() == version("celestial-calendar")
 
 
 @pytest.mark.parametrize(
@@ -45,6 +48,12 @@ def test_supported_ranges_match_documentation(
   algorithm: LunarAlgorithm, start: int, end: int
 ) -> None:
   assert supported_lunar_year_range(algorithm) == (start, end)
+  import celestial_calendar as celestial
+
+  native = celestial.supported_lunar_year_range(getattr(celestial.LunarAlgorithm, algorithm.name))
+  assert (native.start, native.end) == (start, end)
+  guide = (Path(__file__).resolve().parents[1] / "docs/calendar.md").read_text(encoding="utf-8")
+  assert f"| `{algorithm.name}` {algorithm.value} | {start}\N{EN DASH}{end} |" in guide
 
 
 def test_gregorian_lunar_round_trip() -> None:
@@ -121,9 +130,7 @@ def test_validate_lunar_date_rejects_nonexistent(args: tuple[object, ...], messa
 
 
 def test_gregorian_out_of_algorithm_coverage_fails() -> None:
-  import celestial_calendar
-
-  with pytest.raises(celestial_calendar.CelestialError):
+  with pytest.raises(ValueError, match=r"超出.*支持范围"):
     gregorian_to_lunar(LunarAlgorithm.ALGO1, date(1900, 1, 1))
 
 
@@ -152,10 +159,64 @@ def test_upper_range_endpoint_converts(algorithm: LunarAlgorithm, upper: int, da
 )
 def test_above_upper_range_endpoint_fails(algorithm: LunarAlgorithm, day: date) -> None:
   """超上界年份显式失败。"""
-  import celestial_calendar
-
-  with pytest.raises(celestial_calendar.CelestialError):
+  with pytest.raises(ValueError, match=r"超出.*支持范围"):
     gregorian_to_lunar(algorithm, day)
+
+
+@pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
+def test_exact_gregorian_coverage_and_adjacent_dates(algorithm: LunarAlgorithm) -> None:
+  first_year, last_year = supported_lunar_year_range(algorithm)
+  first, _, _ = lunar_year_info(algorithm, first_year)
+  last_first, _, lengths = lunar_year_info(algorithm, last_year)
+  last = last_first + timedelta(days=sum(lengths) - 1)
+  assert gregorian_to_lunar(algorithm, first) == (first_year, 1, 1, False)
+  assert gregorian_to_lunar(algorithm, last) == (last_year, 12, lengths[-1], False)
+  for outside in (first - timedelta(days=1), last + timedelta(days=1)):
+    with pytest.raises(ValueError, match=r"超出.*支持范围"):
+      gregorian_to_lunar(algorithm, outside)
+
+
+@pytest.mark.parametrize("conversion", ["gregorian_to_lunar", "lunar_to_gregorian"])
+@pytest.mark.parametrize("fail_at", ["conversion", "lunar_year_info"])
+def test_internal_calendar_failures_propagate_unchanged(
+  monkeypatch: pytest.MonkeyPatch, conversion: str, fail_at: str
+) -> None:
+  import celestial_calendar as celestial
+
+  operation = conversion if fail_at == "conversion" else fail_at
+  injected = celestial.CelestialError(operation, "synthetic internal failure", recorded=True)
+
+  def fail(*args: object) -> Never:
+    raise injected
+
+  monkeypatch.setattr(celestial, operation, fail)
+  with pytest.raises(celestial.CelestialError) as caught:
+    if conversion == "gregorian_to_lunar":
+      gregorian_to_lunar(LunarAlgorithm.混合, date(2024, 2, 10))
+    else:
+      lunar_to_gregorian(LunarAlgorithm.混合, 2024, 1, 1, False)
+  assert caught.value is injected
+
+
+@pytest.mark.parametrize(
+  "year, month, day, leap, message",
+  [
+    (2023, 1, 30, False, "没有第30日"),
+    (2023, 3, 1, True, "不存在闰3月"),
+    (1599, 1, 1, False, "超出"),
+  ],
+)
+def test_lunar_conversion_rejects_invalid_combinations_before_native_call(
+  monkeypatch: pytest.MonkeyPatch, year: int, month: int, day: int, leap: bool, message: str
+) -> None:
+  import celestial_calendar as celestial
+
+  def unexpected(*args: object) -> Never:
+    raise AssertionError("invalid input reached native conversion")
+
+  monkeypatch.setattr(celestial, "lunar_to_gregorian", unexpected)
+  with pytest.raises(ValueError, match=message):
+    lunar_to_gregorian(LunarAlgorithm.混合, year, month, day, leap)
 
 
 def test_ut1_conversion_matches_chart_snapshot() -> None:

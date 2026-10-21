@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from ziwei.config import DayRollover, LeapMonthPolicy, TianmaRule
+from ziwei.config import DayRollover, LeapMonthPolicy, TianmaRule, YearBoundary
 from ziwei.decades import DECADE_DEFINITION, DECADE_RULE_ID
 from ziwei.knowledge.model import (
   Citation,
@@ -21,7 +21,7 @@ from ziwei.knowledge.model import (
 from ziwei.sihua import SIHUA_TABLES, SihuaVariant
 from ziwei.stars import STAR_RULES, Star, StarRule
 
-CATALOG_VERSION = "2026.10.20.2"
+CATALOG_VERSION = "2026.10.21.1"
 """语料版本，与开发包版本分别记录。"""
 
 CONCEPTS = (
@@ -81,6 +81,13 @@ CONCEPTS = (
     options=tuple(DayRollover),
   ),
   Concept(
+    id="concept.policy.year-boundary",
+    name="换年",
+    aliases=("換年", "换年界线"),
+    kind=ConceptKind.口径,
+    options=tuple(YearBoundary),
+  ),
+  Concept(
     id="concept.school.zhongzhou", name="中州派", aliases=("王亭之中州派",), kind=ConceptKind.流派
   ),
 )
@@ -110,6 +117,15 @@ VARIANTS = (
     concept_ids=("concept.decades",),
     conditions=("性别已知", "年干阴阳来自所选换年口径"),
     implementation="ziwei.decades.decade_periods",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
+  ),
+  RuleVariant(
+    id="variant.decades.quanshu-adjacent",
+    name="电子《全书》邻宫起限（不执行）",
+    definition="阳男阴女从父母宫起顺行，阴男阳女从兄弟宫起逆行；仅登记所见起宫与顺逆。",
+    scope="固定电子录文的安大限诀，不补起限岁数或日期规则",
+    concept_ids=("concept.decades",),
+    conditions=("须核底本及起限年龄，不能拼接现行命宫起限的局数起岁规则",),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
   ),
   RuleVariant(
@@ -227,6 +243,26 @@ VARIANTS = (
     tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
   ),
   RuleVariant(
+    id="variant.year-boundary.lunar-new-year",
+    name="农历正月初一换年",
+    aliases=(YearBoundary.农历正月初一.value,),
+    definition=YearBoundary.农历正月初一.value,
+    scope="《精成》网页准备工作的生年口径，原书待核",
+    concept_ids=("concept.policy.year-boundary",),
+    option=YearBoundary.农历正月初一,
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+  ),
+  RuleVariant(
+    id="variant.year-boundary.lichun",
+    name="立春换年（术数出处待核）",
+    aliases=(YearBoundary.立春.value,),
+    definition=YearBoundary.立春.value,
+    scope="项目已有选项，不归给未核古籍或流派",
+    concept_ids=("concept.policy.year-boundary",),
+    option=YearBoundary.立春,
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+  ),
+  RuleVariant(
     id="variant.palace.minggong-shengong",
     name="安命身宫诀",
     definition="从寅宫起正月顺数至生月，再自该宫起子时，逆数至生时安命、顺数至生时安身。",
@@ -279,7 +315,7 @@ SOURCES = (
     layer=TextLayer.今人说明,
     lineage_id="lineage.zhongyi999-paimingpan",
     provenance="GBK论坛原页，HTTP取得；不以同名古籍或九千对照的全书列替代。",
-    claims="完整十干表、生年干查法、1954甲午原例四化，以及命宫起大限、顺逆、虚岁含首尾例。",
+    claims="完整十干表、生年干查法、月马与年马岁驿说明、火铃顺数，以及1954原例星位、四化和前九限虚岁标签。",
     limits="整套组合只核到此转录；具体规则另核独立说明，不声称取得第二份完整同表或纸本。",
     rights="只收必要短引与自撰规则说明，不转载全文。",
     status=SourceStatus.待核,
@@ -350,7 +386,7 @@ SOURCES = (
     layer=TextLayer.今人说明,
     lineage_id="lineage.jingcheng-golla",
     provenance="只核到网页，未核原书或转录授权。",
-    claims="准备工作明确生月按农历、不看节气且闰月归下月；第11项天马按月列出，第12项壬干含左字。",
+    claims="准备工作明确生年以春节为准、生月按农历、不看节气且闰月归下月；第11项天马按月列出，第12项壬干含左字。",
     limits="网页明确自己的生月口径，但不可当作核过原书或独立古籍证据。",
     rights="仅必要短引，原书与转载许可未确认，不收全文。",
     status=SourceStatus.待核,
@@ -502,7 +538,7 @@ CITATIONS = (
     quote="宜注意之点：此处之岁数为虚岁，而非实岁。",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="命宫寅木三局3至12，顺行卯13至22、逆行丑13至22；1954原例戌火六局6至15、亥16至25。只据区间标签，不采用其公历换算。",
+    limits="木三局例由寅3至12顺行卯13至22、逆行丑13至22；1954正文列前九限戌6至15至午86至95，末三限未96至105、申106至115、酉116至125按现行规则推得。表23图像未核，不采用公历换算。",
   ),
   Citation(
     id="citation.zhongzhou.decades-figure4",
@@ -568,6 +604,42 @@ CITATIONS = (
     limits="生月口径见同页准备工作；原书版本仍未核。",
   ),
   Citation(
+    id="citation.quanshu.decades-adjacent",
+    source_id="source.quanshu-wikisource",
+    locator="安大限诀/起宫与顺逆",
+    quote="阳男阴女从命前一宫起顺行 是父母宫。阴男阳女从命后一宫起逆行 是兄弟宫",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="与现行命宫起限分开登记；该句不能定起限岁数，底本未核，不接入计算。",
+  ),
+  Citation(
+    id="citation.zhongyi999.tianma-month",
+    source_id="source.zhongyi999-paimingpan",
+    locator="安月系诸星诀/安天马诀及说明；举例第11步③",
+    quote="此天马星以生月定之，每月是以初一开始，而不论节气。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="四组三合月口诀与《精成》同文，按一路文本计；两页传承关系未核。九月例天马在申；闰月组合仍是项目选择。",
+  ),
+  Citation(
+    id="citation.zhongyi999.tianma-year",
+    source_id="source.zhongyi999-paimingpan",
+    locator="安月系诸星诀/安天马诀说明末句",
+    quote="有以生年地支起天马亦可用，实为将前诸星之生年“岁驿”一星。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="只记录该页对年马与岁驿的说法，不合并所有同名驿马或扩充本版星曜。",
+  ),
+  Citation(
+    id="citation.zhongyi999.huoling-direction",
+    source_id="source.zhongyi999-paimingpan",
+    locator="安时系诸星诀/安火星铃星诀/白话说明",
+    quote="顺数至生时安火星",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="同句随后说明铃星也顺数至生时。只补已见明文，未核原著；不据网址增加数认定独立谱系。",
+  ),
+  Citation(
     id="citation.jingcheng.birth-month",
     layer=TextLayer.今人说明,
     source_id="source.jingcheng-golla",
@@ -575,6 +647,15 @@ CITATIONS = (
     quote="生月以實際農曆為準",
     aspects=(EvidenceAspect.查法,),
     limits="同段排除节气并规定闰月归下月；只记录网页的明确口径。",
+  ),
+  Citation(
+    id="citation.jingcheng.birth-year",
+    layer=TextLayer.今人说明,
+    source_id="source.jingcheng-golla",
+    locator="第1项準備工作/注意首句",
+    quote="紫微斗數生年以春節為基準",
+    aspects=(EvidenceAspect.查法,),
+    limits="只支持该网页的生年口径，不认证原书版次或其他换年流派。",
   ),
   Citation(
     id="citation.jingcheng.ren",
@@ -888,7 +969,7 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
     ),
     "variant.star.tianfu-reflection": (
       ("citation.quanshu.tianfu", "citation.zhongzhou.major-series"),
-      "《全书》图中的紫微、天府对应位置与中州派讲义说明相合，原书底本仍未核。",
+      "《全书》电子录文的安天府图以文字宫格列紫微、天府对应位置，与中州派讲义说明相合；未见底本影像。",
     ),
     "variant.star.tianfu-series": (
       ("citation.quanshu.major-series", "citation.zhongzhou.major-series"),
@@ -919,8 +1000,9 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
         "citation.quanshu.huoling-starts",
         "citation.zhongzhou.huoling-direction",
         "citation.jingcheng.huoling-direction",
+        "citation.zhongyi999.huoling-direction",
       ),
-      "火星、铃星在子时的四组起始宫位见《全书》、中州派讲义和《精成》。两星均顺数到出生时辰，依据讲义的壬辰年卯时例及《精成》明文；《全书》该段没有说明方向。",
+      "火星、铃星在子时的四组起始宫位见《全书》、中州派讲义和《精成》。两星均顺数到出生时辰，依据讲义例解及《精成》、论坛明文；《全书》该段没有说明方向。",
     ),
     "variant.star.kongjie-hour": (
       ("citation.quanshu.kongjie", "citation.zhongzhou.fubi-wen-kongjie"),
@@ -1009,6 +1091,20 @@ ENTRIES = (
     tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
   ),
   KnowledgeEntry(
+    id="entry.decades.quanshu-adjacent",
+    statement="电子《全书》安大限诀从父母宫或兄弟宫起限，与本项目现行命宫起限分开保留。",
+    concept_ids=("concept.decades",),
+    variant_ids=("variant.decades.quanshu-adjacent",),
+    citation_ids=("citation.quanshu.decades-adjacent",),
+    premises=("只登记固定录文的起宫与顺逆，完整起限前提尚未核定",),
+    premise_status=PremiseStatus.待定,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.待整理,
+    limits="不借用现行局数起岁规则补成可执行变体；底本未核，论坛作者对此法的否定不作为本项目裁决。",
+    recheck="取得该录文底本安大限诀影像及同版起岁说明，核父母宫、兄弟宫起限与年龄规则的关系。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
+  ),
+  KnowledgeEntry(
     id="entry.sihua.geng-wikisource",
     statement="所见电子全书庚干句与九千转引全书列不同，按具体文本分开登记。",
     concept_ids=("concept.sihua.shengnian",),
@@ -1089,6 +1185,7 @@ ENTRIES = (
       "citation.quanshu.tianma-anchor",
       "citation.quanshu.tianma-text",
       "citation.zhongzhou.tianma-year",
+      "citation.zhongyi999.tianma-year",
     ),
     premises=("讨论所列本命安天马段，不是其他术数的驿马",),
     premise_status=PremiseStatus.已明确,
@@ -1100,17 +1197,21 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.tianma.month-branch",
-    statement="精成网页将天马列入月系诸星；准备工作明确按农历生月，不看节气，闰月归下月。",
+    statement="《精成》网页与论坛均明确按农历生月安天马，不看节气；《精成》另规定闰月归下月。",
     concept_ids=("concept.star.tianma", "concept.policy.leap-month"),
     variant_ids=(
       next(rule.id for rule in STAR_RULES if rule.tianma_rule is TianmaRule.MONTH_BRANCH),
     ),
-    citation_ids=("citation.jingcheng.tianma", "citation.jingcheng.birth-month"),
+    citation_ids=(
+      "citation.jingcheng.tianma",
+      "citation.jingcheng.birth-month",
+      "citation.zhongyi999.tianma-month",
+    ),
     premises=("采用该网页明确写出的农历生月口径，正月对应寅宫",),
     premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.已整理,
-    limits="月马只核到《精成》一路独立出处，属于单源；转载不能算作第二路出处。让月马采用所选闰月归属规则，是项目的选择。",
+    limits="两页三合月口诀同文，按一路文本计，传承关系与原书版本未核，不认定为两路独立出处。让月马采用所选闰月归属规则，是项目的选择。",
     recheck="取得《精成》原书的准备工作与按月安天马段，核对网页转录；再找一路独立成文、明确按农历生月查天马的证据。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
@@ -1197,6 +1298,34 @@ ENTRIES = (
     curation=CurationStatus.待整理,
     limits="不是查无出处，也不提供换日实现。",
     recheck="取得明确把23时后的出生日期加一日的作者原文与例盘，并登记版本定位。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+  ),
+  KnowledgeEntry(
+    id="entry.year-boundary.lunar-new-year",
+    statement="《精成》网页准备工作以春节为生年基准，对应本项目农历正月初一换年选项。",
+    concept_ids=("concept.policy.year-boundary",),
+    variant_ids=("variant.year-boundary.lunar-new-year",),
+    citation_ids=("citation.jingcheng.birth-year",),
+    premises=("只记录所见网页口径，不连带采用该页其他规则",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="原书版本与转录忠实度未核；历法新年日期与术数选择换年线是两件事。",
+    recheck="取得《精成》原书版权页与准备工作页，核春节生年句及其例解。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+  ),
+  KnowledgeEntry(
+    id="entry.year-boundary.lichun",
+    statement="项目保留立春换年选项；术数直接出处待核，不归给未核古籍或流派。",
+    concept_ids=("concept.policy.year-boundary",),
+    variant_ids=("variant.year-boundary.lichun",),
+    citation_ids=(),
+    premises=("描述已有选项，立春时刻由历法适配提供",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.待整理,
+    limits="历书的立春时刻只证明时间，不证明紫微斗数应在该时刻换年。",
+    recheck="取得明确用于紫微生年干支的立春换年作者原文与两侧例盘，登记版本定位。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
   ),
   KnowledgeEntry(

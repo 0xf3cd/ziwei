@@ -395,7 +395,8 @@ def loads_chart(payload: str) -> ZiweiChart:
   """恢复schema 1，不重算、不替换存值；不认证历法与IANA偏移真实性。
 
   拒绝缺/多字段、重复键、非有限数值、未知版本/规则与结构矛盾。格式或内容错误抛ValueError，
-  非str参数抛TypeError。不接受URL、文件名或可执行载荷，也不查找历史算法。
+  非严格str实例（含子类）抛TypeError。不接受URL、文件名或可执行载荷，也不查找历史算法。
+  不限制输入体积或数组长度；接收不可信输入的调用方须自行限制资源用量。
   """
   if type(payload) is not str:
     raise TypeError("命盘JSON须为str")

@@ -42,7 +42,7 @@ def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy
   else:
     effective = month
   if effective > 12:
-    raise ValueError("闰十二月按该口径无对应命宫月（不合成来年正月规则）")
+    raise ValueError("闰十二月按该口径无对应安星月（不合成来年正月规则）")
   return effective
 
 
