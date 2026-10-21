@@ -118,6 +118,7 @@ def _resolve_gregorian(
     day_rolled=rolled,
     ut1_jd=ut1_jd,
     lichun_jd=lichun,
+    resolved_time=resolved,
   )
 
 

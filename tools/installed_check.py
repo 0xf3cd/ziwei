@@ -1,5 +1,6 @@
 """隔离验证已安装的包。"""
 
+import json
 import sys
 from datetime import UTC, date, datetime, time, timedelta
 from importlib import import_module
@@ -10,11 +11,14 @@ import ziwei
 from ziwei.birth import CalculationInput, Gender, GregorianBirthRecord, TimePrecision
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
+from ziwei.chart import create_chart, recalculate
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import PremiseStatus
+from ziwei.render import render_text
+from ziwei.serialization import dumps_chart, loads_chart
 from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
 from ziwei.stars import Star
 from ziwei.timezone import AmbiguousTimeError, IanaTimezone, NonexistentTimeError
@@ -160,7 +164,52 @@ def main(expected_version: str) -> None:
   ):
     raise ValueError("Import initialized the calendar adapter")
   check_calendar()
+  check_chart()
   print(f"Installed ziwei {metadata.version}; optimized={sys.flags.optimize}")
+
+
+def check_chart() -> None:
+  """用安装包排整盘、存取和显示；普通与-O由同一个入口执行。"""
+  record = GregorianBirthRecord(
+    birth_date=date(1988, 7, 1),
+    birth_time=time(12),
+    time_precision=TimePrecision.分,
+    timezone=IanaTimezone("Asia/Shanghai"),
+    gender=Gender.男,
+    place="江苏省",
+    source="合成安装例",
+  )
+  choices = ChartConfig(
+    leap_month_policy=LeapMonthPolicy.全月归本月,
+    day_rollover=DayRollover.早晚子时同日,
+    year_boundary=YearBoundary.立春,
+  )
+  chart = create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)
+  if chart.palaces[0].dizhi is not Dizhi.子 or chart.bureau is not WuxingJu.金四局:
+    raise ValueError("Installed full chart has wrong palace or bureau")
+  if len(chart.stars) != 28 or len(chart.palaces) != 12 or len(chart.decades) != 12:
+    raise ValueError("Installed full chart is incomplete")
+  resolved = chart.calculation.resolved_time
+  if resolved is None or resolved.data is None or resolved.offset != timedelta(hours=9):
+    raise ValueError("Installed full chart lost resolved timezone provenance")
+  saved = dumps_chart(chart)
+  restored = loads_chart(saved)
+  if restored != chart or dumps_chart(restored) != saved or recalculate(restored) != chart:
+    raise ValueError("Installed full chart record was not preserved")
+  text = render_text(restored)
+  if not all(part in text for part in ("命宫", "甲子", "大限 4-13虚岁", "紫微", "右弼[科]")):
+    raise ValueError("Installed text chart is incomplete")
+  invalid = json.loads(saved)
+  invalid["schema_version"] = True
+  try:
+    loads_chart(json.dumps(invalid))
+  except ValueError:
+    pass
+  else:
+    raise ValueError("Installed chart loader accepted an invalid schema version")
+  print(
+    "Installed full chart: calculated, saved, restored, recalculated, rendered; invalid schema rejected"
+  )
 
 
 def check_knowledge() -> None:

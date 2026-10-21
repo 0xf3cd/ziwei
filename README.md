@@ -6,10 +6,10 @@
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
 （公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、28星安星、具名生年四化与大限，
-以及独立知识目录；尚无完整命盘API。
+以及完整命盘组合、带版本的JSON保存/恢复、独立重算、文本十二宫格和独立知识目录。
 用法见[出生输入](docs/birth.md)、[历法与时间](docs/calendar.md)、[解析层](docs/resolver.md)、
 [命宫身宫与十二宫](docs/palaces.md)、[五行局](docs/bureau.md)、[安星](docs/stars.md)、
-[四化与大限](docs/sihua-decades.md)和[知识查询](docs/knowledge.md)，
+[四化与大限](docs/sihua-decades.md)、[完整命盘与记录](docs/chart.md)和[知识查询](docs/knowledge.md)，
 开发检查与协作约定见[参与开发](docs/contributing.md)。
 
 ## 首版目标
