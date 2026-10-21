@@ -37,7 +37,7 @@ class Direction(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Decade:
-  """一限的地支、方向及首尾包含的虚岁区间；不表示周岁或实际日期。"""
+  """一限的地支、方向及虚岁区间；只接受五行局起算的十二限之一，首尾包含，不表示周岁或实际日期。"""
 
   dizhi: Dizhi
   direction: Direction
@@ -51,8 +51,12 @@ class Decade:
       raise TypeError("大限须使用 Dizhi 与 Direction 成员")
     if type(self.start_age) is not int or type(self.end_age) is not int:
       raise TypeError("大限岁数须为整数，不接受 bool")
-    if self.start_age < 2 or self.end_age != self.start_age + 9:
-      raise ValueError("大限起始岁数至少为二，首尾包含共十年")
+    if (
+      not 0 <= self.start_age // 10 < len(Dizhi)
+      or self.start_age % 10 not in {ju.number for ju in WuxingJu}
+      or self.end_age != self.start_age + 9
+    ):
+      raise ValueError("大限须为五行局起算的十二限之一，首尾包含共十年")
 
 
 def decade_direction(year_tiangan: Tiangan, gender: Gender) -> Direction:
@@ -88,7 +92,7 @@ def decade_periods(
       ju.number + 10 * index,
       ju.number + 10 * index + 9,
     )
-    for index in range(12)
+    for index in range(len(branches))
   )
 
 

@@ -144,6 +144,20 @@ def test_decade_metadata_is_preserved_in_dataclass_fields() -> None:
       replace(period, **changes)
 
 
+def test_decade_accepts_only_five_bureau_twelve_period_age_sequences() -> None:
+  expected = {start + index * 10 for start in (2, 3, 4, 5, 6) for index in range(12)}
+  accepted = set()
+  for age in (*range(-10, 140), -(10**100), 10**100):
+    if age in expected:
+      period = Decade(Dizhi.子, Direction.顺行, age, age + 9)
+      assert (period.start_age, period.end_age) == (age, age + 9)
+      accepted.add(age)
+    else:
+      with pytest.raises(ValueError):
+        Decade(Dizhi.子, Direction.顺行, age, age + 9)
+  assert accepted == expected
+
+
 @pytest.mark.parametrize("defect", ["missing", "extra", "short", "duplicate", "type"])
 def test_incomplete_or_invalid_table_is_rejected(defect: str) -> None:
   rows: Any = [list(row) for row in SIHUA_TABLES[0].rows]
