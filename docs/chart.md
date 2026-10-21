@@ -135,9 +135,10 @@ True
 
 - [HKO 2024节气分钟表](https://www.hko.gov.hk/en/gts/astronomy/data/files/24SolarTerms_2024.xml)
   给立春02/04 16:27香港时间，时区依据见[节气说明](https://www.hko.gov.hk/en/gts/astronomy/Solar_Term.htm)。
-  16:20与16:35均为申时，分别在该分钟值前7分钟、后8分钟，均在保守的±1分钟比较窗口之外；
-  [逐日表](https://www.hko.gov.hk/en/gts/time/calendar/text/files/T2024e.txt)给当日腊月廿五、02/10正月初一。
-  两时刻都早于02/10，故正月初一口径均为癸卯，立春口径后者为甲辰。不把分钟历书当秒级认证。
+  立春时刻对照测试以60秒为容差，比较库内立春时刻与HKO分钟值，不认证秒级精度。
+- 换年合成例取02/04 16:20和16:35，均为申时，分别在上述分钟值前7分钟、后8分钟，间隔均大于60秒容差。
+  HKO[逐日表](https://www.hko.gov.hk/en/gts/time/calendar/text/files/T2024e.txt)给当日腊月廿五、02/10正月初一。
+  两时刻都早于02/10，故正月初一口径均为癸卯，立春口径后者为甲辰。
 - 2024-11-03 00:20+08、100°E对应11/02 16:20 UTC，平太阳钟为11/02 23:00。
   [pvlib校正Spencer71式](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.solarposition.equation_of_time_spencer71.html)
   独立估得均时差约+980.765秒，太阳钟约11/02 23:16:20.765；只对此例用60秒对照窗口。

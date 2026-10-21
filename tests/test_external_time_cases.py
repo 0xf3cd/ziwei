@@ -56,9 +56,11 @@ def test_hko_lichun_synthetic_components(
   """HKO T2024e.txt给02/04为腊月廿五、02/10为正月初一。
 
   https://www.hko.gov.hk/en/gts/time/calendar/text/files/T2024e.txt
-  两时刻同属申，距16:27分别7和8分钟。十二月从寅顺十一至丑，逆申八至巳、顺八至酉。
-  癸寅甲顺至巳丁：丁巳土五局；甲寅丙顺至巳己：己巳木三局。
-  土五日25商5无补，寅顺四至午；木三日25补2商9，寅顺2再顺8至子。
+  两时刻同属申，距16:27分别7和8分钟。农历十二月从寅宫起正月，顺行11步到丑宫；
+  申时从丑宫逆行8步得命宫巳，顺行8步得身宫酉。
+  按五虎遁，癸年从甲寅顺数到丁巳，纳音属土，为土五局；甲年从丙寅顺数到己巳，纳音属木，为木三局。
+  土五局廿五日：25除以5得商5，无需补数，从寅宫起数第5宫到午。
+  木三局廿五日：补2至27，除以3得商9，从寅宫起数第9宫到戌；补数2为偶数，再顺行2步到子。
   """
   record = GregorianBirthRecord(
     birth_date=date(2024, 2, 4),
@@ -130,8 +132,10 @@ def test_solar_clock_matches_corrected_spencer_for_selected_case() -> None:
 def test_independent_solar_late_zi_components(choices: ChartConfig, rollover: DayRollover) -> None:
   """HKO T2024e.txt：11/02十月初二、11/03初三。独立太阳钟约前日23:16，离子时界约16分。
 
-  十月寅顺九至亥，子时命身同亥；甲年乙亥纳音山头火，火六局。
-  日2补4商1，寅顺4得午；日3补3商1，寅逆3得亥。日标签能区分两种子时口径。
+  农历十月从寅宫起正月，顺行9步到亥，子时不移动，命宫与身宫同亥。
+  甲年亥宫为乙亥，纳音山头火，为火六局。
+  初二补4至6，除以6得商1，从寅宫起数第1宫仍在寅；补数4为偶数，顺行4步到午。
+  初三补3至6，除以6得商1仍在寅；补数3为奇数，逆行3步到亥。日标签能区分两种子时口径。
   """
   record = GregorianBirthRecord(
     birth_date=date(2024, 11, 3),

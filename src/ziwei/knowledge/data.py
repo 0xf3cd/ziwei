@@ -619,7 +619,7 @@ CITATIONS = (
     quote="此天马星以生月定之，每月是以初一开始，而不论节气。",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="四组三合月口诀与《精成》同文，按一路文本计；两页传承关系未核。九月例天马在申；闰月组合仍是项目选择。",
+    limits="四组三合月口诀与《精成》同文，按一路文本计；两页传承关系未核。1954例（九月）天马在申；闰月组合仍是项目选择。",
   ),
   Citation(
     id="citation.zhongyi999.tianma-year",
@@ -637,7 +637,7 @@ CITATIONS = (
     quote="顺数至生时安火星",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="同句随后说明铃星也顺数至生时。只补已见明文，未核原著；不据网址增加数认定独立谱系。",
+    limits="同句随后说明铃星也顺数至生时。只补已见明文，未核原著；不因网址不同就认定为独立谱系。",
   ),
   Citation(
     id="citation.jingcheng.birth-month",
