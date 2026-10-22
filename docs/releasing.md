@@ -15,7 +15,7 @@
 维护者批准配置后：
 
 1. 在GitHub建立`testpypi`与`pypi`两个environment。设置维护者为required reviewer，
-   部署策略选selected，唯一规则为`name: main`、`type: branch`，禁止管理员绕过。
+   Deployment branches选择Selected branches and tags，唯一规则为`name: main`、`type: branch`，禁止管理员绕过。
    不添加API token或其他secret。不要用同名tag规则替代main分支规则。
 2. 单维护者需要保留批准自己运行的能力；启用Prevent self-review会阻止这种批准。
    这里是同一人的显式第二步，不是另一人的独立审阅。
@@ -36,7 +36,8 @@ pending publisher首次使用时才创建项目，**不会预留名称**。配�
 ## 同一次运行中的发布链
 
 候选版本验收完成并合入main后，维护者另行批准启动发布。进入Actions的Release工作流，
-选择main，填写候选版本和本次main运行的完整小写40位SHA。
+选择main，填写候选版本，并复制main最新提交的完整小写40位SHA。
+如果提交表单前main又有新提交，须按新提交的SHA重填。
 版本须与`pyproject.toml`一致，SHA须与GitHub为本次运行记录的`github.sha`一致；
 不接受任意旧提交、tag或临时改写的版本。之后main的新提交不会改变已经锁定的运行SHA。
 
@@ -50,7 +51,7 @@ pending publisher首次使用时才创建项目，**不会预留名称**。配�
 2. **支持矩阵消费**：Linux的Python3.11–3.14、Linux ARM64和macOS／Windows3.14
    下载同一个artifact-id，按构建job单独输出的hash核对后，运行相同安装消费函数。
    安装平台范围仍以[安装要求](../README.md#安装要求)为准。
-3. **TestPyPI批准与上传**：等待`testpypi`环境批准，只下载、核hash，再调用固定SHA的上传action。
+3. **TestPyPI批准与上传**：等待`testpypi`环境批准，只下载、核hash，再调用固定到完整提交SHA的上传action。
 4. **测试站回读**：核精确项目／版本的两个文件摘要。目标wheel只从TestPyPI取回并核对实际hash，
    然后`--no-deps`安装；运行时依赖只按本仓锁定hash从PyPI安装，不使用`--extra-index-url`。
    TestPyPI没有本项目要求的完整依赖组合，不能把它当作PyPI镜像。
@@ -62,7 +63,8 @@ pending publisher首次使用时才创建项目，**不会预留名称**。配�
 
 action引用固定完整提交SHA，但这不等于所有传递依赖都由OCI digest固定。
 当前上传action用该SHA作为容器镜像tag；仍须信任上游维护者及镜像发布链。
-启用前要核对当时的action实现与这项信任条件，不把“已钉action”写成“所有容器字节都已锁定”。
+启用前要核对当时的action实现、记录该镜像tag的实际digest，并确认这项信任条件；
+不把“已钉action”写成“所有容器字节都已锁定”。
 
 ## 失败、拒绝与发布记录
 
@@ -92,7 +94,8 @@ uv run --locked python tools/check.py --artifacts-dir dist
 
 输出目录保存`packages/`中的sdist与wheel，以及消费前固定的`SHA256SUMS`。
 发布工作流随后加入`release.json`，并把文件名、hash和artifact-id分别传给下游job。
-非空目录、缺文件、多文件、软链、错误身份或hash不符都须失败，不静默覆盖。
+本地保留入口拒绝非空目的地，不静默覆盖；发布工具另核保留目录的精确成员、身份、软链和摘要，
+缺文件、多文件、错误身份或hash不符时拒绝继续。
 
 本机测试覆盖身份早失败、workflow权限／依赖结构、产物篡改、真实发布Bash及上传前拒绝。
 它们不能证明服务端environment已经生效、OIDC已可用或TestPyPI已实际安装成功；

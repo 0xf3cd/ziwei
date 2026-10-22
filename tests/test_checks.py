@@ -2,6 +2,7 @@
 
 import io
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -14,17 +15,15 @@ from zipfile import ZipFile
 import pytest
 from packaging.specifiers import SpecifierSet
 
-from tools import check
-from tools.check import (
+from tools import artifacts, check, consumption
+from tools.artifacts import (
   built_artifacts,
-  check_documents,
-  check_examples,
   check_sdist,
   check_wheel,
-  document_errors,
-  run,
   source_members,
 )
+from tools.check import check_documents, check_examples, document_errors
+from tools.consumption import run
 
 PKG_INFO = "Name: ziwei\nVersion: 0.0.0\n"
 SOURCE = (
@@ -172,6 +171,9 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     "docs/index.md",
     "docs/guide/page.md",
     "docs/notes.txt",
+    ".github/workflows/checks.yml",
+    ".github/workflows/release.yml",
+    ".github/workflows/extra.yaml",
   ):
     (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
     (tmp_path / path).touch()
@@ -183,8 +185,17 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     "docs/guide/page.md",
     "docs/python-stdlib.inv",
     "tests/test_a.py",
+    ".github/workflows/checks.yml",
+    ".github/workflows/release.yml",
+    ".github/workflows/extra.yaml",
   } <= set(members)
   assert {"tools/helper.sh", "docs/notes.txt"}.isdisjoint(members)
+
+
+def test_real_source_members_include_the_workflow_consumed_by_tests() -> None:
+  assert {".github/workflows/checks.yml", ".github/workflows/release.yml"} <= set(
+    source_members(check.ROOT)
+  )
 
 
 def test_valid_sdist(tmp_path: Path) -> None:
@@ -219,6 +230,30 @@ def test_sdist_review_material_rejected(tmp_path: Path) -> None:
   members = {"PKG-INFO": PKG_INFO, ".review/notes.md": "x", **dict.fromkeys(SOURCE, "")}
   with pytest.raises(ValueError, match="review material"):
     check_sdist(write_sdist(tmp_path / "ziwei-0.0.0.tar.gz", members), "0.0.0", SOURCE)
+
+
+@pytest.mark.parametrize("name", [".review/notes.md", "ziwei-0.0.0/.review", "other/.review/note"])
+def test_sdist_review_material_is_rejected_outside_the_version_root(
+  tmp_path: Path, name: str
+) -> None:
+  path = write_sdist(
+    tmp_path / "ziwei-0.0.0.tar.gz", {"PKG-INFO": PKG_INFO, **dict.fromkeys(SOURCE, "")}
+  )
+  with tarfile.open(path) as archive:
+    members = []
+    for member in archive.getmembers():
+      stream = archive.extractfile(member)
+      assert stream is not None
+      with stream:
+        members.append((member, stream.read()))
+  with tarfile.open(path, "w:gz") as archive:
+    for member, data in members:
+      archive.addfile(member, io.BytesIO(data))
+    extra = tarfile.TarInfo(name)
+    extra.size = 1
+    archive.addfile(extra, io.BytesIO(b"x"))
+  with pytest.raises(ValueError, match="review material"):
+    check_sdist(path, "0.0.0", SOURCE)
 
 
 @pytest.mark.parametrize(
@@ -300,6 +335,7 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
     calls.append((tuple(command), cwd))
 
   monkeypatch.setattr(check, "run", fake_run)
+  monkeypatch.setattr(consumption, "run", fake_run)
   monkeypatch.setattr(check, "built_artifacts", lambda path: (sdist, wheel))
   monkeypatch.setattr(check, "source_members", lambda path: ())
   monkeypatch.setattr(check, "check_sdist", lambda *args: None)
@@ -322,6 +358,35 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
   assert "--require-hashes" in calls[-4][0]
   assert "--locked" in calls[-6][0] and "--no-emit-project" in calls[-6][0]
   assert "--no-isolation" in calls[0][0]
+  assert calls[1] == ((sys.executable, "-m", "twine", "check", str(sdist), str(wheel)), source)
+  assert calls[2] == (
+    (
+      "uv",
+      "export",
+      "--locked",
+      "--no-dev",
+      "--no-emit-project",
+      "--no-editable",
+      "--output-file",
+      str(tmp_path / "runtime.txt"),
+    ),
+    source,
+  )
+  assert calls[4] == (
+    (
+      "uv",
+      "pip",
+      "install",
+      "--python",
+      str(python),
+      "--require-hashes",
+      "--default-index",
+      "https://pypi.org/simple",
+      "--requirements",
+      str(tmp_path / "runtime.txt"),
+    ),
+    source,
+  )
 
 
 def test_build_backend_is_explicitly_in_the_locked_development_group() -> None:
@@ -355,7 +420,9 @@ def test_distribution_rejects_changes_during_consumption(
   monkeypatch.setattr(check, "run", lambda *args, **kwargs: None)
   monkeypatch.setattr(check, "check_sdist", lambda *args: None)
   monkeypatch.setattr(check, "check_wheel", lambda *args: None)
-  monkeypatch.setattr(check, "install_and_consume", lambda *args: wheel.write_bytes(b"changed"))
+  monkeypatch.setattr(
+    check, "install_and_consume", lambda *args, **kwargs: wheel.write_bytes(b"changed")
+  )
   with pytest.raises(ValueError, match="changed during"):
     check.check_distribution(tmp_path, artifacts_dir=tmp_path / "kept")
   assert not (tmp_path / "kept").exists()
@@ -365,32 +432,85 @@ def test_retained_artifacts_preserve_the_pre_consumption_bytes(tmp_path: Path) -
   files = (tmp_path / "a.tar.gz", tmp_path / "a.whl")
   for path in files:
     path.write_bytes(path.name.encode())
-  hashes = {path: check.file_sha256(path) for path in files}
+  hashes = {path: artifacts.file_sha256(path) for path in reversed(files)}
   kept = tmp_path / "kept"
-  check.preserve_artifacts(hashes, kept)
+  artifacts.preserve_artifacts(hashes, kept)
   for path, digest in hashes.items():
-    assert check.file_sha256(kept / "packages" / path.name) == digest
-  assert len((kept / "SHA256SUMS").read_text().splitlines()) == 2
+    assert artifacts.file_sha256(kept / "packages" / path.name) == digest
+  assert (kept / "SHA256SUMS").read_bytes() == "".join(
+    f"{hashes[path]}  {path.name}\n" for path in files
+  ).encode()
   with pytest.raises(ValueError, match="empty directory"):
-    check.preserve_artifacts(hashes, kept)
+    artifacts.preserve_artifacts(hashes, kept)
 
 
 def test_retaining_an_already_changed_file_fails(tmp_path: Path) -> None:
+  sdist = tmp_path / "a.tar.gz"
+  sdist.write_bytes(b"source")
   path = tmp_path / "a.whl"
   path.write_bytes(b"original")
-  original = check.file_sha256(path)
+  original = artifacts.file_sha256(path)
   path.write_bytes(b"changed")
   with pytest.raises(ValueError, match="changed during"):
-    check.preserve_artifacts({path: original}, tmp_path / "kept")
+    artifacts.preserve_artifacts(
+      {sdist: artifacts.file_sha256(sdist), path: original}, tmp_path / "kept"
+    )
   assert not (tmp_path / "kept/SHA256SUMS").exists()
+
+
+def test_copy_corruption_is_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+  files = tmp_path / "a.tar.gz", tmp_path / "a.whl"
+  for path in files:
+    path.write_bytes(b"original")
+  hashes = {path: artifacts.file_sha256(path) for path in files}
+  monkeypatch.setattr(shutil, "copyfile", lambda src, dst: dst.write_bytes(b"corrupt"))
+  with pytest.raises(ValueError, match="Artifact copy differs"):
+    artifacts.preserve_artifacts(hashes, tmp_path / "kept")
+  assert not (tmp_path / "kept/SHA256SUMS").exists()
+
+
+@pytest.mark.parametrize(
+  "defect", [None, "count", "name", "order", "uppercase", "crlf", "no-newline"]
+)
+def test_checksum_contract(tmp_path: Path, defect: str | None) -> None:
+  names = "ziwei-0.1.0.tar.gz", "ziwei-0.1.0-py3-none-any.whl"
+  hashes = "a" * 64, "b" * 64
+  text = artifacts.checksum_text(names, hashes)
+  path = tmp_path / "SHA256SUMS"
+  path.write_bytes(text.encode())
+  assert artifacts.read_checksums(path, names) == hashes
+  match defect:
+    case "count":
+      text += "extra\n"
+    case "name":
+      text = text.replace(names[1], "other.whl")
+    case "order":
+      text = "\n".join(reversed(text.splitlines())) + "\n"
+    case "uppercase":
+      text = text.replace("a" * 64, "A" * 64)
+    case "crlf":
+      text = text.replace("\n", "\r\n")
+    case "no-newline":
+      text = text.rstrip("\n")
+  path.write_bytes(text.encode())
+  if defect is None:
+    assert artifacts.read_checksums(path, names) == hashes
+  else:
+    with pytest.raises(ValueError, match="build checksum"):
+      artifacts.read_checksums(path, names)
 
 
 def test_installed_consumption_refuses_a_repository_directory() -> None:
   with pytest.raises(ValueError, match="outside the repository"):
-    check.install_and_consume(Path("a.whl"), "0.1.0", check.ROOT / "build/consumer")
+    consumption.install_and_consume(
+      Path("a.whl"), "0.1.0", check.ROOT / "build/consumer", root=check.ROOT
+    )
 
 
-def test_main_runs_every_gate_in_order(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+@pytest.mark.parametrize("retain", [False, True])
+def test_main_runs_every_gate_in_order(
+  monkeypatch: pytest.MonkeyPatch, tmp_path: Path, retain: bool
+) -> None:
   calls: list[object] = []
 
   def fake_run(command: Sequence[str], *, cwd: Path = check.ROOT) -> None:
@@ -408,9 +528,14 @@ def test_main_runs_every_gate_in_order(monkeypatch: pytest.MonkeyPatch, tmp_path
   monkeypatch.setattr(
     check, "check_knowledge_reference", lambda directory: calls.append("knowledge_reference")
   )
-  monkeypatch.setattr(check, "check_distribution", lambda directory: calls.append("distribution"))
+  monkeypatch.setattr(
+    check,
+    "check_distribution",
+    lambda directory, *, artifacts_dir=None: calls.append(("distribution", artifacts_dir)),
+  )
   monkeypatch.setenv("SCRATCH", str(tmp_path))
-  check.main()
+  destination = tmp_path / "kept" if retain else None
+  check.main(artifacts_dir=destination)
   assert calls == [
     ("-m", "ruff", "check", "."),
     ("-m", "ruff", "format", "--check", "."),
@@ -428,7 +553,7 @@ def test_main_runs_every_gate_in_order(monkeypatch: pytest.MonkeyPatch, tmp_path
     ("examples", "report"),
     "api_reference",
     "knowledge_reference",
-    "distribution",
+    ("distribution", destination),
   ]
 
 

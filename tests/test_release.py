@@ -14,7 +14,7 @@ from zipfile import ZipFile
 
 import pytest
 
-from tools import check, release
+from tools import artifacts, release
 
 VERSION = "0.1.0"
 SHA = "a" * 40
@@ -22,18 +22,18 @@ SHA = "a" * 40
 
 @pytest.fixture
 def bundle(tmp_path: Path) -> tuple[Path, release.Manifest]:
-  artifacts = tmp_path / "built"
-  artifacts.mkdir()
-  sdist = artifacts / f"ziwei-{VERSION}.tar.gz"
+  built = tmp_path / "built"
+  built.mkdir()
+  sdist = built / f"ziwei-{VERSION}.tar.gz"
   with tarfile.open(sdist, "w:gz") as archive:
-    texts = dict.fromkeys(check.source_members(check.ROOT), "")
+    texts = dict.fromkeys(artifacts.source_members(release.ROOT), "")
     texts["PKG-INFO"] = f"Name: ziwei\nVersion: {VERSION}\n"
     for name, text in texts.items():
       data = text.encode()
       member = tarfile.TarInfo(f"ziwei-{VERSION}/{name}")
       member.size = len(data)
       archive.addfile(member, io.BytesIO(data))
-  wheel = artifacts / f"ziwei-{VERSION}-py3-none-any.whl"
+  wheel = built / f"ziwei-{VERSION}-py3-none-any.whl"
   with ZipFile(wheel, "w") as archive:
     archive.writestr(f"ziwei-{VERSION}.dist-info/METADATA", f"Name: ziwei\nVersion: {VERSION}\n")
     for name in (
@@ -43,7 +43,9 @@ def bundle(tmp_path: Path) -> tuple[Path, release.Manifest]:
     ):
       archive.writestr(name, "")
   directory = tmp_path / "bundle"
-  check.preserve_artifacts({path: check.file_sha256(path) for path in (sdist, wheel)}, directory)
+  artifacts.preserve_artifacts(
+    {path: artifacts.file_sha256(path) for path in (sdist, wheel)}, directory
+  )
   return directory, release.prepare_bundle(directory, VERSION, SHA)
 
 
@@ -156,7 +158,9 @@ def test_testpypi_metadata_cannot_select_another_project_or_index(
 ) -> None:
   _, manifest = bundle
   data = index_metadata(manifest)
-  assert release.testpypi_files(data, manifest).startswith("https://test-files.pythonhosted.org/")
+  assert release.testpypi_wheel_url(data, manifest).startswith(
+    "https://test-files.pythonhosted.org/"
+  )
   bad = deepcopy(data)
   match defect:
     case "project":
@@ -176,7 +180,7 @@ def test_testpypi_metadata_cannot_select_another_project_or_index(
     case "credentials":
       bad["urls"][1]["url"] = "https://user:password@test-files.pythonhosted.org/packages/file.whl"
   with pytest.raises(ValueError):
-    release.testpypi_files(bad, manifest)
+    release.testpypi_wheel_url(bad, manifest)
 
 
 @pytest.mark.parametrize("corrupt", [False, True])
@@ -195,9 +199,9 @@ def test_testpypi_installs_only_after_verifying_the_download(
       return io.BytesIO(json.dumps(index_metadata(manifest)).encode())
     return io.BytesIO(b"changed" if corrupt else wheel_bytes)
 
-  def consume(wheel: Path, version: str, workdir: Path) -> None:
+  def consume(wheel: Path, version: str, workdir: Path, *, root: Path) -> None:
     assert wheel.read_bytes() == wheel_bytes
-    assert workdir != check.ROOT and version == VERSION
+    assert workdir != root == release.ROOT and version == VERSION
     consumed.append(version)
 
   monkeypatch.setattr(release, "urlopen", open_url)
@@ -255,10 +259,94 @@ def test_release_cli_keeps_the_same_identity_and_bytes(
   if command == "prepare":
     (directory / "release.json").unlink()
   consumed: list[str] = []
-  monkeypatch.setattr(release, "install_and_consume", lambda *args: consumed.append("consume"))
   monkeypatch.setattr(release, "verify_testpypi", lambda *args: consumed.append("testpypi"))
   monkeypatch.setattr(sys, "argv", ["release", command, "--directory", str(directory)])
+  events: list[str] = []
+  verify = release.verify_bundle
+
+  def observe_verify(path: Path, expected: release.Manifest) -> None:
+    events.append("verify")
+    verify(path, expected)
+
+  def consume(*args: Any, **kwargs: Any) -> None:
+    assert kwargs["root"] == source
+    events.append("consume")
+    consumed.append("consume")
+
+  monkeypatch.setattr(release, "verify_bundle", observe_verify)
+  monkeypatch.setattr(release, "install_and_consume", consume)
   release.main()
   if command == "prepare":
     assert f"source_sha={SHA}\n" in (tmp_path / "outputs").read_text()
   assert consumed == {"consume": ["consume"], "verify-testpypi": ["testpypi"]}.get(command, [])
+  assert (
+    events
+    == {
+      "validate": [],
+      "prepare": ["verify"],
+      "consume": ["verify", "consume", "verify"],
+      "verify-testpypi": ["verify"],
+    }[command]
+  )
+
+
+@pytest.mark.parametrize("status", [403, 429, 503])
+def test_testpypi_does_not_retry_non_404_errors(
+  bundle: tuple[Path, release.Manifest], monkeypatch: pytest.MonkeyPatch, status: int
+) -> None:
+  calls: list[str] = []
+  sleeps: list[float] = []
+
+  def unavailable(url: str, *, timeout: int) -> io.BytesIO:
+    calls.append(url)
+    raise HTTPError(url, status, "Synthetic failure", HTTPMessage(), None)
+
+  monkeypatch.setattr(release, "urlopen", unavailable)
+  monkeypatch.setattr(time, "sleep", sleeps.append)
+  with pytest.raises(HTTPError) as caught:
+    release.verify_testpypi(bundle[1])
+  assert caught.value.code == status
+  assert calls == [f"https://test.pypi.org/pypi/ziwei/{VERSION}/json"]
+  assert sleeps == []
+
+
+@pytest.mark.parametrize("defect", ["fields", "type", "digest", "placeholder"])
+def test_manifest_rejects_invalid_shape_and_values(
+  bundle: tuple[Path, release.Manifest], defect: str
+) -> None:
+  directory, _ = bundle
+  data = json.loads((directory / "release.json").read_text(encoding="utf-8"))
+  expected = ""
+  match defect:
+    case "fields":
+      data["extra"] = "x"
+      expected = "manifest fields"
+    case "type":
+      data["version"] = 1
+      expected = "must be strings"
+    case "digest":
+      data["wheel_sha256"] = "X" * 64
+      expected = "lowercase SHA256"
+    case "placeholder":
+      data["version"] = "0.0.0"
+      expected = "0.0.0 placeholder"
+  (directory / "release.json").write_text(json.dumps(data), encoding="utf-8")
+  with pytest.raises(ValueError, match=expected):
+    release.read_manifest(directory)
+
+
+@pytest.mark.skipif(
+  sys.platform == "win32", reason="Windows symlink creation may require privileges"
+)
+@pytest.mark.parametrize("member", ["bundle", "packages", "SHA256SUMS", "release.json"])
+def test_bundle_rejects_symlinks_at_every_level(
+  bundle: tuple[Path, release.Manifest], member: str
+) -> None:
+  directory, manifest = bundle
+  release.verify_bundle(directory, manifest)
+  path = directory if member == "bundle" else directory / member
+  target = directory.parent / (path.name + "-original")
+  path.rename(target)
+  path.symlink_to(target, target_is_directory=target.is_dir())
+  with pytest.raises(ValueError, match="regular"):
+    release.verify_bundle(directory, manifest)

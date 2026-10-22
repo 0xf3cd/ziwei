@@ -15,6 +15,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github/workflows/checks.yml"
 RELEASE = ROOT / ".github/workflows/release.yml"
+UV_VERSION = "0.12.5"
+VERSION = "0.1.0"
 SOURCE_CHECK = (
   "set -euo pipefail\n"
   'test -z "$(git status --porcelain --untracked-files=all)"\n'
@@ -105,7 +107,14 @@ def test_each_ci_job_binds_uv_archive_checksum() -> None:
   assert jobs[0][2] == jobs[1][2] and len({checksum for _, _, checksum in jobs}) == 4
   uv_step = workflow.split("- uses: astral-sh/setup-uv@", 1)[1].split("- run:", 1)[0]
   assert "checksum: ${{ matrix.uv-checksum }}" in uv_step
-  assert 'version: "0.12.5"' in uv_step
+  assert f'version: "{UV_VERSION}"' in uv_step
+
+
+def uv_archive_checksums() -> dict[str, str]:
+  rows = load_workflow(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["quality"]["strategy"][
+    "matrix"
+  ]["include"]
+  return {row["os"]: row["uv-checksum"] for row in rows}
 
 
 def check_release_policy(data: dict[str, Any]) -> None:
@@ -116,6 +125,28 @@ def check_release_policy(data: dict[str, Any]) -> None:
     data["concurrency"] == {"group": "ziwei-publish", "cancel-in-progress": "false"}, "Concurrency"
   )
   jobs = data["jobs"]
+  pairs = [
+    ("ubuntu-latest", "3.11"),
+    ("ubuntu-latest", "3.12"),
+    ("ubuntu-latest", "3.13"),
+    ("ubuntu-latest", "3.14"),
+    ("ubuntu-24.04-arm", "3.14"),
+    ("macos-latest", "3.14"),
+    ("windows-latest", "3.14"),
+  ]
+  checksums = uv_archive_checksums()
+  require(
+    jobs["consume"]["strategy"]["matrix"]["include"]
+    == [
+      {"os": os_name, "python": python, "checksum": checksums[os_name]} for os_name, python in pairs
+    ],
+    "Release consumption matrix and uv checksums",
+  )
+  require(jobs["consume"]["runs-on"] == "${{ matrix.os }}", "Consume runner follows matrix")
+  require(
+    jobs["consume"]["env"]["PYTHON_VERSION"] == "${{ matrix.python }}",
+    "Consume Python follows matrix",
+  )
   require("if" not in jobs["build"], "Identity validation must run rather than silently skip")
   sync = next(
     step
@@ -161,10 +192,15 @@ def check_release_policy(data: dict[str, Any]) -> None:
         )
       if action == "astral-sh/setup-uv":
         require(
-          options.get("version") == "0.12.5" and options.get("enable-cache") == "false",
+          options.get("version") == UV_VERSION and options.get("enable-cache") == "false",
           "Pinned uncached uv",
         )
         require("checksum" in options, "uv download checksum")
+        require(
+          options["checksum"]
+          == ("${{ matrix.checksum }}" if name == "consume" else checksums[job["runs-on"]]),
+          "Release uv checksum matches quality CI",
+        )
       if action == "actions/download-artifact":
         require(
           options
@@ -256,6 +292,12 @@ def test_release_workflow_obeys_the_publication_contract() -> None:
     "build-if",
     "windows-shell",
     "runner-job-env",
+    "matrix-missing",
+    "matrix-python",
+    "matrix-checksum",
+    "matrix-runner",
+    "matrix-env",
+    "uv-checksum",
   ],
 )
 def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
@@ -296,6 +338,22 @@ def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
       )
     case "runner-job-env":
       bad["jobs"]["build"]["env"]["SCRATCH"] = "${{ runner.temp }}"
+    case "matrix-missing":
+      bad["jobs"]["consume"]["strategy"]["matrix"]["include"].pop()
+    case "matrix-python":
+      bad["jobs"]["consume"]["strategy"]["matrix"]["include"][0]["python"] = "3.10"
+    case "matrix-checksum":
+      bad["jobs"]["consume"]["strategy"]["matrix"]["include"][0]["checksum"] = "0" * 64
+    case "matrix-runner":
+      bad["jobs"]["consume"]["runs-on"] = "ubuntu-latest"
+    case "matrix-env":
+      bad["jobs"]["consume"]["env"]["PYTHON_VERSION"] = "3.14"
+    case "uv-checksum":
+      next(
+        step
+        for step in bad["jobs"]["build"]["steps"]
+        if step.get("uses", "").startswith("astral-sh/setup-uv@")
+      )["with"]["checksum"] = "0" * 64
   expected = {
     "trigger": "dispatch-only",
     "permissions": "Least-privilege",
@@ -310,6 +368,12 @@ def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
     "build-if": "Identity validation must run",
     "windows-shell": "Bash variables on every platform",
     "runner-job-env": "Job-level env cannot use runner context",
+    "matrix-missing": "consumption matrix",
+    "matrix-python": "consumption matrix",
+    "matrix-checksum": "consumption matrix",
+    "matrix-runner": "Consume runner follows matrix",
+    "matrix-env": "Consume Python follows matrix",
+    "uv-checksum": "uv checksum matches quality CI",
   }[defect]
   with pytest.raises(ValueError, match=expected):
     check_release_policy(bad)
@@ -323,13 +387,13 @@ def test_actual_publish_script_fails_before_upload(
 ) -> None:
   packages = tmp_path / "packages"
   packages.mkdir()
-  names = ("ziwei-0.1.0.tar.gz", "ziwei-0.1.0-py3-none-any.whl")
+  names = (f"ziwei-{VERSION}.tar.gz", f"ziwei-{VERSION}-py3-none-any.whl")
   for name in names:
     (packages / name).write_bytes(name.encode())
   env = dict(
     os.environ,
     DIST_DIR=str(tmp_path),
-    RELEASE_VERSION="0.1.0",
+    RELEASE_VERSION=VERSION,
     SDIST_NAME=names[0],
     WHEEL_NAME=names[1],
     SDIST_SHA256=hashlib.sha256(names[0].encode()).hexdigest(),

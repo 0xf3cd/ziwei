@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       sha:
-        description: Full lowercase SHA of this main workflow run
+        description: Full lowercase SHA of the latest main commit when dispatching
         required: true
         type: string
 

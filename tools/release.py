@@ -18,28 +18,41 @@ from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from tools.check import check_sdist, check_wheel, file_sha256, install_and_consume, source_members
+from tools.artifacts import (
+  check_sdist,
+  check_wheel,
+  checksum_text,
+  distribution_filenames,
+  file_sha256,
+  read_checksums,
+  source_members,
+)
+from tools.consumption import install_and_consume
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def validate_release_format(version: str, source_sha: str) -> None:
+  """拒绝占位版本、非规范版本号和不完整的小写源码SHA。"""
+  if not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version):
+    raise ValueError("Release version must have three canonical numeric components")
+  if version == "0.0.0":
+    raise ValueError("Release version cannot be the 0.0.0 placeholder")
+  if not re.fullmatch(r"[0-9a-f]{40}", source_sha):
+    raise ValueError("Release SHA must be a full lowercase source SHA")
 
 
 def validate_identity(
   version: str, source_sha: str, *, github_sha: str, github_ref: str, metadata_version: str
 ) -> None:
-  """对本次main运行早失败；不代替服务端environment部署规则。"""
-  if not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version):
-    raise ValueError("Release version must have three canonical numeric components")
-  if version == "0.0.0" or version != metadata_version:
+  """在构建前核本次main运行身份；不代替服务端部署规则。"""
+  validate_release_format(version, source_sha)
+  if version != metadata_version:
     raise ValueError("Release version differs from candidate project metadata")
-  if not re.fullmatch(r"[0-9a-f]{40}", source_sha) or source_sha != github_sha:
+  if source_sha != github_sha:
     raise ValueError("Release SHA must equal this workflow's full source SHA")
   if github_ref != "refs/heads/main":
     raise ValueError("Release early check requires refs/heads/main")
-
-
-def distribution_filenames(version: str) -> tuple[str, str]:
-  """返回ziwei纯Python发行的sdist与wheel文件名。"""
-  return f"ziwei-{version}.tar.gz", f"ziwei-{version}-py3-none-any.whl"
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,19 +65,13 @@ class Manifest:
   wheel_sha256: str
 
   def __post_init__(self) -> None:
-    validate_identity(
-      self.version,
-      self.source_sha,
-      github_sha=self.source_sha,
-      github_ref="refs/heads/main",
-      metadata_version=self.version,
-    )
+    validate_release_format(self.version, self.source_sha)
     if any(not re.fullmatch(r"[0-9a-f]{64}", value) for value in self.hashes):
       raise ValueError("Artifact digests must be lowercase SHA256")
 
   @property
   def filenames(self) -> tuple[str, str]:
-    """返回此次纯Python发行的唯一sdist与wheel文件名。"""
+    """按sdist、wheel顺序返回本次文件名。"""
     return distribution_filenames(self.version)
 
   @property
@@ -100,10 +107,8 @@ def verify_bundle(directory: Path, expected: Manifest) -> None:
     raise ValueError("Manifest differs from trusted build outputs")
   if {path.name for path in packages.iterdir()} != set(expected.filenames):
     raise ValueError("Expected exactly the release sdist and wheel")
-  expected_sums = "".join(
-    f"{digest}  {name}\n" for name, digest in zip(expected.filenames, expected.hashes, strict=True)
-  )
-  if (directory / "SHA256SUMS").read_text(encoding="utf-8") != expected_sums:
+  expected_sums = checksum_text(expected.filenames, expected.hashes).encode("utf-8")
+  if (directory / "SHA256SUMS").read_bytes() != expected_sums:
     raise ValueError("Checksum file differs from trusted build outputs")
   for name, digest in zip(expected.filenames, expected.hashes, strict=True):
     path = packages / name
@@ -115,16 +120,7 @@ def verify_bundle(directory: Path, expected: Manifest) -> None:
 
 def prepare_bundle(directory: Path, version: str, source_sha: str) -> Manifest:
   """把门禁保留的原始摘要与本次源码身份配对，不重建产物。"""
-  sums = (directory / "SHA256SUMS").read_text(encoding="utf-8").splitlines()
-  names = distribution_filenames(version)
-  digests: list[str] = []
-  if len(sums) != 2:
-    raise ValueError("Expected two original build checksums")
-  for line, name in zip(sums, names, strict=True):
-    match = re.fullmatch(r"([0-9a-f]{64})  " + re.escape(name), line)
-    if match is None:
-      raise ValueError("Invalid original build checksum")
-    digests.append(match[1])
+  digests = read_checksums(directory / "SHA256SUMS", distribution_filenames(version))
   manifest = Manifest(version, source_sha, digests[0], digests[1])
   path = directory / "release.json"
   if path.exists() or path.is_symlink():
@@ -134,7 +130,7 @@ def prepare_bundle(directory: Path, version: str, source_sha: str) -> Manifest:
   return manifest
 
 
-def testpypi_files(data: Any, expected: Manifest) -> str:
+def testpypi_wheel_url(data: object, expected: Manifest) -> str:
   """核测试站项目与版本的两文件摘要，返回官方文件站上的wheel URL。"""
   if not isinstance(data, dict) or not isinstance(data.get("info"), dict):
     raise ValueError("Invalid TestPyPI metadata")
@@ -143,7 +139,7 @@ def testpypi_files(data: Any, expected: Manifest) -> str:
   files = data.get("urls")
   if not isinstance(files, list) or len(files) != 2:
     raise ValueError("Expected two TestPyPI files")
-  indexed: dict[str, Any] = {}
+  indexed: dict[str, dict[str, Any]] = {}
   for item in files:
     if not isinstance(item, dict) or not isinstance(item.get("filename"), str):
       raise ValueError("Invalid TestPyPI file metadata")
@@ -185,7 +181,7 @@ def verify_testpypi(expected: Manifest) -> None:
       if not retry:
         raise
       time.sleep(3)
-  download = testpypi_files(data, expected)
+  download = testpypi_wheel_url(data, expected)
   with tempfile.TemporaryDirectory(prefix="ziwei-testpypi-", dir=os.environ.get("SCRATCH")) as tmp:
     directory = Path(tmp)
     wheel = directory / expected.filenames[1]
@@ -194,14 +190,20 @@ def verify_testpypi(expected: Manifest) -> None:
         output.write(chunk)
     if file_sha256(wheel) != expected.wheel_sha256:
       raise ValueError("Downloaded TestPyPI wheel differs from verified bytes")
-    install_and_consume(wheel, expected.version, directory)
+    install_and_consume(wheel, expected.version, directory, root=ROOT)
 
 
 def main() -> None:
-  """显式选择只读验证阶段；上传只由独立workflow job执行。"""
+  """选择身份校验、清单写入或安装消费阶段，不执行上传。"""
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument("command", choices=("validate", "prepare", "consume", "verify-testpypi"))
-  parser.add_argument("--directory", type=Path, default=Path("dist"))
+  parser.add_argument(
+    "command",
+    choices=("validate", "prepare", "consume", "verify-testpypi"),
+    help="validate核身份；prepare写清单与构建输出；consume或verify-testpypi核产物并安装消费",
+  )
+  parser.add_argument(
+    "--directory", type=Path, default=Path("dist"), help="门禁保留的产物目录（默认dist）"
+  )
   args = parser.parse_args()
   version, source_sha = os.environ["RELEASE_VERSION"], os.environ["RELEASE_SHA"]
   metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
@@ -231,7 +233,10 @@ def main() -> None:
   if args.command == "consume":
     with tempfile.TemporaryDirectory(prefix="ziwei-consume-", dir=os.environ.get("SCRATCH")) as tmp:
       install_and_consume(
-        args.directory.resolve() / "packages" / expected.filenames[1], expected.version, Path(tmp)
+        args.directory.resolve() / "packages" / expected.filenames[1],
+        expected.version,
+        Path(tmp),
+        root=ROOT,
       )
     verify_bundle(args.directory, expected)
   else:
