@@ -1,4 +1,4 @@
-"""校验首发身份、保留产物与测试站取回物；不执行上传。"""
+"""校验首发身份、保留产物与安装消费；不执行上传。"""
 
 from __future__ import annotations
 
@@ -8,14 +8,9 @@ import os
 import re
 import sys
 import tempfile
-import time
 import tomllib
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
-from urllib.error import HTTPError
-from urllib.parse import urlsplit
-from urllib.request import urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools.artifacts import (
@@ -130,76 +125,13 @@ def prepare_bundle(directory: Path, version: str, source_sha: str) -> Manifest:
   return manifest
 
 
-def testpypi_wheel_url(data: object, expected: Manifest) -> str:
-  """核测试站项目与版本的两文件摘要，返回官方文件站上的wheel URL。"""
-  if not isinstance(data, dict) or not isinstance(data.get("info"), dict):
-    raise ValueError("Invalid TestPyPI metadata")
-  if data["info"].get("name") != "ziwei" or data["info"].get("version") != expected.version:
-    raise ValueError("TestPyPI project identity differs")
-  files = data.get("urls")
-  if not isinstance(files, list) or len(files) != 2:
-    raise ValueError("Expected two TestPyPI files")
-  indexed: dict[str, dict[str, Any]] = {}
-  for item in files:
-    if not isinstance(item, dict) or not isinstance(item.get("filename"), str):
-      raise ValueError("Invalid TestPyPI file metadata")
-    if item["filename"] in indexed:
-      raise ValueError("Duplicate TestPyPI filename")
-    indexed[item["filename"]] = item
-  if set(indexed) != set(expected.filenames):
-    raise ValueError("TestPyPI filenames differ from the verified artifacts")
-  for name, digest in zip(expected.filenames, expected.hashes, strict=True):
-    digests = indexed[name].get("digests")
-    if not isinstance(digests, dict) or digests.get("sha256") != digest:
-      raise ValueError("TestPyPI digests differ from the verified artifacts")
-  url = indexed[expected.filenames[1]].get("url")
-  if not isinstance(url, str):
-    raise ValueError("TestPyPI wheel URL is missing")
-  parsed = urlsplit(url)
-  if (
-    parsed.scheme != "https"
-    or parsed.netloc != "test-files.pythonhosted.org"
-    or not parsed.path.startswith("/packages/")
-    or parsed.query
-    or parsed.fragment
-  ):
-    raise ValueError("TestPyPI wheel must come from its official file host")
-  return url
-
-
-def verify_testpypi(expected: Manifest) -> None:
-  """有界等待测试站元数据，核取回wheel后按锁定依赖双模式消费。"""
-  url = f"https://test.pypi.org/pypi/ziwei/{expected.version}/json"
-  for attempt in range(10):
-    try:
-      with urlopen(url, timeout=20) as response:
-        data = json.load(response)
-      break
-    except HTTPError as error:
-      retry = error.code == 404 and attempt < 9
-      error.close()
-      if not retry:
-        raise
-      time.sleep(3)
-  download = testpypi_wheel_url(data, expected)
-  with tempfile.TemporaryDirectory(prefix="ziwei-testpypi-", dir=os.environ.get("SCRATCH")) as tmp:
-    directory = Path(tmp)
-    wheel = directory / expected.filenames[1]
-    with urlopen(download, timeout=30) as response, wheel.open("wb") as output:
-      while chunk := response.read(1024 * 1024):
-        output.write(chunk)
-    if file_sha256(wheel) != expected.wheel_sha256:
-      raise ValueError("Downloaded TestPyPI wheel differs from verified bytes")
-    install_and_consume(wheel, expected.version, directory, root=ROOT)
-
-
 def main() -> None:
   """选择身份校验、清单写入或安装消费阶段，不执行上传。"""
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument(
     "command",
-    choices=("validate", "prepare", "consume", "verify-testpypi"),
-    help="validate核身份；prepare写清单与构建输出；consume或verify-testpypi核产物并安装消费",
+    choices=("validate", "prepare", "consume"),
+    help="validate核身份；prepare写清单与构建输出；consume核产物并安装消费",
   )
   parser.add_argument(
     "--directory", type=Path, default=Path("dist"), help="门禁保留的产物目录（默认dist）"
@@ -230,17 +162,14 @@ def main() -> None:
     return
   expected = Manifest(version, source_sha, os.environ["SDIST_SHA256"], os.environ["WHEEL_SHA256"])
   verify_bundle(args.directory, expected)
-  if args.command == "consume":
-    with tempfile.TemporaryDirectory(prefix="ziwei-consume-", dir=os.environ.get("SCRATCH")) as tmp:
-      install_and_consume(
-        args.directory.resolve() / "packages" / expected.filenames[1],
-        expected.version,
-        Path(tmp),
-        root=ROOT,
-      )
-    verify_bundle(args.directory, expected)
-  else:
-    verify_testpypi(expected)
+  with tempfile.TemporaryDirectory(prefix="ziwei-consume-", dir=os.environ.get("SCRATCH")) as tmp:
+    install_and_consume(
+      args.directory.resolve() / "packages" / expected.filenames[1],
+      expected.version,
+      Path(tmp),
+      root=ROOT,
+    )
+  verify_bundle(args.directory, expected)
 
 
 if __name__ == "__main__":

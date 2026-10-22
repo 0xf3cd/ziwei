@@ -155,14 +155,12 @@ def check_release_policy(data: dict[str, Any]) -> None:
   )
   require(sync.get("shell") == "bash", "Matrix sync uses Bash variables on every platform")
   require(
-    set(jobs) == {"build", "consume", "publish-testpypi", "verify-testpypi", "publish-pypi"},
+    set(jobs) == {"build", "consume", "publish-pypi"},
     "Release jobs",
   )
   dependencies = {
     "consume": {"build"},
-    "publish-testpypi": {"build", "consume"},
-    "verify-testpypi": {"build", "publish-testpypi"},
-    "publish-pypi": {"build", "consume", "verify-testpypi"},
+    "publish-pypi": {"build", "consume"},
   }
   for name, job in jobs.items():
     require(
@@ -219,8 +217,7 @@ def check_release_policy(data: dict[str, Any]) -> None:
     if not privileged:
       require("environment" not in job, "Unprivileged jobs do not deploy")
       continue
-    environment = name.removeprefix("publish-")
-    require(job.get("environment") == environment, "Literal release environment")
+    require(job.get("environment") == "pypi", "Literal release environment")
     require(job.get("if") == "github.ref == 'refs/heads/main'", "Main ref early check")
     require(job["runs-on"] == "ubuntu-latest", "Publish runner")
     steps = job["steps"]
@@ -239,25 +236,16 @@ def check_release_policy(data: dict[str, Any]) -> None:
     require(
       steps[2].get("uses", "").startswith("pypa/gh-action-pypi-publish@"), "Single publish action"
     )
-    url = (
-      "https://test.pypi.org/legacy/"
-      if environment == "testpypi"
-      else "https://upload.pypi.org/legacy/"
-    )
     require(
       steps[2]["with"]
       == {
-        "repository-url": url,
+        "repository-url": "https://upload.pypi.org/legacy/",
         "packages-dir": "dist/packages",
         "attestations": "true",
         "skip-existing": "false",
       },
       "Fixed upload target and no skip-existing",
     )
-  require(
-    jobs["publish-testpypi"]["steps"][1]["run"] == jobs["publish-pypi"]["steps"][1]["run"],
-    "One shared publish-byte check",
-  )
   require(
     [step["run"] for step in jobs["build"]["steps"] if "run" in step]
     == [
@@ -284,6 +272,8 @@ def test_release_workflow_obeys_the_publication_contract() -> None:
     "environment",
     "needs",
     "url",
+    "index",
+    "extra-publish",
     "skip",
     "interpolation",
     "always",
@@ -311,11 +301,15 @@ def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
     case "permissions":
       bad["jobs"]["build"]["permissions"]["id-token"] = "write"
     case "environment":
-      publish["environment"] = "testpypi"
+      publish["environment"] = "unprotected"
     case "needs":
-      publish["needs"].remove("verify-testpypi")
+      publish["needs"].remove("consume")
     case "url":
       publish["steps"][2]["with"]["repository-url"] = "${{ inputs.url }}"
+    case "index":
+      publish["steps"][2]["with"]["repository-url"] = "https://test.pypi.org/legacy/"
+    case "extra-publish":
+      bad["jobs"]["publish-extra"] = deepcopy(publish)
     case "skip":
       publish["steps"][2]["with"]["skip-existing"] = "true"
     case "interpolation":
@@ -360,6 +354,8 @@ def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
     "environment": "Literal release environment",
     "needs": "Release needs",
     "url": "Fixed upload target",
+    "index": "Fixed upload target",
+    "extra-publish": "Release jobs",
     "skip": "Fixed upload target",
     "interpolation": "Expressions enter scripts",
     "always": "three unconditional steps",
@@ -380,11 +376,8 @@ def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Publish jobs execute this Bash on Linux")
-@pytest.mark.parametrize("job", ["publish-testpypi", "publish-pypi"])
 @pytest.mark.parametrize("defect", [None, "hash", "missing", "extra", "symlink", "filename"])
-def test_actual_publish_script_fails_before_upload(
-  tmp_path: Path, job: str, defect: str | None
-) -> None:
+def test_actual_publish_script_fails_before_upload(tmp_path: Path, defect: str | None) -> None:
   packages = tmp_path / "packages"
   packages.mkdir()
   names = (f"ziwei-{VERSION}.tar.gz", f"ziwei-{VERSION}-py3-none-any.whl")
@@ -413,7 +406,7 @@ def test_actual_publish_script_fails_before_upload(
       (packages / names[1]).symlink_to(target)
     case "filename":
       env["WHEEL_NAME"] = "../outside.whl"
-  script = load_workflow(RELEASE.read_text())["jobs"][job]["steps"][1]["run"]
+  script = load_workflow(RELEASE.read_text())["jobs"]["publish-pypi"]["steps"][1]["run"]
   marker = tmp_path / "upload-called"
   result = subprocess.run(
     ["bash", "-c", script + '\nprintf called > "$UPLOAD_MARKER"\n'],

@@ -4,12 +4,8 @@ import io
 import json
 import sys
 import tarfile
-import time
-from copy import deepcopy
-from http.client import HTTPMessage
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError
 from zipfile import ZipFile
 
 import pytest
@@ -150,106 +146,7 @@ def test_hashes_are_compared_to_build_outputs_not_only_the_manifest(
     release.verify_bundle(directory, changed)
 
 
-def index_metadata(manifest: release.Manifest) -> dict[str, Any]:
-  return {
-    "info": {"name": "ziwei", "version": manifest.version},
-    "urls": [
-      {
-        "filename": name,
-        "digests": {"sha256": digest},
-        "url": "https://test-files.pythonhosted.org/packages/file.whl",
-      }
-      for name, digest in zip(manifest.filenames, manifest.hashes, strict=True)
-    ],
-  }
-
-
-@pytest.mark.parametrize(
-  "defect",
-  ["project", "version", "count", "duplicate", "hash", "digest-type", "url", "credentials"],
-)
-def test_testpypi_metadata_cannot_select_another_project_or_index(
-  bundle: tuple[Path, release.Manifest], defect: str
-) -> None:
-  _, manifest = bundle
-  data = index_metadata(manifest)
-  assert release.testpypi_wheel_url(data, manifest).startswith(
-    "https://test-files.pythonhosted.org/"
-  )
-  bad = deepcopy(data)
-  match defect:
-    case "project":
-      bad["info"]["name"] = "other"
-    case "version":
-      bad["info"]["version"] = "0.2.0"
-    case "count":
-      bad["urls"].pop()
-    case "duplicate":
-      bad["urls"][1] = bad["urls"][0]
-    case "hash":
-      bad["urls"][1]["digests"]["sha256"] = "0" * 64
-    case "digest-type":
-      bad["urls"][1]["digests"] = "not an object"
-    case "url":
-      bad["urls"][1]["url"] = "https://files.pythonhosted.org/packages/file.whl"
-    case "credentials":
-      bad["urls"][1]["url"] = "https://user:password@test-files.pythonhosted.org/packages/file.whl"
-  with pytest.raises(ValueError):
-    release.testpypi_wheel_url(bad, manifest)
-
-
-@pytest.mark.parametrize("corrupt", [False, True])
-def test_testpypi_installs_only_after_verifying_the_download(
-  bundle: tuple[Path, release.Manifest], monkeypatch: pytest.MonkeyPatch, corrupt: bool
-) -> None:
-  directory, manifest = bundle
-  wheel_bytes = (directory / "packages" / manifest.filenames[1]).read_bytes()
-  calls: list[str] = []
-  consumed: list[str] = []
-
-  def open_url(url: str, *, timeout: int) -> io.BytesIO:
-    calls.append(url)
-    assert timeout > 0
-    if url.endswith("/json"):
-      return io.BytesIO(json.dumps(index_metadata(manifest)).encode())
-    return io.BytesIO(b"changed" if corrupt else wheel_bytes)
-
-  def consume(wheel: Path, version: str, workdir: Path, *, root: Path) -> None:
-    assert wheel.read_bytes() == wheel_bytes
-    assert workdir != root == release.ROOT and version == VERSION
-    consumed.append(version)
-
-  monkeypatch.setattr(release, "urlopen", open_url)
-  monkeypatch.setattr(release, "install_and_consume", consume)
-  if corrupt:
-    with pytest.raises(ValueError, match="Downloaded TestPyPI wheel"):
-      release.verify_testpypi(manifest)
-    assert not consumed
-  else:
-    release.verify_testpypi(manifest)
-    assert consumed == [VERSION]
-  assert calls[0] == f"https://test.pypi.org/pypi/ziwei/{VERSION}/json"
-  assert len(calls) == 2
-
-
-def test_testpypi_visibility_wait_is_bounded(
-  bundle: tuple[Path, release.Manifest], monkeypatch: pytest.MonkeyPatch
-) -> None:
-  calls: list[str] = []
-  sleeps: list[float] = []
-
-  def absent(url: str, *, timeout: int) -> io.BytesIO:
-    calls.append(url)
-    raise HTTPError(url, 404, "Not found", HTTPMessage(), None)
-
-  monkeypatch.setattr(release, "urlopen", absent)
-  monkeypatch.setattr(time, "sleep", sleeps.append)
-  with pytest.raises(HTTPError):
-    release.verify_testpypi(bundle[1])
-  assert len(calls) == 10 and sleeps == [3] * 9
-
-
-@pytest.mark.parametrize("command", ["validate", "prepare", "consume", "verify-testpypi"])
+@pytest.mark.parametrize("command", ["validate", "prepare", "consume"])
 def test_release_cli_keeps_the_same_identity_and_bytes(
   bundle: tuple[Path, release.Manifest],
   tmp_path: Path,
@@ -274,7 +171,6 @@ def test_release_cli_keeps_the_same_identity_and_bytes(
   if command == "prepare":
     (directory / "release.json").unlink()
   consumed: list[str] = []
-  monkeypatch.setattr(release, "verify_testpypi", lambda *args: consumed.append("testpypi"))
   monkeypatch.setattr(sys, "argv", ["release", command, "--directory", str(directory)])
   events: list[str] = []
   verify = release.verify_bundle
@@ -293,36 +189,25 @@ def test_release_cli_keeps_the_same_identity_and_bytes(
   release.main()
   if command == "prepare":
     assert f"source_sha={SHA}\n" in (tmp_path / "outputs").read_text()
-  assert consumed == {"consume": ["consume"], "verify-testpypi": ["testpypi"]}.get(command, [])
+  assert consumed == (["consume"] if command == "consume" else [])
   assert (
     events
     == {
       "validate": [],
       "prepare": ["verify"],
       "consume": ["verify", "consume", "verify"],
-      "verify-testpypi": ["verify"],
     }[command]
   )
 
 
-@pytest.mark.parametrize("status", [403, 429, 503])
-def test_testpypi_does_not_retry_non_404_errors(
-  bundle: tuple[Path, release.Manifest], monkeypatch: pytest.MonkeyPatch, status: int
+def test_removed_index_command_is_rejected(
+  monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-  calls: list[str] = []
-  sleeps: list[float] = []
-
-  def unavailable(url: str, *, timeout: int) -> io.BytesIO:
-    calls.append(url)
-    raise HTTPError(url, status, "Synthetic failure", HTTPMessage(), None)
-
-  monkeypatch.setattr(release, "urlopen", unavailable)
-  monkeypatch.setattr(time, "sleep", sleeps.append)
-  with pytest.raises(HTTPError) as caught:
-    release.verify_testpypi(bundle[1])
-  assert caught.value.code == status
-  assert calls == [f"https://test.pypi.org/pypi/ziwei/{VERSION}/json"]
-  assert sleeps == []
+  monkeypatch.setattr(sys, "argv", ["release", "verify-testpypi"])
+  with pytest.raises(SystemExit) as caught:
+    release.main()
+  assert caught.value.code == 2
+  assert "invalid choice" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("defect", ["fields", "type", "digest", "placeholder", "source-sha"])
