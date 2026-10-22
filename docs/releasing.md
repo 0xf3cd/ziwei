@@ -4,27 +4,27 @@
 
 项目名、PyPI发行名和Python导入名均为`ziwei`。本页说明候选版本的发布方法，
 不表示项目已经上架，也不表示GitHub环境或PyPI发布身份已经配置。
-代码准备、服务端配置、测试站演练、正式上传、tag与Release是分别需要确认的操作。
+发布流程只使用正式PyPI。代码准备、服务端配置、正式上传、tag与Release是分别需要确认的操作。
 
 ## 首发前配置
 
-顺序很重要：先保护GitHub环境，再登记允许使用这些环境的PyPI发布者。
+顺序很重要：先保护GitHub的`pypi`环境，再登记允许使用该环境的PyPI发布者。
 如果workflow引用不存在的environment，GitHub可能自动创建一个没有保护规则的同名环境。
 因此，不能先在PyPI信任一个仅有名字、尚无部署限制的environment。
 
 维护者批准配置后：
 
-1. 在GitHub建立`testpypi`与`pypi`两个environment。设置维护者为required reviewer，
+1. 在GitHub建立`pypi`环境。设置维护者为required reviewer，
    Deployment branches选择Selected branches and tags，唯一规则为`name: main`、`type: branch`，禁止管理员绕过。
    不添加API token或其他secret。不要用同名tag规则替代main分支规则。
 2. 单维护者需要保留批准自己运行的能力；启用Prevent self-review会阻止这种批准。
    这里是同一人的显式第二步，不是另一人的独立审阅。
-3. 用GitHub只读API核对两环境的`protection_rules`、`can_admins_bypass`、
-   `deployment_branch_policy`和`deployment-branch-policies`，再按授权演练非main拒绝、
-   等待批准和不能绕过的行为。workflow里的ref判断不能代替这些服务端规则。
-4. 然后分别在TestPyPI与PyPI登记pending publisher：项目`ziwei`，owner`0xf3cd`，repo`ziwei`，
-   workflow文件名`release.yml`，environment分别填写`testpypi`与`pypi`。
-   即使PyPI把environment标为可选，本流程也必须填写，防止两个发布权限互通。
+3. 用GitHub只读API核对`protection_rules`、`deployment_branch_policy`和
+   `deployment-branch-policies`；在网页保存后重新打开环境设置，确认禁止管理员绕过。
+   再按授权演练非main拒绝、等待批准和不能绕过的行为。workflow里的ref判断不能代替这些服务端规则。
+4. 然后在PyPI登记pending publisher：项目`ziwei`，owner`0xf3cd`，repo`ziwei`，
+   workflow文件名`release.yml`，environment填写`pypi`。
+   即使PyPI把environment标为可选，本流程也必须填写，让发布身份绑定受保护的环境。
 
 pending publisher首次使用时才创建项目，**不会预留名称**。配置前须重新确认名称和账号归属。
 以上配置、拒绝行为与OIDC换取凭据的结果，在实际核验前都不能记为已完成。
@@ -51,14 +51,11 @@ pending publisher首次使用时才创建项目，**不会预留名称**。配�
 2. **支持矩阵消费**：Linux的Python3.11–3.14、Linux ARM64和macOS／Windows3.14
    下载同一个artifact-id，按构建job单独输出的hash核对后，运行相同安装消费函数。
    安装平台范围仍以[安装要求](../README.md#安装要求)为准。
-3. **TestPyPI批准与上传**：等待`testpypi`环境批准，只下载、核hash，再调用固定到完整提交SHA的上传action。
-4. **测试站回读**：核精确项目／版本的两个文件摘要。目标wheel只从TestPyPI取回并核对实际hash，
-   然后`--no-deps`安装；运行时依赖只按本仓锁定hash从PyPI安装，不使用`--extra-index-url`。
-   TestPyPI没有本项目要求的完整依赖组合，不能把它当作PyPI镜像。
-5. **PyPI批准与上传**：测试站回读与消费成功后，等待独立的`pypi`环境批准，
-   再上传同一个artifact-id中的同一对文件。上传job不检出或执行项目源码，不安装项目开发工具。
+3. **PyPI批准与上传**：构建和全部矩阵消费成功后，等待`pypi`环境批准，
+   再下载同一个artifact-id，核对文件名与构建job给出的两文件hash，调用固定到完整提交SHA的上传action。
+   上传job不检出或执行项目源码，不安装项目开发工具。
 
-只有两个上传job拥有`id-token: write`。不使用长期PyPI token、缓存或`skip-existing`，
+只有`publish-pypi`拥有`id-token: write`。不使用长期PyPI token、缓存或`skip-existing`，
 不在push／PR上自动上传。输入和job输出只经环境变量进入脚本。
 
 action引用固定完整提交SHA，但这不等于所有传递依赖都由OCI digest固定。
@@ -71,13 +68,12 @@ action引用固定完整提交SHA，但这不等于所有传递依赖都由OCI d
 artifact保留14天。批准时间须留在原产物的有效期内；过期或取回不符时停止，
 不能自动重新构建另一份文件后声称沿用了原产物。
 
-只演练时可以拒绝正式PyPI批准，但拒绝会使运行失败，**TestPyPI已上传的文件名仍被占用**。
-不要因此重新启动整条流程并重传同版本，也不要自动改版本或开启`skip-existing`。
-先保存运行SHA、artifact-id、两个文件hash、已上传文件与错误，再另行确认后续处理。
+只核验流程时，停在`pypi`待批准；未批准就不会执行上传。若拒绝批准或取消运行，
+先保存运行SHA、artifact-id、两个文件hash与错误，再确认后续处理。
+不要自动改版本、开启`skip-existing`，或重传已经成功上传的文件。
 同一次运行重跑失败job时，原outputs与artifact能否保全、可重跑期限多长，须在授权演练中验证；
-未核之前不承诺重跑一定能恢复。
+未核之前不承诺重跑一定能恢复。重跑build或整条流程会重新构建，不属于沿用原产物的恢复路径。
 
-元数据回读只对新版本的暂时404做有界等待。摘要不符立即失败，不等待另一个结果来覆盖它。
 任一上传失败后，先核远端实际已有的文件及hash；不能只凭本地退出码认定“什么都没上传”。
 
 正式上传完成后，核PyPI文件摘要与PEP740证明中的Source Repository Digest，
@@ -98,5 +94,5 @@ uv run --locked python tools/check.py --artifacts-dir dist
 缺文件、多文件、错误身份或hash不符时拒绝继续。
 
 本机测试覆盖身份早失败、workflow权限／依赖结构、产物篡改、真实发布Bash及上传前拒绝。
-它们不能证明服务端environment已经生效、OIDC已可用或TestPyPI已实际安装成功；
+它们不能证明服务端environment已经生效、OIDC已可用或PyPI已实际接收这些文件；
 这些只有授权后的运行与回读结果才能证明。
