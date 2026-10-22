@@ -1,6 +1,6 @@
 # ziwei
 
-开发中的 Python 紫微斗数排盘与知识库。历法与时间由
+Python 紫微斗数排盘与知识库。历法与时间由
 [celestial-calendar](https://github.com/0xf3cd/celestial-calendar) 提供；本仓记录紫微斗数的安星规则、
 四化口径、流派变体与出处，并组织可复现的命盘结果。
 
@@ -12,6 +12,9 @@
 [四化与大限](docs/sihua-decades.md)、[完整命盘与记录](docs/chart.md)和[知识查询](docs/knowledge.md)，
 开发检查与协作约定见[参与开发](docs/contributing.md)。
 首次发布的前置配置、审批与产物核验见[发布准备](docs/releasing.md)。
+
+当前源码为首版候选，版本号不表示已经上架PyPI；已发布版本以
+[发布记录](https://github.com/0xf3cd/ziwei/releases)为准。
 
 ## 安装要求
 

@@ -4,18 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ziwei"
-version = "0.0.0"
-description = "紫微斗数排盘与有出处的知识（开发中）"
+version = "0.1.0"
+description = "紫微斗数排盘与有出处的知识"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
 license = "MIT"
 license-files = ["LICENSE"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
+]
 dependencies = [
   "celestial-calendar==0.8.0",
   "tzdata==2026.5",
 ]
 
 [project.urls]
+Documentation = "https://github.com/0xf3cd/ziwei/tree/main/docs"
 Repository = "https://github.com/0xf3cd/ziwei"
 Issues = "https://github.com/0xf3cd/ziwei/issues"
 

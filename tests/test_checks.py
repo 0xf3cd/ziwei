@@ -7,10 +7,12 @@ import sys
 import tarfile
 import tomllib
 from collections.abc import Sequence
+from importlib.metadata import distribution
 from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
+from packaging.specifiers import SpecifierSet
 
 from tools import check
 from tools.check import (
@@ -325,6 +327,21 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
 def test_build_backend_is_explicitly_in_the_locked_development_group() -> None:
   metadata = tomllib.loads((check.ROOT / "pyproject.toml").read_text(encoding="utf-8"))
   assert set(metadata["build-system"]["requires"]) <= set(metadata["dependency-groups"]["dev"])
+
+
+def test_current_installed_metadata_matches_the_project() -> None:
+  project = tomllib.loads((check.ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+  installed = distribution("ziwei")
+  assert installed.metadata["Name"] == project["name"] == "ziwei"
+  assert installed.version == project["version"]
+  assert SpecifierSet(installed.metadata["Requires-Python"]) == SpecifierSet(
+    project["requires-python"]
+  )
+  assert set(installed.requires or ()) == set(project["dependencies"])
+  assert set(installed.metadata.get_all("Classifier") or ()) == set(project["classifiers"])
+  assert set(installed.metadata.get_all("Project-URL") or ()) == {
+    f"{name}, {url}" for name, url in project["urls"].items()
+  }
 
 
 def test_distribution_rejects_changes_during_consumption(

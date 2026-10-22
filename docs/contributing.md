@@ -53,13 +53,13 @@ uv run --locked python -m sphinx -E -a -n -W -b html -c docs . build/docs
 
 打开 `build/docs/docs/index.html`。
 
-按上面的 `uv sync` 从本仓安装开发包，本地分发名／版本为 `ziwei`／`0.0.0`。
+按上面的`uv sync`从本仓安装首版候选，本地分发名／版本为`ziwei`／`0.1.0`。
 首次发布前须再核 PyPI 名称可用性。可检查已安装的开发版本：
 
 ```{doctest}
 >>> from importlib.metadata import version
 >>> version("ziwei")
-'0.0.0'
+'0.1.0'
 ```
 
 ## 设计
