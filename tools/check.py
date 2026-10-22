@@ -6,49 +6,29 @@ import ast
 import os
 import re
 import shutil
-import subprocess
 import sys
-import tarfile
 import tempfile
 import tomllib
-from collections.abc import Sequence
-from email.parser import Parser
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
-from zipfile import ZipFile
 
 from markdown_it import MarkdownIt
 
 # 直接运行tools/check.py时，脚本目录而非仓根在sys.path首位。
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tools.artifacts import (
+  built_artifacts,
+  check_sdist,
+  check_wheel,
+  file_sha256,
+  preserve_artifacts,
+  source_members,
+)
+from tools.consumption import install_and_consume, run
 from tools.knowledge_reference import check_knowledge_reference
 
 ROOT = Path(__file__).resolve().parents[1]
-# sdist 须能重建 wheel 并重跑全部检查：源码、测试、工具、文档、锁文件与约定。
-SOURCE_FILES = (
-  "pyproject.toml",
-  "uv.lock",
-  "LICENSE",
-  "README.md",
-  "AGENTS.md",
-  "src/ziwei/__init__.py",
-  "src/ziwei/py.typed",
-)
-SOURCE_PATTERNS = (
-  "src/ziwei/**/*.py",
-  "tools/*.py",
-  "tests/*.py",
-  "docs/**/*.md",
-  "docs/**/*.py",
-  "docs/**/*.inv",
-)
-
-
-def run(command: Sequence[str], *, cwd: Path = ROOT) -> None:
-  """执行命令并传播失败。"""
-  print(f"+ {' '.join(command)}", flush=True)
-  subprocess.run(command, cwd=cwd, check=True)
 
 
 def document_errors(root: Path) -> tuple[str, ...]:
@@ -140,80 +120,25 @@ def check_api_reference(directory: Path, root: Path = ROOT) -> None:
     raise ValueError("API HTML is missing signatures: " + ", ".join(sorted(missing)))
 
 
-def source_members(root: Path) -> tuple[str, ...]:
-  """列出 sdist 必须携带的工作树文件。"""
-  members = set(SOURCE_FILES)
-  for pattern in SOURCE_PATTERNS:
-    members.update(path.relative_to(root).as_posix() for path in root.glob(pattern))
-  return tuple(sorted(members))
-
-
-def check_sdist(sdist: Path, expected_version: str, members: Sequence[str]) -> None:
-  """校验 sdist 身份与内容，拒绝缺文件或夹带审阅材料。"""
-  base = f"ziwei-{expected_version}"
-  with tarfile.open(sdist) as archive:
-    names = archive.getnames()
-    stream = archive.extractfile(f"{base}/PKG-INFO") if f"{base}/PKG-INFO" in names else None
-    if stream is None:
-      raise ValueError("Sdist directory or PKG-INFO differs from project metadata")
-    with stream:
-      metadata = Parser().parsestr(stream.read().decode("utf-8"))
-  if metadata["Name"] != "ziwei" or metadata["Version"] != expected_version:
-    raise ValueError("Sdist identity differs from project metadata")
-  missing = [member for member in members if f"{base}/{member}" not in names]
-  if missing:
-    raise ValueError(f"Sdist is missing: {', '.join(missing)}")
-  if any(name.startswith(f"{base}/.review/") for name in names):
-    raise ValueError("Sdist carries review material")
-
-
-def check_wheel(wheel: Path, expected_version: str) -> None:
-  """校验 wheel 内容与元数据。"""
-  with ZipFile(wheel) as archive:
-    names = archive.namelist()
-    metadata_paths = [name for name in names if name.endswith(".dist-info/METADATA")]
-    if len(metadata_paths) != 1:
-      raise ValueError("Wheel must contain one METADATA file")
-    metadata = Parser().parsestr(archive.read(metadata_paths[0]).decode("utf-8"))
-    if metadata["Name"] != "ziwei" or metadata["Version"] != expected_version:
-      raise ValueError("Wheel identity differs from project metadata")
-    if "ziwei/py.typed" not in names or "ziwei/__init__.py" not in names:
-      raise ValueError("Wheel is missing the package or typing marker")
-    if not any(name.endswith(".dist-info/licenses/LICENSE") for name in names):
-      raise ValueError("Wheel is missing its license")
-
-
-def built_artifacts(directory: Path) -> tuple[Path, Path]:
-  """返回唯一的 sdist 与 wheel。"""
-  sdists = tuple(directory.glob("*.tar.gz"))
-  wheels = tuple(directory.glob("*.whl"))
-  if len(sdists) != 1 or len(wheels) != 1:
-    raise ValueError("Expected one sdist and one wheel")
-  return sdists[0], wheels[0]
-
-
-def check_distribution(directory: Path) -> None:
-  """经 sdist 构建 wheel 并验证隔离安装。"""
+def check_distribution(directory: Path, *, artifacts_dir: Path | None = None) -> None:
+  """从锁定后端构建sdist→wheel、隔离消费，可显式保留同一份已核产物。"""
   metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
   version = metadata["version"]
   # 旧的 SOURCES.txt 会把已从清单删除的文件带回 sdist，掩盖清单变化。
   for stale in ROOT.glob("src/*.egg-info"):
     shutil.rmtree(stale)
   artifacts = directory / "artifacts"
-  run((sys.executable, "-m", "build", "--outdir", str(artifacts)))
+  run((sys.executable, "-m", "build", "--no-isolation", "--outdir", str(artifacts)), cwd=ROOT)
   sdist, wheel = built_artifacts(artifacts)
+  hashes = {path: file_sha256(path) for path in (sdist, wheel)}
   check_sdist(sdist, version, source_members(ROOT))
   check_wheel(wheel, version)
-
-  environment = directory / "consumer"
-  run(("uv", "venv", "--python", sys.executable, str(environment)))
-  python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-  run(("uv", "pip", "install", "--python", str(python), str(wheel), *metadata["dependencies"]))
-  for mode in ((), ("-O",)):
-    run(
-      (str(python), *mode, "-I", str(ROOT / "tools/installed_check.py"), version),
-      cwd=directory,
-    )
+  run((sys.executable, "-m", "twine", "check", str(sdist), str(wheel)), cwd=ROOT)
+  install_and_consume(wheel, version, directory, root=ROOT)
+  if any(file_sha256(path) != digest for path, digest in hashes.items()):
+    raise ValueError("Artifacts changed during installed consumption")
+  if artifacts_dir is not None:
+    preserve_artifacts(hashes, artifacts_dir)
 
 
 def sphinx_report(directory: Path) -> str:
@@ -235,12 +160,13 @@ def sphinx_report(directory: Path) -> str:
         "docs",
         ".",
         str(directory / builder),
-      )
+      ),
+      cwd=ROOT,
     )
   return (directory / "doctest/output.txt").read_text(encoding="utf-8")
 
 
-def main() -> None:
+def main(*, artifacts_dir: Path | None = None) -> None:
   """运行全部检查，失败即停止。"""
   commands = (
     ("-m", "ruff", "check", "."),
@@ -257,7 +183,7 @@ def main() -> None:
     ),
   )
   for arguments in commands:
-    run((sys.executable, *arguments))
+    run((sys.executable, *arguments), cwd=ROOT)
   check_documents()
   with tempfile.TemporaryDirectory(
     prefix="ziwei-check-", dir=os.environ.get("SCRATCH")
@@ -266,9 +192,17 @@ def main() -> None:
     check_examples(sphinx_report(directory))
     check_api_reference(directory / "html")
     check_knowledge_reference(directory / "html")
-    check_distribution(directory)
+    check_distribution(directory, artifacts_dir=artifacts_dir)
   print("All checks passed.")
 
 
 if __name__ == "__main__":
-  main()
+  import argparse
+
+  parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument(
+    "--artifacts-dir",
+    type=Path,
+    help="把已核sdist、wheel与SHA256SUMS保存到此目录；目录须不存在或为空",
+  )
+  main(artifacts_dir=parser.parse_args().artifacts_dir)

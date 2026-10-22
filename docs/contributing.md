@@ -17,7 +17,7 @@ uv run --locked python tools/check.py
 ```
 
 支持 Python 3.11–3.14，原生依赖的平台要求见[安装要求](../README.md#安装要求)。
-CI 在 Linux 3.11／3.14 和 macOS／Windows 3.14 上运行同一命令。
+CI在Linux x86_64的3.11／3.14、Linux ARM64的3.14和macOS／Windows3.14上运行同一命令。
 本地验证下限时使用 `uv sync --locked --python 3.11`。
 优化模式也使用`tools/check.py`入口；它为pytest设置所需的警告过滤，裸跑`python -O -m pytest`不等价。
 
@@ -26,18 +26,21 @@ CI 在 Linux 3.11／3.14 和 macOS／Windows 3.14 上运行同一命令。
 API 检查比对源码中的公开类、函数、方法及显式类型别名与实际 HTML 签名，拒绝被渲染成正文的指令。
 知识参考页从内置记录与配置定义生成，检查字段、口径表配对及稳定锚点；遗漏成员或指向未知记录都须失败。
 标准库类型链接使用随文档保存的离线 inventory，不在构建时下载。
-`python -m build` 经 sdist 构建 wheel。sdist 须带全源码、测试、工具、文档、锁文件与协作约定，
+锁定开发组同时提供build和setuptools后端，`python -m build --no-isolation`经sdist构建wheel。
+sdist须带全源码、测试、工具、workflow、文档、锁文件与协作约定，
 不得夹带 `.review/`；构建前删除 `src/*.egg-info`，旧的文件清单会掩盖 `MANIFEST.in` 的变化。
-安装后在仓外以隔离模式导入包，分别运行普通与优化模式的检查。
+安装后在仓外以隔离模式导入包，分别运行普通与优化模式的检查。运行时依赖按锁文件hash安装，
+本项目wheel用`--no-deps`安装；消费前后比对产物hash，拒绝被改写的文件。
 临时 HTML、doctest 报告、分发包和安装验证环境优先使用 `SCRATCH`，否则使用系统临时目录，
 退出时删除。构建元数据和工具缓存可能保留在仓内已忽略的目录中。
+显式传入`--artifacts-dir`可将同一份已核产物保留到空目录，详见[发布准备](releasing.md)。
 
 工具版本由 `uv.lock` 锁定：Python 3.11 使用 Sphinx 8.2.3，较新 Python 使用 Sphinx 9.1.0。
 覆盖率报告用于定位遗漏。当前测试覆盖历法解析、安星、四化与大限、整盘组合、序列化、恢复与重算，
 并包含独立参考盘例及合成取证。各项证据的适用范围见[完整命盘](chart.md#参考盘例与验收限度)，不把组件测试或往返当成独立整盘认证。
 
 CI的uv版本与各平台下载归档摘要在工作流中固定；摘要取自uv发布资产并与实际归档字节核对。
-第三方action均使用完整提交SHA，浮动tag由回归测试拒绝。setup-uv工具缓存命中可能不重新下载校验，核验时须区分缓存与下载路径。
+第三方action均使用完整提交SHA，浮动tag由回归测试拒绝。
 
 本地格式化运行 `uv run ruff format .`。任一命令失败即停止，修复原因后重跑。
 依赖变更须更新锁文件并通过两个 Python 端点；忽略规则或警告时应限制范围并说明原因。
@@ -50,13 +53,13 @@ uv run --locked python -m sphinx -E -a -n -W -b html -c docs . build/docs
 
 打开 `build/docs/docs/index.html`。
 
-按上面的 `uv sync` 从本仓安装开发包，本地分发名／版本为 `ziwei`／`0.0.0`。
+按上面的`uv sync`从本仓安装首版候选，本地分发名／版本为`ziwei`／`0.1.0`。
 首次发布前须再核 PyPI 名称可用性。可检查已安装的开发版本：
 
 ```{doctest}
 >>> from importlib.metadata import version
 >>> version("ziwei")
-'0.0.0'
+'0.1.0'
 ```
 
 ## 设计

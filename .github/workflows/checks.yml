@@ -22,6 +22,9 @@ jobs:
           - os: ubuntu-latest
             python: "3.14"
             uv-checksum: "68a509da24b06b4223a1c0175fb5eb5bc79342b76cbeff0cfe51ac3f5b17b6b2" # uv-x86_64-unknown-linux-gnu.tar.gz
+          - os: ubuntu-24.04-arm
+            python: "3.14"
+            uv-checksum: "9bf43b4d1a07665bf64d4c4e710930b382321a785e0eb10aac07f46471f86a31" # uv-aarch64-unknown-linux-gnu.tar.gz
           - os: macos-latest
             python: "3.14"
             uv-checksum: "5bb0e5fe008a773c3dbcb97ff79cd89e1241464fe9d2f986d52ad8f1b037bd62" # uv-aarch64-apple-darwin.tar.gz
