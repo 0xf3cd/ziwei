@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import os
 import re
 import shutil
@@ -27,6 +28,8 @@ from tools.knowledge_reference import check_knowledge_reference
 ROOT = Path(__file__).resolve().parents[1]
 # sdist 须能重建 wheel 并重跑全部检查：源码、测试、工具、文档、锁文件与约定。
 SOURCE_FILES = (
+  ".github/workflows/checks.yml",
+  ".github/workflows/release.yml",
   "pyproject.toml",
   "uv.lock",
   "LICENSE",
@@ -36,6 +39,8 @@ SOURCE_FILES = (
   "src/ziwei/py.typed",
 )
 SOURCE_PATTERNS = (
+  ".github/workflows/*.yml",
+  ".github/workflows/*.yaml",
   "src/ziwei/**/*.py",
   "tools/*.py",
   "tests/*.py",
@@ -192,28 +197,92 @@ def built_artifacts(directory: Path) -> tuple[Path, Path]:
   return sdists[0], wheels[0]
 
 
-def check_distribution(directory: Path) -> None:
-  """经 sdist 构建 wheel 并验证隔离安装。"""
+def file_sha256(path: Path) -> str:
+  """读取文件的SHA256。"""
+  with path.open("rb") as stream:
+    return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def install_and_consume(wheel: Path, version: str, directory: Path) -> None:
+  """在仓外新环境安装锁定依赖与指定wheel，执行普通和优化模式消费。"""
+  if directory.resolve().is_relative_to(ROOT.resolve()):
+    raise ValueError("Installed consumption must run outside the repository")
+  requirements = directory / "runtime.txt"
+  run(
+    (
+      "uv",
+      "export",
+      "--locked",
+      "--no-dev",
+      "--no-emit-project",
+      "--no-editable",
+      "--output-file",
+      str(requirements),
+    )
+  )
+  environment = directory / "consumer"
+  run(("uv", "venv", "--python", sys.executable, str(environment)))
+  python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+  run(
+    (
+      "uv",
+      "pip",
+      "install",
+      "--python",
+      str(python),
+      "--require-hashes",
+      "--default-index",
+      "https://pypi.org/simple",
+      "--requirements",
+      str(requirements),
+    )
+  )
+  run(("uv", "pip", "install", "--python", str(python), "--no-deps", str(wheel)))
+  for mode in ((), ("-O",)):
+    run(
+      (str(python), *mode, "-I", str(ROOT / "tools/installed_check.py"), version),
+      cwd=directory,
+    )
+
+
+def preserve_artifacts(hashes: dict[Path, str], destination: Path) -> None:
+  """把已核两文件及原始摘要写入空目录；拒绝覆盖或消费后的篡改。"""
+  if destination.exists() and (not destination.is_dir() or any(destination.iterdir())):
+    raise ValueError("Artifact destination must be an empty directory")
+  destination.mkdir(parents=True, exist_ok=True)
+  packages = destination / "packages"
+  packages.mkdir()
+  for path, expected in hashes.items():
+    if file_sha256(path) != expected:
+      raise ValueError("Artifacts changed during installed consumption")
+    copied = packages / path.name
+    shutil.copyfile(path, copied)
+    if file_sha256(copied) != expected:
+      raise ValueError("Artifact copy differs from the verified bytes")
+  (destination / "SHA256SUMS").write_text(
+    "".join(f"{digest}  {path.name}\n" for path, digest in hashes.items()), encoding="utf-8"
+  )
+
+
+def check_distribution(directory: Path, *, artifacts_dir: Path | None = None) -> None:
+  """从锁定后端构建sdist→wheel、隔离消费，可显式保留同一份已核产物。"""
   metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
   version = metadata["version"]
   # 旧的 SOURCES.txt 会把已从清单删除的文件带回 sdist，掩盖清单变化。
   for stale in ROOT.glob("src/*.egg-info"):
     shutil.rmtree(stale)
   artifacts = directory / "artifacts"
-  run((sys.executable, "-m", "build", "--outdir", str(artifacts)))
+  run((sys.executable, "-m", "build", "--no-isolation", "--outdir", str(artifacts)))
   sdist, wheel = built_artifacts(artifacts)
+  hashes = {path: file_sha256(path) for path in (sdist, wheel)}
   check_sdist(sdist, version, source_members(ROOT))
   check_wheel(wheel, version)
-
-  environment = directory / "consumer"
-  run(("uv", "venv", "--python", sys.executable, str(environment)))
-  python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-  run(("uv", "pip", "install", "--python", str(python), str(wheel), *metadata["dependencies"]))
-  for mode in ((), ("-O",)):
-    run(
-      (str(python), *mode, "-I", str(ROOT / "tools/installed_check.py"), version),
-      cwd=directory,
-    )
+  run((sys.executable, "-m", "twine", "check", str(sdist), str(wheel)))
+  install_and_consume(wheel, version, directory)
+  if any(file_sha256(path) != digest for path, digest in hashes.items()):
+    raise ValueError("Artifacts changed during installed consumption")
+  if artifacts_dir is not None:
+    preserve_artifacts(hashes, artifacts_dir)
 
 
 def sphinx_report(directory: Path) -> str:
@@ -240,7 +309,7 @@ def sphinx_report(directory: Path) -> str:
   return (directory / "doctest/output.txt").read_text(encoding="utf-8")
 
 
-def main() -> None:
+def main(*, artifacts_dir: Path | None = None) -> None:
   """运行全部检查，失败即停止。"""
   commands = (
     ("-m", "ruff", "check", "."),
@@ -266,9 +335,16 @@ def main() -> None:
     check_examples(sphinx_report(directory))
     check_api_reference(directory / "html")
     check_knowledge_reference(directory / "html")
-    check_distribution(directory)
+    if artifacts_dir is None:
+      check_distribution(directory)
+    else:
+      check_distribution(directory, artifacts_dir=artifacts_dir)
   print("All checks passed.")
 
 
 if __name__ == "__main__":
-  main()
+  import argparse
+
+  parser = argparse.ArgumentParser(description=__doc__)
+  parser.add_argument("--artifacts-dir", type=Path, help="保留已核产物与SHA256SUMS的空目录")
+  main(artifacts_dir=parser.parse_args().artifacts_dir)

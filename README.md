@@ -11,6 +11,7 @@
 [命宫身宫与十二宫](docs/palaces.md)、[五行局](docs/bureau.md)、[安星](docs/stars.md)、
 [四化与大限](docs/sihua-decades.md)、[完整命盘与记录](docs/chart.md)和[知识查询](docs/knowledge.md)，
 开发检查与协作约定见[参与开发](docs/contributing.md)。
+首次发布的前置配置、审批与产物核验见[发布准备](docs/releasing.md)。
 
 ## 安装要求
 

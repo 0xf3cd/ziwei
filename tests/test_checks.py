@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import tarfile
+import tomllib
 from collections.abc import Sequence
 from pathlib import Path
 from zipfile import ZipFile
@@ -24,7 +25,14 @@ from tools.check import (
 )
 
 PKG_INFO = "Name: ziwei\nVersion: 0.0.0\n"
-SOURCE = ("pyproject.toml", "src/ziwei/__init__.py", "src/ziwei/py.typed", "tools/check.py")
+SOURCE = (
+  "pyproject.toml",
+  "src/ziwei/__init__.py",
+  "src/ziwei/py.typed",
+  "tools/check.py",
+  ".github/workflows/checks.yml",
+  ".github/workflows/release.yml",
+)
 
 
 @pytest.fixture
@@ -281,7 +289,10 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
   (source / "pyproject.toml").write_bytes((check.ROOT / "pyproject.toml").read_bytes())
   monkeypatch.setattr(check, "ROOT", source)
   artifacts = tmp_path / "artifacts"
+  artifacts.mkdir()
   sdist, wheel = artifacts / "ziwei.tar.gz", artifacts / "ziwei.whl"
+  sdist.write_bytes(b"source")
+  wheel.write_bytes(b"wheel")
 
   def fake_run(command: Sequence[str], *, cwd: Path = check.ROOT) -> None:
     calls.append((tuple(command), cwd))
@@ -296,12 +307,68 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
     tmp_path / "consumer" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
   )
   script = str(check.ROOT / "tools/installed_check.py")
+  version = tomllib.loads((source / "pyproject.toml").read_text())["project"]["version"]
   assert calls[-2:] == [
-    ((str(python), "-I", script, "0.0.0"), tmp_path),
-    ((str(python), "-O", "-I", script, "0.0.0"), tmp_path),
+    ((str(python), "-I", script, version), tmp_path),
+    ((str(python), "-O", "-I", script, version), tmp_path),
   ]
   assert tmp_path != check.ROOT and not tmp_path.is_relative_to(check.ROOT)
   assert str(wheel) in calls[-3][0]
+  assert "--no-deps" in calls[-3][0]
+  assert "--require-hashes" in calls[-4][0]
+  assert "--locked" in calls[-6][0] and "--no-emit-project" in calls[-6][0]
+  assert "--no-isolation" in calls[0][0]
+
+
+def test_build_backend_is_explicitly_in_the_locked_development_group() -> None:
+  metadata = tomllib.loads((check.ROOT / "pyproject.toml").read_text())
+  assert set(metadata["build-system"]["requires"]) <= set(metadata["dependency-groups"]["dev"])
+
+
+def test_distribution_rejects_changes_during_consumption(
+  tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  artifacts = tmp_path / "artifacts"
+  artifacts.mkdir()
+  sdist, wheel = artifacts / "a.tar.gz", artifacts / "a.whl"
+  sdist.write_bytes(b"source")
+  wheel.write_bytes(b"wheel")
+  monkeypatch.setattr(check, "run", lambda *args, **kwargs: None)
+  monkeypatch.setattr(check, "check_sdist", lambda *args: None)
+  monkeypatch.setattr(check, "check_wheel", lambda *args: None)
+  monkeypatch.setattr(check, "install_and_consume", lambda *args: wheel.write_bytes(b"changed"))
+  with pytest.raises(ValueError, match="changed during"):
+    check.check_distribution(tmp_path, artifacts_dir=tmp_path / "kept")
+  assert not (tmp_path / "kept").exists()
+
+
+def test_retained_artifacts_preserve_the_pre_consumption_bytes(tmp_path: Path) -> None:
+  files = (tmp_path / "a.tar.gz", tmp_path / "a.whl")
+  for path in files:
+    path.write_bytes(path.name.encode())
+  hashes = {path: check.file_sha256(path) for path in files}
+  kept = tmp_path / "kept"
+  check.preserve_artifacts(hashes, kept)
+  for path, digest in hashes.items():
+    assert check.file_sha256(kept / "packages" / path.name) == digest
+  assert len((kept / "SHA256SUMS").read_text().splitlines()) == 2
+  with pytest.raises(ValueError, match="empty directory"):
+    check.preserve_artifacts(hashes, kept)
+
+
+def test_retaining_an_already_changed_file_fails(tmp_path: Path) -> None:
+  path = tmp_path / "a.whl"
+  path.write_bytes(b"original")
+  original = check.file_sha256(path)
+  path.write_bytes(b"changed")
+  with pytest.raises(ValueError, match="changed during"):
+    check.preserve_artifacts({path: original}, tmp_path / "kept")
+  assert not (tmp_path / "kept/SHA256SUMS").exists()
+
+
+def test_installed_consumption_refuses_a_repository_directory() -> None:
+  with pytest.raises(ValueError, match="outside the repository"):
+    check.install_and_consume(Path("a.whl"), "0.1.0", check.ROOT / "build/consumer")
 
 
 def test_main_runs_every_gate_in_order(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
