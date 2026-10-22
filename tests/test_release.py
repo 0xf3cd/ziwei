@@ -93,7 +93,17 @@ def test_prepared_bundle_preserves_original_checksums(
 
 @pytest.mark.parametrize(
   "defect",
-  ["bytes", "checksum", "manifest", "extra", "missing", "symlink", "filename", "extra-metadata"],
+  [
+    "bytes",
+    "checksum",
+    "crlf",
+    "manifest",
+    "extra",
+    "missing",
+    "symlink",
+    "filename",
+    "extra-metadata",
+  ],
 )
 def test_bundle_rejects_a_single_change(bundle: tuple[Path, release.Manifest], defect: str) -> None:
   directory, manifest = bundle
@@ -104,6 +114,9 @@ def test_bundle_rejects_a_single_change(bundle: tuple[Path, release.Manifest], d
       wheel.write_bytes(b"changed")
     case "checksum":
       (directory / "SHA256SUMS").write_text("0" * 64)
+    case "crlf":
+      sums = directory / "SHA256SUMS"
+      sums.write_bytes(sums.read_bytes().replace(b"\n", b"\r\n"))
     case "manifest":
       data = json.loads((directory / "release.json").read_text())
       data["wheel_sha256"] = "b" * 64
@@ -122,7 +135,9 @@ def test_bundle_rejects_a_single_change(bundle: tuple[Path, release.Manifest], d
       wheel.rename(wheel.with_name("other.whl"))
     case "extra-metadata":
       (directory / "unexpected").touch()
-  with pytest.raises(ValueError):
+  with pytest.raises(
+    ValueError, match="Checksum file differs" if defect in ("checksum", "crlf") else None
+  ):
     release.verify_bundle(directory, manifest)
 
 
@@ -310,7 +325,7 @@ def test_testpypi_does_not_retry_non_404_errors(
   assert sleeps == []
 
 
-@pytest.mark.parametrize("defect", ["fields", "type", "digest", "placeholder"])
+@pytest.mark.parametrize("defect", ["fields", "type", "digest", "placeholder", "source-sha"])
 def test_manifest_rejects_invalid_shape_and_values(
   bundle: tuple[Path, release.Manifest], defect: str
 ) -> None:
@@ -330,6 +345,9 @@ def test_manifest_rejects_invalid_shape_and_values(
     case "placeholder":
       data["version"] = "0.0.0"
       expected = "0.0.0 placeholder"
+    case "source-sha":
+      data["source_sha"] = "short"
+      expected = "full lowercase source SHA"
   (directory / "release.json").write_text(json.dumps(data), encoding="utf-8")
   with pytest.raises(ValueError, match=expected):
     release.read_manifest(directory)
@@ -350,3 +368,26 @@ def test_bundle_rejects_symlinks_at_every_level(
   path.symlink_to(target, target_is_directory=target.is_dir())
   with pytest.raises(ValueError, match="regular"):
     release.verify_bundle(directory, manifest)
+
+
+@pytest.mark.parametrize(
+  "version, source_sha, message",
+  [
+    ("0.0.0", SHA, "0.0.0 placeholder"),
+    ("0.1.0rc1", SHA, "canonical numeric components"),
+    ("01.2.3", SHA, "canonical numeric components"),
+    (VERSION, "short", "full lowercase source SHA"),
+    (VERSION, SHA.upper(), "full lowercase source SHA"),
+  ],
+)
+def test_identity_format_is_checked_even_when_the_context_matches(
+  version: str, source_sha: str, message: str
+) -> None:
+  with pytest.raises(ValueError, match=message):
+    release.validate_identity(
+      version,
+      source_sha,
+      github_sha=source_sha,
+      github_ref="refs/heads/main",
+      metadata_version=version,
+    )

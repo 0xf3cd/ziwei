@@ -412,6 +412,10 @@ def test_current_installed_metadata_matches_the_project() -> None:
 def test_distribution_rejects_changes_during_consumption(
   tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+  source = tmp_path / "source"
+  source.mkdir()
+  (source / "pyproject.toml").write_bytes((check.ROOT / "pyproject.toml").read_bytes())
+  monkeypatch.setattr(check, "ROOT", source)
   artifacts = tmp_path / "artifacts"
   artifacts.mkdir()
   sdist, wheel = artifacts / "a.tar.gz", artifacts / "a.whl"
