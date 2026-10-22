@@ -134,6 +134,10 @@ def check_release_policy(data: dict[str, Any]) -> None:
     "publish-pypi": {"build", "consume", "verify-testpypi"},
   }
   for name, job in jobs.items():
+    require(
+      all("${{ runner" not in value for value in job.get("env", {}).values()),
+      "Job-level env cannot use runner context",
+    )
     needs = job.get("needs", [])
     require(
       set([needs] if isinstance(needs, str) else needs) == dependencies.get(name, set()),
@@ -251,6 +255,7 @@ def test_release_workflow_obeys_the_publication_contract() -> None:
     "build-gate",
     "build-if",
     "windows-shell",
+    "runner-job-env",
   ],
 )
 def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
@@ -289,6 +294,8 @@ def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
       next(step for step in bad["jobs"]["consume"]["steps"] if step.get("shell") == "bash").pop(
         "shell"
       )
+    case "runner-job-env":
+      bad["jobs"]["build"]["env"]["SCRATCH"] = "${{ runner.temp }}"
   expected = {
     "trigger": "dispatch-only",
     "permissions": "Least-privilege",
@@ -302,6 +309,7 @@ def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
     "build-gate": "Full build gate",
     "build-if": "Identity validation must run",
     "windows-shell": "Bash variables on every platform",
+    "runner-job-env": "Job-level env cannot use runner context",
   }[defect]
   with pytest.raises(ValueError, match=expected):
     check_release_policy(bad)

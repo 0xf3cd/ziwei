@@ -307,7 +307,9 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
     tmp_path / "consumer" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
   )
   script = str(check.ROOT / "tools/installed_check.py")
-  version = tomllib.loads((source / "pyproject.toml").read_text())["project"]["version"]
+  version = tomllib.loads((source / "pyproject.toml").read_text(encoding="utf-8"))["project"][
+    "version"
+  ]
   assert calls[-2:] == [
     ((str(python), "-I", script, version), tmp_path),
     ((str(python), "-O", "-I", script, version), tmp_path),
@@ -321,7 +323,7 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
 
 
 def test_build_backend_is_explicitly_in_the_locked_development_group() -> None:
-  metadata = tomllib.loads((check.ROOT / "pyproject.toml").read_text())
+  metadata = tomllib.loads((check.ROOT / "pyproject.toml").read_text(encoding="utf-8"))
   assert set(metadata["build-system"]["requires"]) <= set(metadata["dependency-groups"]["dev"])
 
 
