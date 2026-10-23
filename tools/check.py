@@ -92,7 +92,7 @@ def check_api_reference(directory: Path, root: Path = ROOT) -> None:
     parts = module.relative_to(root / "src").with_suffix("").parts
     namespace = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
     source = module.read_text(encoding="utf-8")
-    lines = source.splitlines()
+    lines = source.split("\n")
     nodes = ast.parse(source).body
     for index, node in enumerate(nodes):
       if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):

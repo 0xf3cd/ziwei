@@ -255,8 +255,12 @@ def test_history_never_calls_current_default_star_entry(monkeypatch: pytest.Monk
   assert dumps_chart(original) == text
 
 
-def test_v010_constructor_does_not_require_new_snapshot_keyword() -> None:
+@pytest.mark.parametrize("bounds", [(1600, 2199), (1, 9999)])
+def test_v010_constructor_does_not_require_new_snapshot_keyword(
+  monkeypatch: pytest.MonkeyPatch, bounds: tuple[int, int]
+) -> None:
   value = loads_chart((FIXTURES / "lunar.json").read_text()).calculation
+  monkeypatch.setitem(calendar._ALGORITHM_RANGE, value.lunar_algorithm, bounds)
   legacy = CalculationInput(
     record=value.record,
     lunar_year=value.lunar_year,
@@ -274,11 +278,12 @@ def test_v010_constructor_does_not_require_new_snapshot_keyword() -> None:
     lichun_jd=value.lichun_jd,
     resolved_time=value.resolved_time,
   )
-  assert legacy == value and legacy.supported_lunar_year_range == (1600, 2199)
+  assert legacy == replace(value, supported_lunar_year_range=bounds)
+  assert legacy.supported_lunar_year_range == bounds
 
 
 def test_reproduction_constants_match_fixed_provenance() -> None:
-  tree = ast.parse((FIXTURES / "generate.py").read_text())
+  tree = ast.parse((FIXTURES / "generate.py").read_text(encoding="utf-8"))
   constants = {
     node.targets[0].id: ast.literal_eval(node.value)
     for node in tree.body

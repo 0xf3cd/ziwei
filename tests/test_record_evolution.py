@@ -65,7 +65,7 @@ def test_real_default_expansion_does_not_expand_historical_schema(
   )
   if future:
     path = source / "ziwei/stars.py"
-    code = path.read_text()
+    code = path.read_text(encoding="utf-8")
     marker = "  紫微 = ZIWEI"
     assert code.count(marker) == 1
     code = code.replace(
@@ -93,7 +93,7 @@ def test_real_default_expansion_does_not_expand_historical_schema(
 STAR_RULES = (*STAR_RULES, StarRule(
   'variant.test.future', '测试', (Star.测试星,), '隔离演进例', 'ziwei.stars.place_stars'))
 """
-    path.write_text(code)
+    path.write_text(code, encoding="utf-8")
   result = subprocess.run(
     [
       sys.executable,
@@ -121,10 +121,12 @@ def test_new_star_concept_is_generated_in_the_same_version(tmp_path: Path) -> No
     ROOT / "src/ziwei", source / "ziwei", ignore=shutil.ignore_patterns("__pycache__")
   )
   path = source / "ziwei/stars.py"
-  code = path.read_text()
+  code = path.read_text(encoding="utf-8")
   marker = "  紫微 = ZIWEI"
   assert code.count(marker) == 1
-  path.write_text(code.replace(marker, '  FUTURE = "测试星", "concept.star.future"\n' + marker))
+  path.write_text(
+    code.replace(marker, '  FUTURE = "测试星", "concept.star.future"\n' + marker), encoding="utf-8"
+  )
   check = """
 import sys
 sys.path.insert(0, sys.argv[1])

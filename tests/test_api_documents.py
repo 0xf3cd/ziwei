@@ -121,8 +121,9 @@ def test_explicit_type_alias_has_a_real_api_signature(api_tree: Path, annotation
 
 @pytest.mark.parametrize("annotation", ["Final", "Final[int]", "typing.Final[str]"])
 @pytest.mark.parametrize("comment", [False, True])
+@pytest.mark.parametrize("prefix", ["", "# a\u2028b\n", "# a\fb\n", "# a\x85b\n"])
 def test_documented_final_is_public_but_unmarked_assignments_are_not(
-  api_tree: Path, annotation: str, comment: bool
+  api_tree: Path, annotation: str, comment: bool, prefix: str
 ) -> None:
   public = (
     f"#: 公开值。\nPublic: {annotation} = 1\n"
@@ -130,7 +131,9 @@ def test_documented_final_is_public_but_unmarked_assignments_are_not(
     else f'Public: {annotation} = 1\n"""公开值。"""\n'
   )
   (api_tree / "src/ziwei/sample.py").write_text(
-    "from typing import Final\nimport typing\ndef resolve():\n  pass\n"
+    "from typing import Final\nimport typing\n"
+    + prefix
+    + "def resolve():\n  pass\n"
     + public
     + f'_private: {annotation} = 2\n"""内部值。"""\n'
     f"Implementation: {annotation} = 3\nordinary = 4\n"
@@ -202,14 +205,14 @@ def test_removing_real_autodata_is_rejected(
   source = tmp_path / "source"
   shutil.copytree(baseline, source)
   page = source / "docs/api.md"
-  original = page.read_text()
+  original = page.read_text(encoding="utf-8")
   changed, count = re.subn(
     rf"(?m)^\.\. autodata:: {re.escape(target)}\n(?:   :[^\n]*\n)*",
     "",
     original,
   )
   assert count == 1
-  page.write_text(changed)
+  page.write_text(changed, encoding="utf-8")
   output = tmp_path / "html"
   _build_api(source, output)
   with pytest.raises(ValueError, match=re.escape(target)):

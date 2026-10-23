@@ -38,7 +38,7 @@ SOURCE = (
 
 def test_real_sdist_carries_historical_fixtures_and_rejects_missing_one(tmp_path: Path) -> None:
   root = Path(__file__).resolve().parents[1]
-  metadata = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+  metadata = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]
   subprocess.run(
     [sys.executable, "-m", "build", "--sdist", "--no-isolation", "--outdir", str(tmp_path)],
     cwd=root,

@@ -204,7 +204,9 @@ def _generate(wheel: Path, output: Path) -> None:
     "cases": list(cases),
     "sha256": hashes,
   }
-  (output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
+  (output / "provenance.json").write_text(
+    json.dumps(provenance, indent=2) + "\n", encoding="utf-8", newline="\n"
+  )
   print(f"Generated {len(cases)} historical charts and {len(enums)} enum baselines")
 
 

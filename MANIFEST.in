@@ -1,4 +1,4 @@
-include AGENTS.md uv.lock
+include AGENTS.md uv.lock .gitattributes
 recursive-include .github/workflows *.yml *.yaml
 recursive-include docs *.md *.py *.inv
 recursive-include tests *.py
