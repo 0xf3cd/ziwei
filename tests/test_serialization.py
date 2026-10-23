@@ -160,7 +160,6 @@ print('RESTORE_ONLY_OK')
     (("calculation", "shichen"), "丑"),
     (("calculation", "lunar_algorithm"), "ALGO3"),
     (("calculation", "supported_lunar_year_range"), [True, 2199]),
-    (("calculation", "supported_lunar_year_range"), [1, 9999]),
     (("calculation", "config", "tianma_rule"), "unknown"),
     (("calculation", "config", "year_boundary"), "立春"),
     (("shengong",), "子"),

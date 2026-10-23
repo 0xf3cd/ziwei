@@ -1,0 +1,29 @@
+{
+  "software_version": "0.1.0",
+  "schema_version": 1,
+  "source_sha": "206723d794bbf9333062ab0f07beb0d9e4751b2e",
+  "wheel": "ziwei-0.1.0-py3-none-any.whl",
+  "wheel_sha256": "a720f4d40497119673b35acbc2be2dd87dc9aa6c3f813c6e4c0ba715d1e4c862",
+  "celestial_calendar_version": "0.8.0",
+  "cases": [
+    "lunar",
+    "civil-fixed",
+    "instant-fixed",
+    "instant-iana",
+    "civil-dst-gap",
+    "civil-unchecked-fold",
+    "instant-solar-int",
+    "civil-late-zi"
+  ],
+  "sha256": {
+    "lunar.json": "cce152b8c61cad9382e02b5a087be695b5767624e9d2258e9f789f9283d2920d",
+    "civil-fixed.json": "4950dde069fc1890b91f97ad15756f6bb1cdce66bbdd9aa95c8889ccfb347f7d",
+    "instant-fixed.json": "425347d551db4eeab7f6fd85372fd8a1b169c6c49f49d21e647d01559b1d285d",
+    "instant-iana.json": "19e4c854bb5f5bbeb89da45349fd33b79af12fae53cfa2f0b09fe81290ab1959",
+    "civil-dst-gap.json": "01f2907ef3676ead7b3a420fec4a31779ece75c92d3cccaf90226da4cb71fbe0",
+    "civil-unchecked-fold.json": "eb6aba0dd3be42c39a7dd7baea0036822d730aff5202ae70eff69d5c320a6136",
+    "identifiers.json": "d298e315fb5da3358c030088b1899864b72a5411c5ac9f329ba423eba1d2d3e6",
+    "instant-solar-int.json": "e3c03558ba4927c0c6f88bc7107820cbaf7e902ded5eebe234ca0723f028d7ad",
+    "civil-late-zi.json": "fb9667af8d0559f84e212908e3cfa0fa833159e08181997f522e0d9c79c08073"
+  }
+}

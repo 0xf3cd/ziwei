@@ -4,8 +4,9 @@ import json
 from datetime import date, datetime, time, timedelta
 from enum import StrEnum
 from math import isfinite
-from typing import Any, Final, TypeAlias, TypeVar
+from typing import Any, Final, TypeAlias, TypeVar, cast
 
+from ziwei._text import _check_json_text
 from ziwei.birth import (
   BirthRecord,
   CalculationInput,
@@ -15,14 +16,14 @@ from ziwei.birth import (
   TimePrecision,
 )
 from ziwei.bureau import WuxingJu
-from ziwei.calendar import LunarAlgorithm, supported_lunar_year_range
+from ziwei.calendar import LunarAlgorithm
 from ziwei.chart import ZiweiChart
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, TianmaRule, YearBoundary
 from ziwei.decades import DECADE_RULE_ID, Decade, Direction
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.palaces import Palace, PalaceName
 from ziwei.sihua import SihuaResult, SihuaVariant
-from ziwei.stars import Star, StarPlacement
+from ziwei.stars import _NATAL_STARS_V1, Star, StarPlacement
 from ziwei.timezone import FixedOffset, IanaTimezone, ResolvedTime, TimezoneData
 
 SCHEMA_VERSION: Final = 1
@@ -30,6 +31,34 @@ SCHEMA_VERSION: Final = 1
 
 _Json: TypeAlias = dict[str, Any]
 _E = TypeVar("_E", bound=StrEnum)
+
+
+class UnsupportedSchemaVersionError(ValueError):
+  """未知整数 schema；schema_version 保存请求版本，不按当前字段解释载荷。"""
+
+  def __init__(self, schema_version: int) -> None:
+    self.schema_version = schema_version
+    super().__init__(f"不支持的命盘schema版本：{schema_version}")
+
+
+def _check_schema1_stars(stars: tuple[StarPlacement, ...]) -> None:
+  if tuple(p.star for p in stars) != _NATAL_STARS_V1:
+    raise ValueError("schema 1须保存已发布的28星及其顺序")
+
+
+def _check_strings(value: Any, path: str = "$") -> None:
+  if isinstance(value, str):
+    try:
+      _check_json_text(value)
+    except ValueError as error:
+      raise ValueError(f"{path}：{error}") from error
+  elif isinstance(value, dict):
+    for key, item in value.items():
+      _check_strings(key, path)
+      _check_strings(item, f"{path}.{key}")
+  elif isinstance(value, list):
+    for index, item in enumerate(value):
+      _check_strings(item, f"{path}[{index}]")
 
 
 def _microseconds(value: timedelta) -> int:
@@ -87,6 +116,7 @@ def _resolved_dump(value: ResolvedTime | None) -> _Json | None:
 
 
 def _chart_dump(chart: ZiweiChart) -> _Json:
+  _check_schema1_stars(chart.stars)
   value = chart.calculation
   config = value.config
   return {
@@ -108,7 +138,7 @@ def _chart_dump(chart: ZiweiChart) -> _Json:
       },
       "lunar_algorithm": value.lunar_algorithm.value,
       "lunar_algorithm_version": value.lunar_algorithm_version,
-      "supported_lunar_year_range": list(supported_lunar_year_range(value.lunar_algorithm)),
+      "supported_lunar_year_range": list(cast(tuple[int, int], value.supported_lunar_year_range)),
       "apparent_solar": value.apparent_solar,
       "day_rolled": value.day_rolled,
       "ut1_jd": value.ut1_jd,
@@ -155,7 +185,9 @@ def dumps_chart(chart: ZiweiChart) -> str:
   """
   if not isinstance(chart, ZiweiChart):
     raise TypeError("序列化须使用 ZiweiChart")
-  return json.dumps(_chart_dump(chart), ensure_ascii=True, allow_nan=False, indent=2)
+  obj = _chart_dump(chart)
+  _check_strings(obj)
+  return json.dumps(obj, ensure_ascii=True, allow_nan=False, indent=2)
 
 
 def _object(value: Any, keys: str) -> _Json:
@@ -294,8 +326,8 @@ def _calculation_load(value: Any, record: BirthRecord) -> CalculationInput:
   )
   algorithm = _enum(LunarAlgorithm, obj["lunar_algorithm"])
   bounds = tuple(_int(x) for x in _array(obj["supported_lunar_year_range"]))
-  if bounds != supported_lunar_year_range(algorithm):
-    raise ValueError("算法支持范围与当前定义不一致")
+  if len(bounds) != 2:
+    raise ValueError("supported_lunar_year_range须有两个端点")
   return CalculationInput(
     record=record,
     lunar_year=_int(obj["lunar_year"]),
@@ -312,6 +344,7 @@ def _calculation_load(value: Any, record: BirthRecord) -> CalculationInput:
     ut1_jd=_jd(obj["ut1_jd"]),
     lichun_jd=_jd(obj["lichun_jd"]),
     resolved_time=_resolved_load(obj["resolved_time"], record),
+    supported_lunar_year_range=(bounds[0], bounds[1]),
   )
 
 
@@ -340,12 +373,16 @@ def _decade_load(value: Any) -> Decade:
 
 
 def _chart_load(value: Any) -> ZiweiChart:
+  if type(value) is not dict or "schema_version" not in value:
+    raise ValueError("命盘根对象须含schema_version")
+  schema = _int(value["schema_version"])
+  if schema != SCHEMA_VERSION:
+    raise UnsupportedSchemaVersionError(schema)
+  _check_strings(value)
   obj = _object(
     value,
     "schema_version software_version record calculation palaces shengong bureau stars sihua decades",
   )
-  if _int(obj["schema_version"]) != SCHEMA_VERSION:
-    raise ValueError("不支持的命盘schema版本")
   record = _record_load(obj["record"])
   palaces = []
   for item in _array(obj["palaces"]):
@@ -359,6 +396,7 @@ def _chart_load(value: Any) -> ZiweiChart:
     stars.append(
       StarPlacement(_enum(Star, p["star"]), _enum(Dizhi, p["dizhi"]), _str(p["rule_id"]))
     )
+  _check_schema1_stars(tuple(stars))
   return ZiweiChart(
     calculation=_calculation_load(obj["calculation"], record),
     palaces=tuple(palaces),
@@ -394,7 +432,8 @@ def _finite_float(value: str) -> float:
 def loads_chart(payload: str) -> ZiweiChart:
   """恢复schema 1，不重算、不替换存值；不认证历法与IANA偏移真实性。
 
-  拒绝缺/多字段、重复键、非有限数值、未知版本/规则与结构矛盾。格式或内容错误抛ValueError，
+  未知整数版本抛 UnsupportedSchemaVersionError；已支持版本仍严格检查字段与组件。
+  拒绝缺/多字段、重复键、非有限数值、未知规则与结构矛盾。格式或内容错误抛ValueError，
   非严格str实例（含子类）抛TypeError。不接受URL、文件名或可执行载荷，也不查找历史算法。
   不限制输入体积或数组长度；接收不可信输入的调用方须自行限制资源用量。
   """
@@ -405,5 +444,7 @@ def loads_chart(payload: str) -> ZiweiChart:
       payload, object_pairs_hook=_pairs, parse_constant=_reject_constant, parse_float=_finite_float
     )
     return _chart_load(obj)
+  except UnsupportedSchemaVersionError:
+    raise
   except (TypeError, ValueError, OverflowError, RecursionError) as error:
-    raise ValueError("命盘JSON无效或与当前规则不兼容") from error
+    raise ValueError(f"命盘JSON无效或与所选规则不兼容：{error}") from error

@@ -34,6 +34,7 @@ exclude_patterns = [
   "build/**",
   "dist/**",
   "AGENTS.md",
+  "tests/**",
 ]
 myst_heading_anchors = 6
 nitpicky = True

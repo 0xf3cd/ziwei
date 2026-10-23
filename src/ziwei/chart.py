@@ -24,16 +24,13 @@ from ziwei.palaces import (
 )
 from ziwei.resolver import DEFAULT_LUNAR_ALGORITHM, resolve
 from ziwei.sihua import SihuaResult, SihuaVariant, shengnian_sihua
-from ziwei.stars import StarPlacement, place_stars
+from ziwei.stars import StarPlacement, _place_stored_stars, place_stars
 from ziwei.timezone import current_timezone_data
 
 
 def _check_calculation(value: CalculationInput) -> None:
   """核完整盘计算输入的一致性；不读取历法或时区数据，不认证其已存原值。"""
   value.require_complete()
-  minimum, maximum = supported_lunar_year_range(value.lunar_algorithm)
-  if not minimum <= value.lunar_year <= maximum:
-    raise ValueError("解析农历年超出所选算法的支持范围")
   for jd in (value.ut1_jd, value.lichun_jd):
     if jd is not None and not isfinite(jd):
       raise ValueError("UT1 日数须为有限值")
@@ -86,7 +83,7 @@ def _check_calculation(value: CalculationInput) -> None:
 class ZiweiChart:
   """完整本命盘，按当前纯规则核对组合，不重做历法或时区解析。
 
-  宫位按宫名序，星曜按Star序，大限按起限先后（自命宫起，随顺逆）；序列复制为元组。
+  宫位按宫名序，星曜按已发布规则组顺序，大限按起限先后（自命宫起，随顺逆）；序列复制为元组。
   software_version保存生成版本并参与完整记录相等；重算不以它判兼容。
   calculation中的农历、UT1和IANA偏移仍是已存原值，构造成功不表示这些原值已经重新认证。
   """
@@ -134,7 +131,7 @@ class ZiweiChart:
       raise ValueError("身宫须与计算输入一致")
     if self.bureau is not bureau_of(palace_ganzhi(ming, value.ganzhi_year)):
       raise ValueError("五行局须与命宫干支一致")
-    if self.stars != place_stars(value):
+    if self.stars != _place_stored_stars(value, tuple(p.star for p in self.stars)):
       raise ValueError("星位及规则须与计算输入一致且按星曜序保存")
     if self.sihua != shengnian_sihua(value, self.sihua.variant):
       raise ValueError("四化须使用解析后的生年干")
@@ -152,7 +149,16 @@ def create_chart(
   """解析原始记录并组合完整盘；时辰、性别或所请求口径不可用时整次失败。"""
   value = resolve(record, config, lunar_algorithm)
   value.require_complete()
-  month = effective_month(value.month, value.day, value.is_leap_month, config.leap_month_policy)
+  return _compose_chart(value, sihua_variant, place_stars(value))
+
+
+def _compose_chart(
+  value: CalculationInput, sihua_variant: SihuaVariant, stars: tuple[StarPlacement, ...]
+) -> ZiweiChart:
+  value.require_complete()
+  month = effective_month(
+    value.month, value.day, value.is_leap_month, value.config.leap_month_policy
+  )
   shichen = cast(Dizhi, value.shichen)
   ming = minggong_dizhi(month, shichen)
   return ZiweiChart(
@@ -160,7 +166,7 @@ def create_chart(
     palaces=twelve_palaces(ming, value.year_ganzhi.tiangan),
     shengong=shengong_dizhi(month, shichen),
     bureau=bureau_of(palace_ganzhi(ming, value.ganzhi_year)),
-    stars=place_stars(value),
+    stars=stars,
     sihua=shengnian_sihua(value, sihua_variant),
     decades=place_decades(value),
     software_version=version("ziwei"),
@@ -182,6 +188,9 @@ def recalculate(chart: ZiweiChart) -> ZiweiChart:
     raise ValueError("重算所需的 celestial 版本不可用") from error
   if value.lunar_algorithm_version != installed_calendar_version:
     raise ValueError("重算所需的 celestial 版本不可用")
+  minimum, maximum = supported_lunar_year_range(value.lunar_algorithm)
+  if not minimum <= value.lunar_year <= maximum:
+    raise ValueError("重算日期超出当前算法支持范围")
   if value.resolved_time is not None and value.resolved_time.data is not None:
     try:
       installed_timezone_data = current_timezone_data()
@@ -192,16 +201,24 @@ def recalculate(chart: ZiweiChart) -> ZiweiChart:
   # 先核当前纯规则仍能表示原结果，再执行历法与时区求值。
   replace(chart)
   try:
-    result = create_chart(
+    recalculated = resolve(
       value.record,
       value.config,
-      sihua_variant=chart.sihua.variant,
-      lunar_algorithm=value.lunar_algorithm,
+      value.lunar_algorithm,
+    )
+    result = _compose_chart(
+      recalculated,
+      chart.sihua.variant,
+      _place_stored_stars(recalculated, tuple(p.star for p in chart.stars)),
     )
   except ZoneInfoNotFoundError as error:
     raise ValueError("重算所需的 IANA 时区不可用") from error
   for field in fields(chart):
-    if field.name != "software_version" and getattr(result, field.name) != getattr(
+    if field.name == "calculation":
+      original = replace(value, supported_lunar_year_range=recalculated.supported_lunar_year_range)
+      if original != recalculated:
+        raise ValueError("重算结果与已存记录不一致：calculation")
+    elif field.name != "software_version" and getattr(result, field.name) != getattr(
       chart, field.name
     ):
       raise ValueError(f"重算结果与已存记录不一致：{field.name}")

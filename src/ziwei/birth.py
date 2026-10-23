@@ -3,8 +3,10 @@
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from enum import StrEnum
+from typing import TypeAlias
 
-from ziwei.calendar import LunarAlgorithm
+from ziwei._text import _check_json_text
+from ziwei.calendar import LunarAlgorithm, supported_lunar_year_range
 from ziwei.config import ChartConfig, DayRollover, YearBoundary
 from ziwei.ganzhi import Dizhi, Ganzhi, Yinyang, year_ganzhi
 from ziwei.timezone import FixedOffset, IanaTimezone, ResolvedTime, resolve_civil_time
@@ -57,6 +59,8 @@ def _check_metadata(longitude_deg: float | None, place: str | None, source: str 
   for value in (place, source):
     if value is not None and not isinstance(value, str):
       raise TypeError("地点与来源说明须为字符串或 None")
+    if value is not None:
+      _check_json_text(value)
 
 
 def _check_lunar_date(
@@ -149,7 +153,7 @@ class LunarBirthRecord:
     _check_metadata(self.longitude_deg, self.place, self.source)
 
 
-BirthRecord = GregorianBirthRecord | LunarBirthRecord
+BirthRecord: TypeAlias = GregorianBirthRecord | LunarBirthRecord
 """公历与农历的原始出生记录，保留各自不同的输入信息。"""
 
 
@@ -161,6 +165,8 @@ class CalculationInput:
   原始记录和实际口径随值保存；阴阳及年干支由该编号派生，不维护可互相矛盾的副本。
   原始时辰未知时，解析时辰不得变为已知。
   lunar_algorithm 与 lunar_algorithm_version 记录所用农历算法及 celestial 版本；
+  supported_lunar_year_range 保存生成时范围，不认证历史来源。省略时取当前范围，
+  传入序列复制为元组；恢复时须显式传入文件快照，不以当前范围覆盖。
   apparent_solar 记录是否采用真太阳时路径；day_rolled 记录晚子时归次日是否顺延；
   ut1_jd 与 lichun_jd 记录立春换年所比较的出生瞬间与立春时刻（UT1 日数），
   纯民用正月初一路径为 None。
@@ -183,6 +189,7 @@ class CalculationInput:
   ut1_jd: float | None
   lichun_jd: float | None
   resolved_time: ResolvedTime | None = None
+  supported_lunar_year_range: tuple[int, int] | None = None
 
   def __post_init__(self) -> None:
     if not isinstance(self.record, BirthRecord):
@@ -197,6 +204,16 @@ class CalculationInput:
       raise TypeError("口径须为显式 ChartConfig")
     if not isinstance(self.lunar_algorithm, LunarAlgorithm):
       raise TypeError("农历算法须为 LunarAlgorithm 成员")
+    bounds = (
+      supported_lunar_year_range(self.lunar_algorithm)
+      if self.supported_lunar_year_range is None
+      else tuple(self.supported_lunar_year_range)
+    )
+    if len(bounds) != 2 or any(type(bound) is not int for bound in bounds):
+      raise ValueError("算法支持范围须为两个整数，不接受 bool")
+    if not 1 <= bounds[0] <= self.lunar_year <= bounds[1] <= 9999:
+      raise ValueError("算法支持范围须在1至9999内有序且包含解析农历年")
+    object.__setattr__(self, "supported_lunar_year_range", bounds)
     if not isinstance(self.lunar_algorithm_version, str) or not self.lunar_algorithm_version:
       raise ValueError("农历算法版本不得为空")
     for value, label in (

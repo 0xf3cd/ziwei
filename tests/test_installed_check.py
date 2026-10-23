@@ -254,6 +254,7 @@ def test_installed_consumer_rejects_consistent_wrong_positions(
     )
 
   monkeypatch.setattr(chart_module, "place_stars", shifted)
+  monkeypatch.setattr(chart_module, "_place_stored_stars", lambda value, stars: shifted(value))
   with pytest.raises(ValueError, match="independent star positions"):
     installed_check.check_chart()
 

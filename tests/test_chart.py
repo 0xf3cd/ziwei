@@ -408,7 +408,7 @@ def test_chart_only_guards_do_not_tighten_legacy_input(
 ) -> None:
   value = lunar_chart.calculation
   if change == "year":
-    value = replace(value, lunar_year=5000, ganzhi_year=5000)
+    value = replace(value, lunar_year=5000, ganzhi_year=5000, supported_lunar_year_range=(1, 9999))
   elif change == "nonfinite":
     value = replace(civil_chart.calculation, ut1_jd=float("nan"))
   elif change == "longitude":

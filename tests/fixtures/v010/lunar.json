@@ -1,0 +1,354 @@
+{
+  "schema_version": 1,
+  "software_version": "0.1.0",
+  "record": {
+    "calendar": "\u519c\u5386",
+    "year": 2000,
+    "month": 1,
+    "day": 1,
+    "is_leap_month": false,
+    "shichen": "\u5b50",
+    "gender": "\u5973",
+    "longitude_deg": null,
+    "place": null,
+    "source": "\u5408\u6210\u519c\u5386\u4f8b"
+  },
+  "calculation": {
+    "lunar_year": 2000,
+    "month": 1,
+    "day": 1,
+    "is_leap_month": false,
+    "shichen": "\u5b50",
+    "ganzhi_year": 2000,
+    "config": {
+      "leap_month_policy": "\u5168\u6708\u5f52\u672c\u6708",
+      "day_rollover": "\u65e9\u665a\u5b50\u65f6\u540c\u65e5",
+      "year_boundary": "\u519c\u5386\u6b63\u6708\u521d\u4e00",
+      "tianma_rule": "\u5e74\u652f\u5929\u9a6c"
+    },
+    "lunar_algorithm": "\u6df7\u5408",
+    "lunar_algorithm_version": "0.8.0",
+    "supported_lunar_year_range": [
+      1600,
+      2199
+    ],
+    "apparent_solar": false,
+    "day_rolled": false,
+    "ut1_jd": null,
+    "lichun_jd": null,
+    "resolved_time": null
+  },
+  "palaces": [
+    {
+      "dizhi": "\u5bc5",
+      "tiangan": "\u620a",
+      "name": "\u547d\u5bab"
+    },
+    {
+      "dizhi": "\u4e11",
+      "tiangan": "\u5df1",
+      "name": "\u5144\u5f1f"
+    },
+    {
+      "dizhi": "\u5b50",
+      "tiangan": "\u620a",
+      "name": "\u59bb\u59be"
+    },
+    {
+      "dizhi": "\u4ea5",
+      "tiangan": "\u4e01",
+      "name": "\u5b50\u5973"
+    },
+    {
+      "dizhi": "\u620c",
+      "tiangan": "\u4e19",
+      "name": "\u8d22\u5e1b"
+    },
+    {
+      "dizhi": "\u9149",
+      "tiangan": "\u4e59",
+      "name": "\u75be\u5384"
+    },
+    {
+      "dizhi": "\u7533",
+      "tiangan": "\u7532",
+      "name": "\u8fc1\u79fb"
+    },
+    {
+      "dizhi": "\u672a",
+      "tiangan": "\u7678",
+      "name": "\u5974\u4ec6"
+    },
+    {
+      "dizhi": "\u5348",
+      "tiangan": "\u58ec",
+      "name": "\u5b98\u7984"
+    },
+    {
+      "dizhi": "\u5df3",
+      "tiangan": "\u8f9b",
+      "name": "\u7530\u5b85"
+    },
+    {
+      "dizhi": "\u8fb0",
+      "tiangan": "\u5e9a",
+      "name": "\u798f\u5fb7"
+    },
+    {
+      "dizhi": "\u536f",
+      "tiangan": "\u5df1",
+      "name": "\u7236\u6bcd"
+    }
+  ],
+  "shengong": "\u5bc5",
+  "bureau": "\u571f\u4e94\u5c40",
+  "stars": [
+    {
+      "star": "\u7d2b\u5fae",
+      "dizhi": "\u5348",
+      "rule_id": "variant.star.ziwei-bureau-day"
+    },
+    {
+      "star": "\u5929\u673a",
+      "dizhi": "\u5df3",
+      "rule_id": "variant.star.ziwei-series"
+    },
+    {
+      "star": "\u592a\u9633",
+      "dizhi": "\u536f",
+      "rule_id": "variant.star.ziwei-series"
+    },
+    {
+      "star": "\u6b66\u66f2",
+      "dizhi": "\u5bc5",
+      "rule_id": "variant.star.ziwei-series"
+    },
+    {
+      "star": "\u5929\u540c",
+      "dizhi": "\u4e11",
+      "rule_id": "variant.star.ziwei-series"
+    },
+    {
+      "star": "\u5ec9\u8d1e",
+      "dizhi": "\u620c",
+      "rule_id": "variant.star.ziwei-series"
+    },
+    {
+      "star": "\u5929\u5e9c",
+      "dizhi": "\u620c",
+      "rule_id": "variant.star.tianfu-reflection"
+    },
+    {
+      "star": "\u592a\u9634",
+      "dizhi": "\u4ea5",
+      "rule_id": "variant.star.tianfu-series"
+    },
+    {
+      "star": "\u8d2a\u72fc",
+      "dizhi": "\u5b50",
+      "rule_id": "variant.star.tianfu-series"
+    },
+    {
+      "star": "\u5de8\u95e8",
+      "dizhi": "\u4e11",
+      "rule_id": "variant.star.tianfu-series"
+    },
+    {
+      "star": "\u5929\u76f8",
+      "dizhi": "\u5bc5",
+      "rule_id": "variant.star.tianfu-series"
+    },
+    {
+      "star": "\u5929\u6881",
+      "dizhi": "\u536f",
+      "rule_id": "variant.star.tianfu-series"
+    },
+    {
+      "star": "\u4e03\u6740",
+      "dizhi": "\u8fb0",
+      "rule_id": "variant.star.tianfu-series"
+    },
+    {
+      "star": "\u7834\u519b",
+      "dizhi": "\u7533",
+      "rule_id": "variant.star.tianfu-series"
+    },
+    {
+      "star": "\u5de6\u8f85",
+      "dizhi": "\u8fb0",
+      "rule_id": "variant.star.fubi-effective-month"
+    },
+    {
+      "star": "\u53f3\u5f3c",
+      "dizhi": "\u620c",
+      "rule_id": "variant.star.fubi-effective-month"
+    },
+    {
+      "star": "\u6587\u660c",
+      "dizhi": "\u620c",
+      "rule_id": "variant.star.wenchang-wenqu-hour"
+    },
+    {
+      "star": "\u6587\u66f2",
+      "dizhi": "\u8fb0",
+      "rule_id": "variant.star.wenchang-wenqu-hour"
+    },
+    {
+      "star": "\u5929\u9b41",
+      "dizhi": "\u4e11",
+      "rule_id": "variant.star.kuiyue-modern"
+    },
+    {
+      "star": "\u5929\u94ba",
+      "dizhi": "\u672a",
+      "rule_id": "variant.star.kuiyue-modern"
+    },
+    {
+      "star": "\u64ce\u7f8a",
+      "dizhi": "\u9149",
+      "rule_id": "variant.star.yangtuo-lucun"
+    },
+    {
+      "star": "\u9640\u7f57",
+      "dizhi": "\u672a",
+      "rule_id": "variant.star.yangtuo-lucun"
+    },
+    {
+      "star": "\u706b\u661f",
+      "dizhi": "\u5bc5",
+      "rule_id": "variant.star.huoling-forward"
+    },
+    {
+      "star": "\u94c3\u661f",
+      "dizhi": "\u620c",
+      "rule_id": "variant.star.huoling-forward"
+    },
+    {
+      "star": "\u5730\u7a7a",
+      "dizhi": "\u4ea5",
+      "rule_id": "variant.star.kongjie-hour"
+    },
+    {
+      "star": "\u5730\u52ab",
+      "dizhi": "\u4ea5",
+      "rule_id": "variant.star.kongjie-hour"
+    },
+    {
+      "star": "\u7984\u5b58",
+      "dizhi": "\u7533",
+      "rule_id": "variant.star.lucun-stem"
+    },
+    {
+      "star": "\u5929\u9a6c",
+      "dizhi": "\u5bc5",
+      "rule_id": "variant.tianma.year-branch"
+    }
+  ],
+  "sihua": {
+    "year_tiangan": "\u5e9a",
+    "variant": "\u738b\u4ead\u4e4b\u8bb2\u4e49\u8f6c\u5f55",
+    "rule_id": "variant.sihua.wangtingzhi-lecture",
+    "lu": "\u592a\u9633",
+    "quan": "\u6b66\u66f2",
+    "ke": "\u5929\u5e9c",
+    "ji": "\u5929\u540c"
+  },
+  "decades": [
+    {
+      "dizhi": "\u5bc5",
+      "direction": "\u9006\u884c",
+      "start_age": 5,
+      "end_age": 14,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u4e11",
+      "direction": "\u9006\u884c",
+      "start_age": 15,
+      "end_age": 24,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u5b50",
+      "direction": "\u9006\u884c",
+      "start_age": 25,
+      "end_age": 34,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u4ea5",
+      "direction": "\u9006\u884c",
+      "start_age": 35,
+      "end_age": 44,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u620c",
+      "direction": "\u9006\u884c",
+      "start_age": 45,
+      "end_age": 54,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u9149",
+      "direction": "\u9006\u884c",
+      "start_age": 55,
+      "end_age": 64,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u7533",
+      "direction": "\u9006\u884c",
+      "start_age": 65,
+      "end_age": 74,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u672a",
+      "direction": "\u9006\u884c",
+      "start_age": 75,
+      "end_age": 84,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u5348",
+      "direction": "\u9006\u884c",
+      "start_age": 85,
+      "end_age": 94,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u5df3",
+      "direction": "\u9006\u884c",
+      "start_age": 95,
+      "end_age": 104,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u8fb0",
+      "direction": "\u9006\u884c",
+      "start_age": 105,
+      "end_age": 114,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    },
+    {
+      "dizhi": "\u536f",
+      "direction": "\u9006\u884c",
+      "start_age": 115,
+      "end_age": 124,
+      "rule_id": "variant.decades.xusui-inclusive",
+      "age_convention": "\u865a\u5c81"
+    }
+  ]
+}

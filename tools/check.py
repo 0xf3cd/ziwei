@@ -86,21 +86,33 @@ class ApiTargets(HTMLParser):
 
 
 def check_api_reference(directory: Path, root: Path = ROOT) -> None:
-  """要求公开类、函数、方法及显式类型别名出现在生成的API签名里。"""
+  """核公开定义、类型别名和有变量说明的 Final 常量的真实 HTML 签名。"""
   expected: set[str] = set()
   for module in (root / "src/ziwei").rglob("*.py"):
     parts = module.relative_to(root / "src").with_suffix("").parts
     namespace = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
-    for node in ast.parse(module.read_text(encoding="utf-8")).body:
+    nodes = ast.parse(module.read_text(encoding="utf-8")).body
+    for index, node in enumerate(nodes):
       if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
         annotation = node.annotation
-        is_type_alias = (isinstance(annotation, ast.Name) and annotation.id == "TypeAlias") or (
+        if isinstance(annotation, ast.Subscript):
+          annotation = annotation.value
+        kind = annotation.id if isinstance(annotation, ast.Name) else None
+        if (
           isinstance(annotation, ast.Attribute)
-          and annotation.attr == "TypeAlias"
           and isinstance(annotation.value, ast.Name)
           and annotation.value.id == "typing"
+        ):
+          kind = annotation.attr
+        following = nodes[index + 1] if index + 1 < len(nodes) else None
+        documented = (
+          isinstance(following, ast.Expr)
+          and isinstance(following.value, ast.Constant)
+          and isinstance(following.value.value, str)
         )
-        if is_type_alias and not node.target.id.startswith("_"):
+        if (
+          kind == "TypeAlias" or (kind == "Final" and documented)
+        ) and not node.target.id.startswith("_"):
           expected.add(f"{namespace}.{node.target.id}")
       if isinstance(node, ast.ClassDef | ast.FunctionDef) and not node.name.startswith("_"):
         name = f"{namespace}.{node.name}"

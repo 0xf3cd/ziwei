@@ -97,6 +97,7 @@ SIHUA_TABLES: Final[tuple[SihuaTable, ...]] = (
     ),
   ),
 )
+"""具名完整四化表；每行按禄、权、科、忌排列，行序为甲至癸。"""
 
 
 def _sihua_row(year_tiangan: Tiangan, variant: SihuaVariant) -> tuple[Star, Star, Star, Star]:

@@ -46,8 +46,8 @@ class YearBoundary(StrEnum):
 
 #: 闰月归属、子时换日和换年界线三个枚举的联合类型；这三项均无默认值。
 PolicyOption: TypeAlias = LeapMonthPolicy | DayRollover | YearBoundary
-#: 从PolicyOption取得这三个枚举的类型，供输入校验和参考页共用。
 POLICY_ENUMS: Final[tuple[type[StrEnum], ...]] = get_args(PolicyOption)
+"""从PolicyOption取得这三个枚举的类型，供输入校验和参考页共用。"""
 
 
 class TianmaRule(StrEnum):

@@ -1,6 +1,7 @@
 """保存规则的出处与说明；星曜和安星规则引用所属模块的定义，不另抄数值表。"""
 
 from datetime import date
+from typing import Final
 
 from ziwei.config import DayRollover, LeapMonthPolicy, TianmaRule, YearBoundary
 from ziwei.decades import DECADE_DEFINITION, DECADE_RULE_ID
@@ -21,7 +22,7 @@ from ziwei.knowledge.model import (
 from ziwei.sihua import SIHUA_TABLES, SihuaVariant
 from ziwei.stars import STAR_RULES, Star, StarRule
 
-CATALOG_VERSION = "2026.10.21.1"
+CATALOG_VERSION: Final = "2026.10.21.1"
 """语料版本，与开发包版本分别记录。"""
 
 CONCEPTS = (

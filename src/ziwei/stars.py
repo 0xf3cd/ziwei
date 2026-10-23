@@ -31,34 +31,44 @@ if TYPE_CHECKING:
 class Star(StrEnum):
   """28颗星的名称与中文别名；选择不同的安星规则，不会把同一颗星变成另一颗星。"""
 
-  ZIWEI = "紫微"
-  TIANJI = "天机"
-  TAIYANG = "太阳"
-  WUQU = "武曲"
-  TIANTONG = "天同"
-  LIANZHEN = "廉贞"
-  TIANFU = "天府"
-  TAIYIN = "太阴"
-  TANLANG = "贪狼"
-  JUMEN = "巨门"
-  TIANXIANG = "天相"
-  TIANLIANG = "天梁"
-  QISHA = "七杀"
-  POJUN = "破军"
-  ZUOFU = "左辅"
-  YOUBI = "右弼"
-  WENCHANG = "文昌"
-  WENQU = "文曲"
-  TIANKUI = "天魁"
-  TIANYUE = "天钺"
-  QINGYANG = "擎羊"
-  TUOLUO = "陀罗"
-  HUOXING = "火星"
-  LINGXING = "铃星"
-  DIKONG = "地空"
-  DIJIE = "地劫"
-  LUCUN = "禄存"
-  TIANMA = "天马"
+  _concept_id: str
+
+  def __new__(cls, value: str, concept_id: str | None = None) -> Star:
+    if concept_id is None:
+      raise ValueError("新增星曜须显式指定知识标识")
+    member = str.__new__(cls, value)
+    member._value_ = value
+    member._concept_id = concept_id
+    return member
+
+  ZIWEI = "紫微", "concept.star.ziwei"
+  TIANJI = "天机", "concept.star.tianji"
+  TAIYANG = "太阳", "concept.star.taiyang"
+  WUQU = "武曲", "concept.star.wuqu"
+  TIANTONG = "天同", "concept.star.tiantong"
+  LIANZHEN = "廉贞", "concept.star.lianzhen"
+  TIANFU = "天府", "concept.star.tianfu"
+  TAIYIN = "太阴", "concept.star.taiyin"
+  TANLANG = "贪狼", "concept.star.tanlang"
+  JUMEN = "巨门", "concept.star.jumen"
+  TIANXIANG = "天相", "concept.star.tianxiang"
+  TIANLIANG = "天梁", "concept.star.tianliang"
+  QISHA = "七杀", "concept.star.qisha"
+  POJUN = "破军", "concept.star.pojun"
+  ZUOFU = "左辅", "concept.star.zuofu"
+  YOUBI = "右弼", "concept.star.youbi"
+  WENCHANG = "文昌", "concept.star.wenchang"
+  WENQU = "文曲", "concept.star.wenqu"
+  TIANKUI = "天魁", "concept.star.tiankui"
+  TIANYUE = "天钺", "concept.star.tianyue"
+  QINGYANG = "擎羊", "concept.star.qingyang"
+  TUOLUO = "陀罗", "concept.star.tuoluo"
+  HUOXING = "火星", "concept.star.huoxing"
+  LINGXING = "铃星", "concept.star.lingxing"
+  DIKONG = "地空", "concept.star.dikong"
+  DIJIE = "地劫", "concept.star.dijie"
+  LUCUN = "禄存", "concept.star.lucun"
+  TIANMA = "天马", "concept.star.tianma"
   紫微 = ZIWEI
   天机 = TIANJI
   太阳 = TAIYANG
@@ -90,8 +100,40 @@ class Star(StrEnum):
 
   @property
   def concept_id(self) -> str:
-    """知识目录中的固定标识，由拼音枚举名生成，不随中文显示名称改变。"""
-    return "concept.star." + self.name.lower()
+    """知识目录中的固定标识，不随 Python 成员名或显示名称改变。"""
+    return self._concept_id
+
+
+_NATAL_STARS_V1: Final = (
+  Star.紫微,
+  Star.天机,
+  Star.太阳,
+  Star.武曲,
+  Star.天同,
+  Star.廉贞,
+  Star.天府,
+  Star.太阴,
+  Star.贪狼,
+  Star.巨门,
+  Star.天相,
+  Star.天梁,
+  Star.七杀,
+  Star.破军,
+  Star.左辅,
+  Star.右弼,
+  Star.文昌,
+  Star.文曲,
+  Star.天魁,
+  Star.天钺,
+  Star.擎羊,
+  Star.陀罗,
+  Star.火星,
+  Star.铃星,
+  Star.地空,
+  Star.地劫,
+  Star.禄存,
+  Star.天马,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -443,6 +485,11 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
   闰十二月需要按下月安星等无法处理的组合会抛错，不返回部分结果。
   每颗星只返回一个位置；天马的rule_id保存此次实际使用的规则，不靠日后的默认值还原。
   """
+  return _place_natal_stars_v1(value)
+
+
+def _place_natal_stars_v1(value: CalculationInput) -> tuple[StarPlacement, ...]:
+  """计算已发布的 28 星规则组，不随默认全集扩张。"""
   # 在调用时才导入出生记录类型，避免仅查询安星知识时连带加载出生与历法模块。
   from ziwei.birth import CalculationInput
 
@@ -470,6 +517,17 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
     *place_fire_bell(year.dizhi, value.shichen),
     _placement(Star.天马, tianma_dizhi(ma_branch), value.config.tianma_rule),
   )
-  if len(positions) != len(Star) or {item.star for item in positions} != set(Star):
+  if len(positions) != len(_NATAL_STARS_V1) or {item.star for item in positions} != set(
+    _NATAL_STARS_V1
+  ):
     raise ValueError("安星结果须恰有28颗不同星曜")
-  return tuple(sorted(positions, key=lambda item: tuple(Star).index(item.star)))
+  return tuple(sorted(positions, key=lambda item: _NATAL_STARS_V1.index(item.star)))
+
+
+def _place_stored_stars(
+  value: CalculationInput, stars: tuple[Star, ...]
+) -> tuple[StarPlacement, ...]:
+  """按已有完整星集求值；任意子集不能冒充历史规则组。"""
+  if stars != _NATAL_STARS_V1:
+    raise ValueError("不支持的完整星集或星曜顺序")
+  return _place_natal_stars_v1(value)
