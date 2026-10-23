@@ -1,5 +1,6 @@
 """固定发行文件验证保全；恢复、再次保存与重新求值分别验收。"""
 
+import ast
 import hashlib
 import importlib
 import json
@@ -15,6 +16,9 @@ from typing import Any
 import pytest
 
 from ziwei import calendar
+from ziwei import chart as chart_module
+from ziwei import stars as stars_module
+from ziwei.birth import CalculationInput
 from ziwei.chart import recalculate
 from ziwei.knowledge import load_catalog
 from ziwei.serialization import UnsupportedSchemaVersionError, dumps_chart, loads_chart
@@ -236,3 +240,85 @@ def test_restoration_keeps_unavailable_dependency_version() -> None:
   assert restored.calculation.lunar_algorithm_version == "unavailable"
   with pytest.raises(ValueError, match="celestial 版本不可用"):
     recalculate(restored)
+
+
+def test_history_never_calls_current_default_star_entry(monkeypatch: pytest.MonkeyPatch) -> None:
+  def reject(*args: Any, **kwargs: Any) -> Any:
+    raise RuntimeError("current default star entry called")
+
+  monkeypatch.setattr(chart_module, "place_stars", reject)
+  monkeypatch.setattr(stars_module, "place_stars", reject)
+  text = (FIXTURES / "lunar.json").read_text()
+  original = loads_chart(text)
+  assert replace(original) == original
+  assert recalculate(original).stars == original.stars
+  assert dumps_chart(original) == text
+
+
+def test_v010_constructor_does_not_require_new_snapshot_keyword() -> None:
+  value = loads_chart((FIXTURES / "lunar.json").read_text()).calculation
+  legacy = CalculationInput(
+    record=value.record,
+    lunar_year=value.lunar_year,
+    month=value.month,
+    day=value.day,
+    is_leap_month=value.is_leap_month,
+    shichen=value.shichen,
+    ganzhi_year=value.ganzhi_year,
+    config=value.config,
+    lunar_algorithm=value.lunar_algorithm,
+    lunar_algorithm_version=value.lunar_algorithm_version,
+    apparent_solar=value.apparent_solar,
+    day_rolled=value.day_rolled,
+    ut1_jd=value.ut1_jd,
+    lichun_jd=value.lichun_jd,
+    resolved_time=value.resolved_time,
+  )
+  assert legacy == value and legacy.supported_lunar_year_range == (1600, 2199)
+
+
+def test_reproduction_constants_match_fixed_provenance() -> None:
+  tree = ast.parse((FIXTURES / "generate.py").read_text())
+  constants = {
+    node.targets[0].id: ast.literal_eval(node.value)
+    for node in tree.body
+    if isinstance(node, ast.Assign)
+    and isinstance(node.targets[0], ast.Name)
+    and node.targets[0].id in ("SOURCE_SHA", "WHEEL_SHA256")
+  }
+  assert constants == {
+    "SOURCE_SHA": PROVENANCE["source_sha"],
+    "WHEEL_SHA256": PROVENANCE["wheel_sha256"],
+  }
+
+
+@pytest.mark.parametrize("key", ["ut1_jd", "lichun_jd"])
+def test_julian_days_require_float_but_do_not_certify_astronomy(key: str) -> None:
+  data = json.loads((FIXTURES / "instant-iana.json").read_text())
+  data["calculation"][key] = 1
+  with pytest.raises(ValueError):
+    loads_chart(json.dumps(data))
+  data = json.loads((FIXTURES / "instant-iana.json").read_text())
+  for field in ("ut1_jd", "lichun_jd"):
+    data["calculation"][field] -= 10_000_000.0
+  restored = loads_chart(json.dumps(data))
+  assert getattr(restored.calculation, key) == data["calculation"][key] < 0
+  with pytest.raises(ValueError, match="重算结果"):
+    recalculate(restored)
+
+
+@pytest.mark.parametrize(
+  "key",
+  ["bad\nkey", "bad\x1b[31mkey", "a" * 2000, "汉" * 2000],
+  ids=["newline", "escape", "long-ascii", "long-chinese"],
+)
+def test_content_error_diagnostic_is_escaped_bounded_and_chained(key: str) -> None:
+  data = json.loads((FIXTURES / "lunar.json").read_text())
+  data[key] = "\ud800\udc00"
+  with pytest.raises(ValueError) as raised:
+    loads_chart(json.dumps(data, ensure_ascii=False))
+  diagnostic = str(raised.value)
+  assert len(diagnostic) < 300
+  assert "\n" not in diagnostic and "\x1b" not in diagnostic
+  assert raised.value.__cause__ is not None
+  assert key in str(raised.value.__cause__)

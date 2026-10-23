@@ -91,7 +91,9 @@ def check_api_reference(directory: Path, root: Path = ROOT) -> None:
   for module in (root / "src/ziwei").rglob("*.py"):
     parts = module.relative_to(root / "src").with_suffix("").parts
     namespace = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
-    nodes = ast.parse(module.read_text(encoding="utf-8")).body
+    source = module.read_text(encoding="utf-8")
+    lines = source.splitlines()
+    nodes = ast.parse(source).body
     for index, node in enumerate(nodes):
       if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
         annotation = node.annotation
@@ -109,7 +111,7 @@ def check_api_reference(directory: Path, root: Path = ROOT) -> None:
           isinstance(following, ast.Expr)
           and isinstance(following.value, ast.Constant)
           and isinstance(following.value.value, str)
-        )
+        ) or (node.lineno > 1 and lines[node.lineno - 2].lstrip().startswith("#:"))
         if (
           kind == "TypeAlias" or (kind == "Final" and documented)
         ) and not node.target.id.startswith("_"):

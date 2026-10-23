@@ -477,7 +477,7 @@ def tianma_dizhi(branch: Dizhi) -> Dizhi:
 
 
 def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
-  """从解析结果安28星，按Star枚举顺序返回；要求时辰已知，允许性别未知。
+  """从解析结果安28星，按已发布的 28 星固定顺序返回；要求时辰已知，允许性别未知。
 
   本入口不重做历法，也不调用完整命盘校验。命宫、左辅右弼和月马使用同一个安星月份，
   由effective_month按所选闰月归属规则确定。选择按前后半月分别归属时，用解析后的农历日

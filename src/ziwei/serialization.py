@@ -447,4 +447,7 @@ def loads_chart(payload: str) -> ZiweiChart:
   except UnsupportedSchemaVersionError:
     raise
   except (TypeError, ValueError, OverflowError, RecursionError) as error:
-    raise ValueError(f"命盘JSON无效或与所选规则不兼容：{error}") from error
+    diagnostic = repr(str(error)[:200])
+    if len(diagnostic) > 240:
+      diagnostic = diagnostic[:237] + "..."
+    raise ValueError(f"命盘JSON无效或与所选规则不兼容：{diagnostic}") from error

@@ -72,9 +72,16 @@ def test_real_default_expansion_does_not_expand_historical_schema(
       marker, '  FUTURE = "测试星", "concept.star.future"\n  测试星 = FUTURE\n' + marker
     )
     marker = "  return _place_natal_stars_v1(value)"
-    assert code.count(marker) == 2
-    code = code.replace(
-      marker, "  return (*_place_natal_stars_v1(value), _placement(Star.测试星, Dizhi.子))", 1
+    start = code.index("def place_stars(")
+    end = code.index("\ndef ", start + 1)
+    body = code[start:end]
+    assert body.count(marker) == 1
+    code = (
+      code[:start]
+      + body.replace(
+        marker, "  return (*_place_natal_stars_v1(value), _placement(Star.测试星, Dizhi.子))"
+      )
+      + code[end:]
     )
     marker = "  if stars != _NATAL_STARS_V1:"
     assert code.count(marker) == 1
@@ -102,6 +109,40 @@ STAR_RULES = (*STAR_RULES, StarRule(
     env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
     text=True,
     capture_output=True,
-    check=True,
+    check=False,
   )
+  assert result.returncode == 0, result.stdout + result.stderr
   assert result.stdout.strip() == f"EVOLUTION_OK {29 if future else 28}"
+
+
+def test_new_star_concept_is_generated_in_the_same_version(tmp_path: Path) -> None:
+  source = tmp_path / "src"
+  shutil.copytree(
+    ROOT / "src/ziwei", source / "ziwei", ignore=shutil.ignore_patterns("__pycache__")
+  )
+  path = source / "ziwei/stars.py"
+  code = path.read_text()
+  marker = "  紫微 = ZIWEI"
+  assert code.count(marker) == 1
+  path.write_text(code.replace(marker, '  FUTURE = "测试星", "concept.star.future"\n' + marker))
+  check = """
+import sys
+sys.path.insert(0, sys.argv[1])
+from ziwei.stars import Star
+from ziwei.knowledge import load_catalog
+catalog = load_catalog()
+for star in Star:
+  if catalog.get(star.concept_id).name != star.value:
+    raise RuntimeError('star concept mismatch')
+print('CONCEPTS_OK', len(Star))
+"""
+  result = subprocess.run(
+    [sys.executable, "-I", *(["-O"] if sys.flags.optimize else []), "-c", check, str(source)],
+    cwd=tmp_path,
+    text=True,
+    capture_output=True,
+    check=False,
+    env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+  )
+  assert result.returncode == 0, result.stdout + result.stderr
+  assert result.stdout.strip() == "CONCEPTS_OK 29"

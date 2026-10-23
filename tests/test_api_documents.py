@@ -120,21 +120,34 @@ def test_explicit_type_alias_has_a_real_api_signature(api_tree: Path, annotation
 
 
 @pytest.mark.parametrize("annotation", ["Final", "Final[int]", "typing.Final[str]"])
+@pytest.mark.parametrize("comment", [False, True])
 def test_documented_final_is_public_but_unmarked_assignments_are_not(
-  api_tree: Path, annotation: str
+  api_tree: Path, annotation: str, comment: bool
 ) -> None:
+  public = (
+    f"#: 公开值。\nPublic: {annotation} = 1\n"
+    if comment
+    else f'Public: {annotation} = 1\n"""公开值。"""\n'
+  )
   (api_tree / "src/ziwei/sample.py").write_text(
-    f'from typing import Final\nimport typing\nPublic: {annotation} = 1\n"""公开值。"""\n'
-    f'_private: {annotation} = 2\n"""内部值。"""\n'
-    f"Implementation: {annotation} = 3\nordinary = 4\n",
+    "from typing import Final\nimport typing\ndef resolve():\n  pass\n"
+    + public
+    + f'_private: {annotation} = 2\n"""内部值。"""\n'
+    f"Implementation: {annotation} = 3\nordinary = 4\n"
+    f"#: 与下一项隔行，不是其说明\n\nSeparated: {annotation} = 5\n"
+    f"# 普通注释\nUndocumented: {annotation} = 6\n",
     encoding="utf-8",
   )
   page = api_tree / "docs/api.html"
-  page.write_text('<p id="ziwei.sample.Public"></p>', encoding="utf-8")
+  page.write_text(
+    '<dt id="ziwei.sample.resolve"></dt><p id="ziwei.sample.Public"></p>', encoding="utf-8"
+  )
   with pytest.raises(ValueError, match=r"ziwei\.sample\.Public"):
     check_api_reference(api_tree, api_tree)
   page.write_text(
-    '<dt id="ziwei.sample.Public"></dt><dt id="extra.enum.member"></dt>', encoding="utf-8"
+    '<dt id="ziwei.sample.resolve"></dt><dt id="ziwei.sample.Public"></dt>'
+    '<dt id="extra.enum.member"></dt>',
+    encoding="utf-8",
   )
   check_api_reference(api_tree, api_tree)
 

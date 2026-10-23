@@ -83,7 +83,7 @@ def _check_calculation(value: CalculationInput) -> None:
 class ZiweiChart:
   """完整本命盘，按当前纯规则核对组合，不重做历法或时区解析。
 
-  宫位按宫名序，星曜按已发布规则组顺序，大限按起限先后（自命宫起，随顺逆）；序列复制为元组。
+  宫位按宫名序，星曜按已发布的 28 星固定顺序，大限按起限先后（自命宫起，随顺逆）；序列复制为元组。
   software_version保存生成版本并参与完整记录相等；重算不以它判兼容。
   calculation中的农历、UT1和IANA偏移仍是已存原值，构造成功不表示这些原值已经重新认证。
   """
@@ -213,13 +213,12 @@ def recalculate(chart: ZiweiChart) -> ZiweiChart:
     )
   except ZoneInfoNotFoundError as error:
     raise ValueError("重算所需的 IANA 时区不可用") from error
+  original = replace(value, supported_lunar_year_range=recalculated.supported_lunar_year_range)
+  if original != recalculated:
+    raise ValueError("重算结果与已存记录不一致：calculation")
   for field in fields(chart):
-    if field.name == "calculation":
-      original = replace(value, supported_lunar_year_range=recalculated.supported_lunar_year_range)
-      if original != recalculated:
-        raise ValueError("重算结果与已存记录不一致：calculation")
-    elif field.name != "software_version" and getattr(result, field.name) != getattr(
-      chart, field.name
-    ):
+    if field.name not in ("calculation", "software_version") and getattr(
+      result, field.name
+    ) != getattr(chart, field.name):
       raise ValueError(f"重算结果与已存记录不一致：{field.name}")
   return result
