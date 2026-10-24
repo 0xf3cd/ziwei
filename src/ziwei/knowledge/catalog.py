@@ -103,7 +103,10 @@ class Catalog:
     return (*self.concepts, *self.variants, *self.sources, *self.citations, *self.entries)
 
   def get(self, identifier: str) -> Record:
-    """按稳定标识查记录；未知标识抛KeyError，不按名称替代。"""
+    """按稳定标识查记录，不按名称替代。
+
+    错类型抛TypeError，格式非法抛ValueError，格式合法但不存在抛KeyError。
+    """
     _identifier(identifier)
     for record in self.records:
       if record.id == identifier:

@@ -3,26 +3,35 @@
 from dataclasses import dataclass
 from datetime import datetime, time
 from math import isfinite
-from typing import cast
+from typing import TypeVar, cast
 
 from ziwei.birth import BirthRecord, CalculationInput, LunarBirthRecord
-from ziwei.bureau import WuxingJu, bureau_of
+from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
 from ziwei.config import ChartConfig, DayRollover, YearBoundary
 from ziwei.decades import Decade, place_decades
-from ziwei.ganzhi import Dizhi, Tiangan
+from ziwei.ganzhi import Dizhi
 from ziwei.palaces import (
   Palace,
-  PalaceName,
-  effective_month,
-  minggong_dizhi,
-  palace_ganzhi,
+  _chart_frame,
   shengong_dizhi,
   twelve_palaces,
 )
 from ziwei.resolver import DEFAULT_LUNAR_ALGORITHM, resolve
 from ziwei.sihua import SihuaResult, SihuaVariant, shengnian_sihua
 from ziwei.stars import StarPlacement, place_stars
+
+_T = TypeVar("_T")
+
+
+def _check_component_sequence(
+  actual: tuple[_T, ...], expected: tuple[_T, ...], component: str
+) -> None:
+  if len(actual) != len(expected):
+    raise ValueError(f"{component}数量不符：应为{len(expected)}，实际为{len(actual)}")
+  for index, (item, wanted) in enumerate(zip(actual, expected, strict=True)):
+    if item != wanted:
+      raise ValueError(f"{component}[{index}]与计算输入不符：应为{wanted!r}，实际为{item!r}")
 
 
 def _check_calculation(value: CalculationInput) -> None:
@@ -106,30 +115,21 @@ class ZiweiChart:
       object.__setattr__(self, name, items)
     value = self.calculation
     _check_calculation(value)
-    if any(
-      not isinstance(p.dizhi, Dizhi)
-      or not isinstance(p.tiangan, Tiangan)
-      or not isinstance(p.name, PalaceName)
-      for p in self.palaces
-    ):
-      raise TypeError("宫位记录须使用领域枚举，不接受同值字符串")
-    month = effective_month(
-      value.month, value.day, value.is_leap_month, value.config.leap_month_policy
-    )
+    frame = _chart_frame(value)
     shichen = cast(Dizhi, value.shichen)
-    ming = minggong_dizhi(month, shichen)
-    if self.palaces != twelve_palaces(ming, value.year_ganzhi.tiangan):
-      raise ValueError("十二宫须与计算输入一致且按宫名序保存")
-    if self.shengong is not shengong_dizhi(month, shichen):
-      raise ValueError("身宫须与计算输入一致")
-    if self.bureau is not bureau_of(palace_ganzhi(ming, value.ganzhi_year)):
-      raise ValueError("五行局须与命宫干支一致")
-    if self.stars != place_stars(value):
-      raise ValueError("星位及规则须与计算输入一致且按星曜序保存")
-    if self.sihua != shengnian_sihua(value, self.sihua.variant):
-      raise ValueError("四化须使用解析后的生年干")
-    if self.decades != place_decades(value):
-      raise ValueError("大限须与计算输入一致且按行限序保存")
+    _check_component_sequence(
+      self.palaces, twelve_palaces(frame.minggong, value.year_ganzhi.tiangan), "十二宫"
+    )
+    shengong = shengong_dizhi(frame.month, shichen)
+    if self.shengong is not shengong:
+      raise ValueError(f"身宫与计算输入不符：应为{shengong.value}，实际为{self.shengong.value}")
+    if self.bureau is not frame.bureau:
+      raise ValueError(f"五行局与命宫干支不符：应为{frame.bureau.value}，实际为{self.bureau.value}")
+    _check_component_sequence(self.stars, place_stars(value), "星位")
+    sihua = shengnian_sihua(value, self.sihua.variant)
+    if self.sihua != sihua:
+      raise ValueError(f"四化与解析后的生年干及规则不符：应为{sihua!r}，实际为{self.sihua!r}")
+    _check_component_sequence(self.decades, place_decades(value), "大限")
 
 
 def create_chart(
@@ -142,16 +142,13 @@ def create_chart(
   """解析原始记录并组合完整盘；时辰、性别或所请求口径不可用时整次失败。"""
   value = resolve(record, config, lunar_algorithm)
   value.require_complete()
-  month = effective_month(
-    value.month, value.day, value.is_leap_month, value.config.leap_month_policy
-  )
+  frame = _chart_frame(value)
   shichen = cast(Dizhi, value.shichen)
-  ming = minggong_dizhi(month, shichen)
   return ZiweiChart(
     calculation=value,
-    palaces=twelve_palaces(ming, value.year_ganzhi.tiangan),
-    shengong=shengong_dizhi(month, shichen),
-    bureau=bureau_of(palace_ganzhi(ming, value.ganzhi_year)),
+    palaces=twelve_palaces(frame.minggong, value.year_ganzhi.tiangan),
+    shengong=shengong_dizhi(frame.month, shichen),
+    bureau=frame.bureau,
     stars=place_stars(value),
     sihua=shengnian_sihua(value, sihua_variant),
     decades=place_decades(value),

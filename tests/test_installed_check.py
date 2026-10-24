@@ -203,6 +203,20 @@ def test_dependency_pin_is_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
     installed_check.check_inputs()
 
 
+@pytest.mark.parametrize("defect", ["palace", "day"])
+def test_input_consumer_rejects_missing_value_guards(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  if defect == "palace":
+    monkeypatch.setattr(installed_check, "Palace", lambda **kwargs: None)
+    message = "Installed Palace accepted a non-enum branch"
+  else:
+    monkeypatch.setattr(installed_check, "effective_month", lambda *args: 1)
+    message = "Installed effective_month accepted day 31"
+  with pytest.raises(ValueError, match=message):
+    installed_check.check_inputs()
+
+
 def test_full_chart_consumer_rejects_faulty_rendering(monkeypatch: pytest.MonkeyPatch) -> None:
   monkeypatch.setattr(installed_check, "render_text", lambda chart: "命宫")
   with pytest.raises(ValueError, match="Installed text chart"):

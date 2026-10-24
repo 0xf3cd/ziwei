@@ -141,8 +141,9 @@ def validate_lunar_date(
     raise ValueError(f"农历年{year}超出{LunarAlgorithm(algorithm).value}支持范围")
   if not 1 <= month <= 12:
     raise ValueError(f"农历月须在1至12之间：{month}")
+  label = f"农历{year}年{'闰' if is_leap else '平'}{month}月"
   if day < 1:
-    raise ValueError(f"农历{year}年{month}月没有第{day}日")
+    raise ValueError(f"{label}没有第{day}日")
   _, leap_month, month_lengths = lunar_year_info(algorithm, year)
   if is_leap and month != leap_month:
     raise ValueError(f"农历{year}年不存在闰{month}月")
@@ -151,9 +152,9 @@ def validate_lunar_date(
     1 if leap_month is not None and (month > leap_month or (is_leap and month == leap_month)) else 0
   )
   if effective_month > len(month_lengths):
-    raise ValueError(f"农历{year}年不存在第{month}月")
+    raise ValueError(f"{label}不存在")
   if day > month_lengths[effective_month - 1]:
-    raise ValueError(f"农历{year}年{month}月没有第{day}日")
+    raise ValueError(f"{label}没有第{day}日")
 
 
 #: 闰秒表（TAI-UTC，秒），1972-01-01 起；2017-01-01 后恒为 37 秒。

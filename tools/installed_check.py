@@ -23,6 +23,7 @@ from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import KnowledgeEntry, PremiseStatus
+from ziwei.palaces import Palace, PalaceName, effective_month
 from ziwei.render import render_text
 from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
 from ziwei.stars import Star
@@ -87,6 +88,18 @@ def check_inputs() -> None:
     lichun_jd=None,
   )
   value.require_complete()
+  try:
+    Palace(dizhi="子", tiangan=Tiangan.甲, name=PalaceName.命宫)  # type: ignore[arg-type]
+  except TypeError:
+    pass
+  else:
+    raise ValueError("Installed Palace accepted a non-enum branch")
+  try:
+    effective_month(1, 31, False, LeapMonthPolicy.全月归本月)
+  except ValueError:
+    pass
+  else:
+    raise ValueError("Installed effective_month accepted day 31")
   check_sihua_decades()
 
 

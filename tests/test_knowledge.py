@@ -698,27 +698,28 @@ def test_dangling_citation_is_rejected_even_without_entries(catalog: Catalog) ->
 
 
 @pytest.mark.parametrize(
-  "operation",
+  "operation,error",
   [
-    lambda c: c.get("entry.unknown"),
-    lambda c: c.references("entry.unknown"),
-    lambda c: c.filter_entries(source_id="source.unknown"),
-    lambda c: c.filter_entries(source_id="concept.synthetic"),
-    lambda c: c.filter_entries(default_only=1),
-    lambda c: c.filter_entries(display="可默认展示"),
-    lambda c: c.filter_sources(status="所列版本已核"),
-    lambda c: c.filter_sources(aspect="查法"),
-    lambda c: c.filter_sources(lineage_id="不是标识"),
-    lambda c: c.list_concepts(kind="星曜"),
-    lambda c: c.list_variants(concept_id="concept.unknown"),
-    lambda c: c.list_variants(school_id="concept.synthetic"),
-    lambda c: c.find(" "),
-    lambda c: c.find(3),
-    lambda c: c.get(None),
+    (lambda c: c.get("entry.unknown"), KeyError),
+    (lambda c: c.get("Nope"), ValueError),
+    (lambda c: c.references("entry.unknown"), KeyError),
+    (lambda c: c.filter_entries(source_id="source.unknown"), KeyError),
+    (lambda c: c.filter_entries(source_id="concept.synthetic"), ValueError),
+    (lambda c: c.filter_entries(default_only=1), TypeError),
+    (lambda c: c.filter_entries(display="可默认展示"), TypeError),
+    (lambda c: c.filter_sources(status="所列版本已核"), TypeError),
+    (lambda c: c.filter_sources(aspect="查法"), TypeError),
+    (lambda c: c.filter_sources(lineage_id="不是标识"), ValueError),
+    (lambda c: c.list_concepts(kind="星曜"), TypeError),
+    (lambda c: c.list_variants(concept_id="concept.unknown"), KeyError),
+    (lambda c: c.list_variants(school_id="concept.synthetic"), ValueError),
+    (lambda c: c.find(" "), ValueError),
+    (lambda c: c.find(3), TypeError),
+    (lambda c: c.get(None), TypeError),
   ],
 )
-def test_invalid_query_inputs(catalog: Catalog, operation: Any) -> None:
-  with pytest.raises((TypeError, ValueError, KeyError)):
+def test_invalid_query_inputs(catalog: Catalog, operation: Any, error: type[Exception]) -> None:
+  with pytest.raises(error):
     operation(catalog)
 
 

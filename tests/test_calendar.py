@@ -74,6 +74,18 @@ def test_validate_lunar_date_accepts_leap_month() -> None:
   validate_lunar_date(LunarAlgorithm.ALGO3, 2023, 2, 29, True)
 
 
+@pytest.mark.parametrize("is_leap,day", [(False, 0), (True, 0), (False, 31), (True, 30)])
+def test_lunar_day_error_locates_year_month_and_leap(is_leap: bool, day: int) -> None:
+  label = f"农历2023年{'闰' if is_leap else '平'}2月没有第{day}日"
+  with pytest.raises(ValueError, match=label):
+    validate_lunar_date(LunarAlgorithm.ALGO3, 2023, 2, day, is_leap)
+
+
+def test_missing_leap_month_error_locates_year_and_month() -> None:
+  with pytest.raises(ValueError, match="农历2023年不存在闰3月"):
+    validate_lunar_date(LunarAlgorithm.ALGO3, 2023, 3, 1, True)
+
+
 def test_validate_lunar_date_accepts_plain_month_after_leap() -> None:
   """闰月之后的平月取真实月长：2023 闰二月，四月三十（2023-06-17）与腊月三十（2024-02-09）都在。"""
   validate_lunar_date(LunarAlgorithm.ALGO3, 2023, 4, 30, False)

@@ -26,6 +26,14 @@
 《全书》以闰月全月归下月；LifeDNA 列全月归本月与十六日起算次月两种。闰十二月按归下月口径
 没有对应安星月（不合成「来年正月」的无出处规则），`effective_month` 显式失败。
 
+`Palace`构造时要求地支、天干与宫名分别为所属枚举成员，并核对干支阴阳配对。
+同值字符串或列表抛`TypeError`，如甲丑这样的不合法配对抛`ValueError`；接受的宫位值不可变。
+相比已发布的v0.1.0，这些非法输入会在构造宫位时立即失败，不再等到读取干支或组合完整盘时才拒绝。
+
+`effective_month`只核月份1至12、日期1至30等基本值域，不检查真实月长或该年是否存在此闰月。
+真实日期由历法适配的`validate_lunar_date`核验，解析层会调用它；例如小月三十不能仅靠本函数判断。
+三个现有闰月选项分别处理，未实现的选项显式失败，不归入任何已有算法。
+
 ```{doctest}
 >>> from ziwei.config import LeapMonthPolicy
 >>> from ziwei.ganzhi import Dizhi, Tiangan
