@@ -86,21 +86,35 @@ class ApiTargets(HTMLParser):
 
 
 def check_api_reference(directory: Path, root: Path = ROOT) -> None:
-  """要求公开类、函数、方法及显式类型别名出现在生成的API签名里。"""
+  """检查公开定义、类型别名与带说明的 Final 常量是否出现在生成的 API 签名中。"""
   expected: set[str] = set()
   for module in (root / "src/ziwei").rglob("*.py"):
     parts = module.relative_to(root / "src").with_suffix("").parts
     namespace = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
-    for node in ast.parse(module.read_text(encoding="utf-8")).body:
+    source = module.read_text(encoding="utf-8")
+    lines = source.split("\n")
+    nodes = ast.parse(source).body
+    for index, node in enumerate(nodes):
       if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
         annotation = node.annotation
-        is_type_alias = (isinstance(annotation, ast.Name) and annotation.id == "TypeAlias") or (
+        if isinstance(annotation, ast.Subscript):
+          annotation = annotation.value
+        kind = annotation.id if isinstance(annotation, ast.Name) else None
+        if (
           isinstance(annotation, ast.Attribute)
-          and annotation.attr == "TypeAlias"
           and isinstance(annotation.value, ast.Name)
           and annotation.value.id == "typing"
-        )
-        if is_type_alias and not node.target.id.startswith("_"):
+        ):
+          kind = annotation.attr
+        following = nodes[index + 1] if index + 1 < len(nodes) else None
+        documented = (
+          isinstance(following, ast.Expr)
+          and isinstance(following.value, ast.Constant)
+          and isinstance(following.value.value, str)
+        ) or (node.lineno > 1 and lines[node.lineno - 2].lstrip().startswith("#:"))
+        if (
+          kind == "TypeAlias" or (kind == "Final" and documented)
+        ) and not node.target.id.startswith("_"):
           expected.add(f"{namespace}.{node.target.id}")
       if isinstance(node, ast.ClassDef | ast.FunctionDef) and not node.name.startswith("_"):
         name = f"{namespace}.{node.name}"

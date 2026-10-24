@@ -28,7 +28,7 @@ SOURCE_PATTERNS = (
   ".github/workflows/*.yaml",
   "src/ziwei/**/*.py",
   "tools/*.py",
-  "tests/*.py",
+  "tests/**/*.py",
   "docs/**/*.md",
   "docs/**/*.py",
   "docs/**/*.inv",

@@ -42,6 +42,83 @@ def test_every_star_and_rule_is_queryable_without_birth() -> None:
   assert catalog.filter_entries(default_only=True) == ()
 
 
+@pytest.mark.parametrize(
+  "change,error_encoding",
+  [("append", None), ("rename", None), ("missing-id", None), ("missing-id", "ascii")],
+)
+def test_star_concepts_have_explicit_identity(
+  tmp_path: Path, change: str, error_encoding: str | None
+) -> None:
+  source = tmp_path / "src"
+  shutil.copytree(
+    Path(__file__).resolve().parents[1] / "src/ziwei",
+    source / "ziwei",
+    ignore=shutil.ignore_patterns("__pycache__"),
+  )
+  path = source / "ziwei/stars.py"
+  code = path.read_text(encoding="utf-8")
+  marker = "  紫微 = ZIWEI"
+  assert code.count(marker) == 1
+  if change == "rename":
+    code = code.replace("  ZIWEI = ", "  ZIWEI_RENAMED = ").replace(
+      marker, "  紫微 = ZIWEI_RENAMED"
+    )
+  else:
+    member = '  FUTURE = "测试星", "concept.star.future"\n'
+    if change == "missing-id":
+      member = '  FUTURE = "测试星"\n'
+    code = code.replace(marker, member + marker)
+  path.write_text(code, encoding="utf-8")
+  check = """
+import sys
+sys.path.insert(0, sys.argv[1])
+if sys.argv[3]:
+  sys.stderr.reconfigure(encoding=sys.argv[3], errors='backslashreplace')
+try:
+  from ziwei.stars import Star
+except ValueError as error:
+  if sys.argv[2] != 'missing-id' or str(error) != '新增星曜须显式指定知识标识':
+    raise
+  print('MISSING_ID_REJECTED')
+  raise SystemExit(0)
+if sys.argv[2] == 'missing-id':
+  raise RuntimeError('missing identity accepted')
+from ziwei.knowledge import load_catalog
+catalog = load_catalog()
+for star in Star:
+  if catalog.get(star.concept_id).name != star.value:
+    raise RuntimeError('star concept mismatch')
+if Star.紫微.concept_id != 'concept.star.ziwei':
+  raise RuntimeError('renamed member changed identity')
+if sys.argv[2] == 'rename' and Star.紫微.name != 'ZIWEI_RENAMED':
+  raise RuntimeError('rename was not applied')
+print('CONCEPTS_OK', len(Star))
+"""
+  result = subprocess.run(
+    [
+      sys.executable,
+      "-I",
+      *(["-O"] if sys.flags.optimize else []),
+      "-c",
+      check,
+      str(source),
+      change,
+      error_encoding or "",
+    ],
+    cwd=tmp_path,
+    text=True,
+    capture_output=True,
+    check=False,
+  )
+  assert result.returncode == 0, result.stdout + result.stderr
+  expected = (
+    "MISSING_ID_REJECTED"
+    if change == "missing-id"
+    else f"CONCEPTS_OK {29 if change == 'append' else 28}"
+  )
+  assert result.stdout.strip() == expected
+
+
 def test_source_bindings_follow_stable_rule_identity_not_order() -> None:
   original = {entry.id: entry for entry in _star_entries(stars.STAR_RULES)}
   reordered = {entry.id: entry for entry in _star_entries(tuple(reversed(stars.STAR_RULES)))}

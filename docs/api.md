@@ -4,6 +4,10 @@
 
 以下签名和说明从实现生成；模块按职责导入，不从包根初始化历法或时区数据。
 枚举中的中文成员名是对应拼音或英语成员的别名，指向同一成员。
+模块中的公开数据以显式 `TypeAlias`，或带变量说明的 `Final` 声明；下划线名字为内部实现。
+变量说明可用紧随赋值的字符串，或紧邻赋值之前的 `#:` 注释。
+其他未加下划线的赋值和导入不因此成为公开数据合同。API 检查要求每项公开数据声明都有对应的 HTML 签名；
+页面可以同时包含枚举成员、数据字段等其他签名。
 
 ## 出生记录与计算输入
 
@@ -148,25 +152,23 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
    :members: Direction, Decade, decade_direction, decade_periods, place_decades
    :undoc-members:
    :member-order: bysource
+
+.. autodata:: ziwei.decades.DECADE_RULE_ID
+   :no-value:
+
+.. autodata:: ziwei.decades.DECADE_DEFINITION
+   :no-value:
 ```
 
-## 完整命盘、记录与显示
+## 完整命盘与显示
 
-[用法、schema合同与参考盘例](chart.md)。恢复只核结构及当前纯规则，历法与时区真实性另由重算检验。
+[用法与参考盘例](chart.md)。从原始出生记录排盘并生成只读文本盘面，不提供命盘保存／恢复接口。
 
 ```{eval-rst}
 .. automodule:: ziwei.chart
-   :members: ZiweiChart, create_chart, recalculate
+   :members: ZiweiChart, create_chart
    :undoc-members:
    :member-order: bysource
-
-.. automodule:: ziwei.serialization
-   :members: dumps_chart, loads_chart
-   :undoc-members:
-   :member-order: bysource
-
-.. autodata:: ziwei.serialization.SCHEMA_VERSION
-   :annotation:
 
 .. automodule:: ziwei.render
    :members: render_text

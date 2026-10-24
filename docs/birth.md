@@ -79,19 +79,19 @@ IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，�
 ## 显式配置与解析后的输入形状
 
 闰月归属、子时换日和换年界线互相独立，构造配置时必须分别指定；这些选择不改变原始记录中的日期。
-术数专有词用拼音，通用概念用惯用英语。枚举的中文别名与对应成员相同，JSON 值是中文。
+术数专有词用拼音，通用概念用惯用英语。枚举的中文别名与对应成员相同，枚举值为中文。
 
 ```{doctest}
->>> from dataclasses import asdict
->>> import json
 >>> from ziwei.config import YearBoundary, ChartConfig, LeapMonthPolicy, DayRollover
 >>> choices = ChartConfig(
 ...   leap_month_policy=LeapMonthPolicy.全月归本月,
 ...   day_rollover=DayRollover.晚子时归次日,
 ...   year_boundary=YearBoundary.立春,
 ... )
->>> json.loads(json.dumps(asdict(choices), ensure_ascii=False))["year_boundary"]
+>>> choices.year_boundary.value
 '立春'
+>>> YearBoundary.立春 is YearBoundary.LICHUN
+True
 ```
 
 天马的查法由`TianmaRule`选择，默认使用年支天马（年马），也可改为月支天马（月马）。

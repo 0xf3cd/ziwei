@@ -116,7 +116,7 @@ def test_internal_bad_composition_is_rejected(
   original = stars.place_hour_stars(Dizhi.子)
   broken = original[:-1] if defect == "missing" else (original[0], original[0], *original[2:])
   monkeypatch.setattr(stars, "place_hour_stars", lambda _: broken)
-  with pytest.raises(ValueError, match="28颗"):
+  with pytest.raises(ValueError, match="覆盖全部星曜且每颗只出现一次"):
     stars.place_stars(value)
 
 

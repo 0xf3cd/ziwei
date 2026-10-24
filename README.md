@@ -6,15 +6,17 @@ Python 紫微斗数排盘与知识库。历法与时间由
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
 （公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、28星安星、具名生年四化与大限，
-以及完整命盘组合、带版本的JSON保存/恢复、重算、文本十二宫格和独立知识目录。
+以及完整命盘组合、文本十二宫格和独立知识目录。
 用法见[出生输入](docs/birth.md)、[历法与时间](docs/calendar.md)、[解析层](docs/resolver.md)、
 [命宫身宫与十二宫](docs/palaces.md)、[五行局](docs/bureau.md)、[安星](docs/stars.md)、
-[四化与大限](docs/sihua-decades.md)、[完整命盘与记录](docs/chart.md)和[知识查询](docs/knowledge.md)，
+[四化与大限](docs/sihua-decades.md)、[完整命盘与文本盘面](docs/chart.md)和[知识查询](docs/knowledge.md)，
 开发检查与协作约定见[参与开发](docs/contributing.md)。
 首次发布的前置配置、审批与产物核验见[发布准备](docs/releasing.md)。
 
-当前源码为首版候选，版本号不表示已经上架PyPI；已发布版本以
+当前源码为开发版本，版本号暂仍为`0.1.0`，内容与已发布的v0.1.0不同；已发布版本以
 [发布记录](https://github.com/0xf3cd/ziwei/releases)为准。
+与v0.1.0相比，开发源码不再提供命盘JSON保存／恢复与旧盘重算接口，也不读取旧JSON命盘。
+已发布的v0.1.0及其制品不变。
 
 ## 安装要求
 
@@ -30,7 +32,7 @@ celestial-calendar 0.8.0在PyPI只提供下列原生wheel，没有源码分发�
 Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖范围内，不能依靠pip自动回退源码构建。
 请使用独立虚拟环境；与不同精确版本的celestial-calendar或tzdata显式共装会冲突。
 安装ziwei时，pip也可能将环境中已有的较新celestial-calendar或tzdata降到上述精确版本。
-当前源代码开发安装与检查见[参与开发](docs/contributing.md)，版本与首次发布仍以发布记录为准。
+当前源代码开发安装与检查见[参与开发](docs/contributing.md)，已发布制品以发布记录为准。
 
 ## 首版目标
 
@@ -41,7 +43,7 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 - 安命宫、身宫与十二宫宫干，定五行局，安紫微、天府两系十四主星。
 - 安六吉、六煞、禄存与天马；按所选具名四化表取生年四化。
 - 起大限：顺逆由年干阴阳与性别定，首限起始虚岁由五行局数定。
-- 输出不可变结构、文本盘面与带版本的序列化，保留输入、口径、历法版本与派生结果。
+- 输出不可变结构与文本盘面，保留输入、口径、历法版本与派生结果。
 
 交付任务与验收见 [v0.1.0 milestone](https://github.com/0xf3cd/ziwei/milestone/1)。
 

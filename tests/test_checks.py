@@ -31,6 +31,7 @@ SOURCE = (
   "src/ziwei/__init__.py",
   "src/ziwei/py.typed",
   "tools/check.py",
+  "tests/unit/test_nested.py",
   ".github/workflows/checks.yml",
   ".github/workflows/release.yml",
 )
@@ -166,6 +167,7 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     "tools/check.py",
     "tools/helper.sh",
     "tests/test_a.py",
+    "tests/unit/test_nested.py",
     "docs/conf.py",
     "docs/python-stdlib.inv",
     "docs/index.md",
@@ -185,6 +187,7 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     "docs/guide/page.md",
     "docs/python-stdlib.inv",
     "tests/test_a.py",
+    "tests/unit/test_nested.py",
     ".github/workflows/checks.yml",
     ".github/workflows/release.yml",
     ".github/workflows/extra.yaml",

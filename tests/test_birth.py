@@ -16,7 +16,7 @@ from ziwei.birth import (
   TimePrecision,
   shichen_from_time,
 )
-from ziwei.calendar import LunarAlgorithm
+from ziwei.calendar import LunarAlgorithm, supported_lunar_year_range
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.ganzhi import Dizhi, Yinyang
 from ziwei.timezone import FixedOffset, IanaTimezone
@@ -242,6 +242,37 @@ def test_parsed_contract_and_independent_year_choice() -> None:
   for leap_month, day, year in product(LeapMonthPolicy, DayRollover, YearBoundary):
     choices = ChartConfig(leap_month_policy=leap_month, day_rollover=day, year_boundary=year)
     assert calculation_input(config=choices).config is choices
+
+
+@pytest.mark.parametrize("algorithm", tuple(LunarAlgorithm))
+def test_calculation_range_is_derived_and_not_injectable(algorithm: LunarAlgorithm) -> None:
+  value = calculation_input(lunar_algorithm=algorithm)
+  assert value.supported_lunar_year_range == supported_lunar_year_range(algorithm)
+  with pytest.raises(TypeError):
+    calculation_input(lunar_algorithm=algorithm, supported_lunar_year_range=(1, 9999))
+  with pytest.raises((TypeError, ValueError)):
+    replace(value, supported_lunar_year_range=(1, 9999))
+
+
+@pytest.mark.parametrize("algorithm", tuple(LunarAlgorithm))
+@pytest.mark.parametrize("endpoint", [0, 1])
+def test_calculation_rejects_year_outside_algorithm_range(
+  algorithm: LunarAlgorithm, endpoint: int
+) -> None:
+  bounds = supported_lunar_year_range(algorithm)
+  outside = bounds[endpoint] + (-1 if endpoint == 0 else 1)
+  with pytest.raises(ValueError, match="支持范围"):
+    calculation_input(lunar_algorithm=algorithm, lunar_year=outside)
+
+
+@pytest.mark.parametrize("kind", ["gregorian", "lunar"])
+@pytest.mark.parametrize("name", ["place", "source"])
+@pytest.mark.parametrize(
+  "text", ["\ud800\udc00", "\ud800", "\udc00", "\U00010000", "中文", "\x1b[31m\n\x00"]
+)
+def test_metadata_preserves_python_text(kind: str, name: str, text: str) -> None:
+  record = gregorian_record(**{name: text}) if kind == "gregorian" else lunar_record(**{name: text})
+  assert getattr(record, name) == text
 
 
 def test_partial_parsed_inputs_do_not_gain_defaults() -> None:
