@@ -196,7 +196,7 @@ def rendered_api(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
 
 @pytest.mark.parametrize(
   "target",
-  ["ziwei.serialization.SCHEMA_VERSION", "ziwei.config.POLICY_ENUMS", "ziwei.birth.BirthRecord"],
+  ["ziwei.decades.DECADE_RULE_ID", "ziwei.config.POLICY_ENUMS", "ziwei.birth.BirthRecord"],
 )
 def test_removing_real_autodata_is_rejected(
   rendered_api: tuple[Path, Path], tmp_path: Path, target: str

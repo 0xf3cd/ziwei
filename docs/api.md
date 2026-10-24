@@ -160,23 +160,15 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
    :no-value:
 ```
 
-## 完整命盘、记录与显示
+## 完整命盘与显示
 
-[用法、schema合同与参考盘例](chart.md)。恢复按已存版本核结构及纯规则，历法与时区真实性另由重算检验。
+[用法与参考盘例](chart.md)。从原始出生记录排盘并生成只读文本盘面，不提供命盘保存／恢复接口。
 
 ```{eval-rst}
 .. automodule:: ziwei.chart
-   :members: ZiweiChart, create_chart, recalculate
+   :members: ZiweiChart, create_chart
    :undoc-members:
    :member-order: bysource
-
-.. automodule:: ziwei.serialization
-   :members: dumps_chart, loads_chart, UnsupportedSchemaVersionError
-   :undoc-members:
-   :member-order: bysource
-
-.. autodata:: ziwei.serialization.SCHEMA_VERSION
-   :annotation:
 
 .. automodule:: ziwei.render
    :members: render_text

@@ -104,38 +104,6 @@ class Star(StrEnum):
     return self._concept_id
 
 
-_NATAL_STARS_V1: Final = (
-  Star.紫微,
-  Star.天机,
-  Star.太阳,
-  Star.武曲,
-  Star.天同,
-  Star.廉贞,
-  Star.天府,
-  Star.太阴,
-  Star.贪狼,
-  Star.巨门,
-  Star.天相,
-  Star.天梁,
-  Star.七杀,
-  Star.破军,
-  Star.左辅,
-  Star.右弼,
-  Star.文昌,
-  Star.文曲,
-  Star.天魁,
-  Star.天钺,
-  Star.擎羊,
-  Star.陀罗,
-  Star.火星,
-  Star.铃星,
-  Star.地空,
-  Star.地劫,
-  Star.禄存,
-  Star.天马,
-)
-
-
 @dataclass(frozen=True, slots=True)
 class StarRule:
   """一条安星规则的标识、说明及所用星曜。
@@ -477,7 +445,7 @@ def tianma_dizhi(branch: Dizhi) -> Dizhi:
 
 
 def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
-  """从解析结果安28星，按已发布的 28 星固定顺序返回；要求时辰已知，允许性别未知。
+  """从解析结果安28星，按Star枚举顺序返回；要求时辰已知，允许性别未知。
 
   本入口不重做历法，也不调用完整命盘校验。命宫、左辅右弼和月马使用同一个安星月份，
   由effective_month按所选闰月归属规则确定。选择按前后半月分别归属时，用解析后的农历日
@@ -485,11 +453,6 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
   闰十二月需要按下月安星等无法处理的组合会抛错，不返回部分结果。
   每颗星只返回一个位置；天马的rule_id保存此次实际使用的规则，不靠日后的默认值还原。
   """
-  return _place_natal_stars_v1(value)
-
-
-def _place_natal_stars_v1(value: CalculationInput) -> tuple[StarPlacement, ...]:
-  """计算已发布的 28 星规则组，不随默认全集扩张。"""
   # 在调用时才导入出生记录类型，避免仅查询安星知识时连带加载出生与历法模块。
   from ziwei.birth import CalculationInput
 
@@ -517,17 +480,6 @@ def _place_natal_stars_v1(value: CalculationInput) -> tuple[StarPlacement, ...]:
     *place_fire_bell(year.dizhi, value.shichen),
     _placement(Star.天马, tianma_dizhi(ma_branch), value.config.tianma_rule),
   )
-  if len(positions) != len(_NATAL_STARS_V1) or {item.star for item in positions} != set(
-    _NATAL_STARS_V1
-  ):
+  if len(positions) != len(Star) or {item.star for item in positions} != set(Star):
     raise ValueError("安星结果须恰有28颗不同星曜")
-  return tuple(sorted(positions, key=lambda item: _NATAL_STARS_V1.index(item.star)))
-
-
-def _place_stored_stars(
-  value: CalculationInput, stars: tuple[Star, ...]
-) -> tuple[StarPlacement, ...]:
-  """按已有完整星集求值；任意子集不能冒充历史规则组。"""
-  if stars != _NATAL_STARS_V1:
-    raise ValueError("不支持的完整星集或星曜顺序")
-  return _place_natal_stars_v1(value)
+  return tuple(sorted(positions, key=lambda item: tuple(Star).index(item.star)))

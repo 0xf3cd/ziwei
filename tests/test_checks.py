@@ -36,30 +36,6 @@ SOURCE = (
 )
 
 
-def test_real_sdist_carries_historical_fixtures_and_rejects_missing_one(tmp_path: Path) -> None:
-  root = Path(__file__).resolve().parents[1]
-  metadata = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-  subprocess.run(
-    [sys.executable, "-m", "build", "--sdist", "--no-isolation", "--outdir", str(tmp_path)],
-    cwd=root,
-    check=True,
-    capture_output=True,
-    text=True,
-  )
-  original = next(tmp_path.glob("*.tar.gz"))
-  members = source_members(root)
-  fixture = "tests/fixtures/v010/lunar.json"
-  assert fixture in members and "tests/fixtures/v010/README.md" in members
-  check_sdist(original, metadata["version"], members)
-  missing = tmp_path / "missing-fixture.tar.gz"
-  with tarfile.open(original) as source, tarfile.open(missing, "w:gz") as target:
-    for member in source:
-      if member.name != f"ziwei-{metadata['version']}/{fixture}":
-        target.addfile(member, source.extractfile(member) if member.isfile() else None)
-  with pytest.raises(ValueError, match=r"lunar\.json"):
-    check_sdist(missing, metadata["version"], members)
-
-
 @pytest.fixture
 def docs(tmp_path: Path) -> Path:
   (tmp_path / "docs").mkdir()

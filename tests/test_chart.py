@@ -1,11 +1,12 @@
-"""独立原例、注明手推的合成例与组件联动分别验证，不用往返证明计算正确。"""
+"""独立原例、注明手推的合成例与组件联动分别验证。"""
 
 import sys
 from collections.abc import Iterator
 from dataclasses import FrozenInstanceError, replace
 from datetime import date, time, timedelta
+from importlib.util import find_spec
 from itertools import product
-from typing import Any, Never
+from typing import Any
 
 import pytest
 
@@ -13,7 +14,7 @@ from ziwei import chart as module
 from ziwei.birth import Gender, GregorianBirthRecord, LunarBirthRecord, TimePrecision
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm, supported_lunar_year_range
-from ziwei.chart import ZiweiChart, create_chart, recalculate
+from ziwei.chart import ZiweiChart, create_chart
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, TianmaRule, YearBoundary
 from ziwei.decades import Direction, place_decades
 from ziwei.ganzhi import Dizhi
@@ -191,7 +192,7 @@ def test_algorithm_endpoints(
     record, chart_choices, sihua_variant=SihuaVariant.排命盘口诀转录, lunar_algorithm=algorithm
   )
   assert result.calculation.lunar_year == year
-  assert recalculate(result) == result
+  assert result.calculation.supported_lunar_year_range == supported_lunar_year_range(algorithm)
 
 
 @pytest.mark.parametrize("missing", ["shichen", "gender"])
@@ -225,7 +226,6 @@ def test_chart_is_frozen_and_copies_sequences(lunar_chart: ZiweiChart) -> None:
     ("decades", ()),
     ("shengong", Dizhi.子),
     ("bureau", WuxingJu.水二局),
-    ("software_version", ""),
     ("calculation", None),
     ("sihua", None),
     ("palaces", ["命宫"]),
@@ -237,63 +237,12 @@ def test_chart_rejects_bad_parts(lunar_chart: ZiweiChart, field: str, bad: Any) 
     replace(lunar_chart, **{field: bad})
 
 
-def test_old_direct_calculation_still_supported(civil_chart: ZiweiChart) -> None:
+def test_partial_calculation_cannot_form_complete_chart(civil_chart: ZiweiChart) -> None:
   old = replace(civil_chart.calculation, resolved_time=None)
   assert old.resolved_time is None
   assert place_stars(old) == civil_chart.stars
   with pytest.raises(ValueError, match="存在性"):
     replace(civil_chart, calculation=old)
-
-
-@pytest.mark.parametrize("kind", ["calendar", "tzdata", "iana"])
-def test_recalculate_rejects_unavailable_versions(civil_chart: ZiweiChart, kind: str) -> None:
-  value = civil_chart.calculation
-  if kind == "calendar":
-    value = replace(value, lunar_algorithm_version="unavailable")
-  else:
-    resolved = value.resolved_time
-    assert resolved is not None and resolved.data is not None
-    data = replace(
-      resolved.data, **{"package_version" if kind == "tzdata" else "iana_version": "unavailable"}
-    )
-    value = replace(value, resolved_time=replace(resolved, data=data))
-  saved = replace(civil_chart, calculation=value)
-  with pytest.raises(ValueError, match="版本不可用"):
-    recalculate(saved)
-  assert saved.calculation == value
-
-
-@pytest.mark.parametrize("field", ["ut1_jd", "lichun_jd"])
-def test_recalculation_detects_unverified_calendar_values(
-  civil_chart: ZiweiChart, field: str
-) -> None:
-  value = civil_chart.calculation
-  original = getattr(value, field)
-  altered = replace(value, **{field: original + 0.001})
-  saved = replace(civil_chart, calculation=altered)
-  with pytest.raises(ValueError, match="不一致"):
-    recalculate(saved)
-  assert getattr(saved.calculation, field) == original + 0.001
-
-
-def test_recalculation_detects_wrong_civil_lunar_relation(lunar_chart: ZiweiChart) -> None:
-  record = GregorianBirthRecord(
-    birth_date=date(1954, 10, 4),
-    birth_time=time(0),
-    time_precision=TimePrecision.时,
-    timezone=FixedOffset(timedelta(hours=8)),
-    gender=Gender.男,
-  )
-  # 保持1954例的农历和派生值，只改公历原始日；纯结构校验不能认证历法对应。
-  saved = replace(lunar_chart, calculation=replace(lunar_chart.calculation, record=record))
-  with pytest.raises(ValueError, match="不一致"):
-    recalculate(saved)
-
-
-def test_software_version_is_information_only(lunar_chart: ZiweiChart) -> None:
-  saved = replace(lunar_chart, software_version="older-software")
-  assert saved != lunar_chart
-  assert recalculate(saved) == lunar_chart
 
 
 def test_create_calls_complete_guard(
@@ -357,10 +306,6 @@ def test_solar_time_crossing_date_is_preserved(
   assert isinstance(stored_record, GregorianBirthRecord) and stored_record.birth_date == date(
     2024, 3, 10
   )
-  from ziwei.serialization import dumps_chart, loads_chart
-
-  restored = loads_chart(dumps_chart(result))
-  assert restored == result and recalculate(restored) == result
 
 
 @pytest.mark.parametrize("defect", ["apparent", "shichen", "resolved"])
@@ -400,16 +345,12 @@ def test_chart_rejects_unrolled_civil_late_zi(chart_choices: ChartConfig) -> Non
     replace(valid, calculation=replace(valid.calculation, day_rolled=False))
 
 
-@pytest.mark.parametrize(
-  "change", ["year", "nonfinite", "longitude", "lunar-zi", "instant", "type"]
-)
-def test_chart_only_guards_do_not_tighten_legacy_input(
+@pytest.mark.parametrize("change", ["nonfinite", "longitude", "lunar-zi", "instant", "type"])
+def test_chart_rejects_inconsistent_calculation(
   lunar_chart: ZiweiChart, civil_chart: ZiweiChart, change: str
 ) -> None:
   value = lunar_chart.calculation
-  if change == "year":
-    value = replace(value, lunar_year=5000, ganzhi_year=5000, supported_lunar_year_range=(1, 9999))
-  elif change == "nonfinite":
+  if change == "nonfinite":
     value = replace(civil_chart.calculation, ut1_jd=float("nan"))
   elif change == "longitude":
     value = replace(value, record=replace(value.record, longitude_deg=100.0))
@@ -421,7 +362,7 @@ def test_chart_only_guards_do_not_tighten_legacy_input(
     with pytest.raises(TypeError):
       replace(value, resolved_time="not a ResolvedTime")  # type: ignore[arg-type]
     return
-  # 旧低层形状仍可构造，整盘拒绝矛盾。
+  # 低层值不核完整盘关系，组合入口仍须拒绝矛盾。
   with pytest.raises(ValueError):
     replace(lunar_chart, calculation=value)
 
@@ -437,9 +378,10 @@ def test_other_year_sihua_is_rejected(lunar_chart: ZiweiChart, civil_chart: Ziwe
     replace(lunar_chart, sihua=civil_chart.sihua)
 
 
-def test_recalculate_requires_chart() -> None:
-  with pytest.raises(TypeError):
-    recalculate(None)  # type: ignore[arg-type]
+def test_persistence_surface_is_removed() -> None:
+  assert find_spec("ziwei.serialization") is None
+  assert not hasattr(module, "recalculate")
+  assert "software_version" not in ZiweiChart.__dataclass_fields__
 
 
 def test_solar_late_zi_rollover_at_solar_date(chart_choices: ChartConfig) -> None:
@@ -470,19 +412,3 @@ def test_solar_late_zi_rollover_at_solar_date(chart_choices: ChartConfig) -> Non
     1,
     True,
   )
-  from ziwei.serialization import dumps_chart, loads_chart
-
-  restored = loads_chart(dumps_chart(rolled))
-  assert restored == rolled and recalculate(restored) == rolled
-
-
-@pytest.mark.parametrize("boundary", ["celestial_version", "current_timezone_data"])
-def test_recalculation_reports_missing_runtime_dependency(
-  civil_chart: ZiweiChart, monkeypatch: pytest.MonkeyPatch, boundary: str
-) -> None:
-  def unavailable() -> Never:
-    raise ImportError("dependency unavailable")
-
-  monkeypatch.setattr(module, boundary, unavailable)
-  with pytest.raises(ValueError, match="版本不可用"):
-    recalculate(civil_chart)

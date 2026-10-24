@@ -13,7 +13,6 @@ from zipfile import ZipFile
 
 # sdist须能重建wheel并重跑全部检查。
 SOURCE_FILES = (
-  ".gitattributes",
   ".github/workflows/checks.yml",
   ".github/workflows/release.yml",
   "pyproject.toml",
@@ -29,9 +28,7 @@ SOURCE_PATTERNS = (
   ".github/workflows/*.yaml",
   "src/ziwei/**/*.py",
   "tools/*.py",
-  "tests/**/*.py",
-  "tests/fixtures/**/*.json",
-  "tests/fixtures/**/*.md",
+  "tests/*.py",
   "docs/**/*.md",
   "docs/**/*.py",
   "docs/**/*.inv",

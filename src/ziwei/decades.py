@@ -20,7 +20,7 @@ if TYPE_CHECKING:
   from ziwei.birth import CalculationInput, Gender
 
 DECADE_RULE_ID: Final = "variant.decades.xusui-inclusive"
-"""首尾包含的虚岁大限规则标识，已发布记录保留此值。"""
+"""首尾包含的虚岁大限规则的稳定标识。"""
 DECADE_DEFINITION: Final = (
   "命宫起限，以五行局数为首限起始虚岁，每限十年，起止岁数均包含；"
   "阳男阴女按地支顺行，阴男阳女逆行。只给岁数标签，不换算日期或指定换岁日。"
