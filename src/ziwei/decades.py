@@ -12,9 +12,9 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final, Literal
 
-from ziwei.bureau import WuxingJu, bureau_of
+from ziwei.bureau import WuxingJu
 from ziwei.ganzhi import Dizhi, Tiangan, Yinyang
-from ziwei.palaces import effective_month, minggong_dizhi, palace_ganzhi
+from ziwei.palaces import _chart_frame
 
 if TYPE_CHECKING:
   from ziwei.birth import CalculationInput, Gender
@@ -106,9 +106,5 @@ def place_decades(value: CalculationInput) -> tuple[Decade, ...]:
     raise TypeError("起大限须使用 CalculationInput")
   if value.shichen is None:
     raise ValueError("起大限需要已知时辰")
-  month = effective_month(
-    value.month, value.day, value.is_leap_month, value.config.leap_month_policy
-  )
-  minggong = minggong_dizhi(month, value.shichen)
-  ju = bureau_of(palace_ganzhi(minggong, value.ganzhi_year))
-  return decade_periods(minggong, ju, value.year_ganzhi.tiangan, value.gender)
+  frame = _chart_frame(value)
+  return decade_periods(frame.minggong, frame.bureau, value.year_ganzhi.tiangan, value.gender)

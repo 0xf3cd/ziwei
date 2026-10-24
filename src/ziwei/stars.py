@@ -19,10 +19,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final
 
-from ziwei.bureau import WuxingJu, bureau_of
+from ziwei.bureau import WuxingJu
 from ziwei.config import TianmaRule
 from ziwei.ganzhi import Dizhi, Tiangan
-from ziwei.palaces import effective_month, minggong_dizhi, month_palace_index, palace_ganzhi
+from ziwei.palaces import _chart_frame, month_palace_index
 
 if TYPE_CHECKING:
   from ziwei.birth import CalculationInput
@@ -460,21 +460,17 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
     raise TypeError("安星需要解析后的 CalculationInput")
   if value.shichen is None:
     raise ValueError("安星需要已知时辰")
-  month = effective_month(
-    value.month, value.day, value.is_leap_month, value.config.leap_month_policy
-  )
-  minggong = minggong_dizhi(month, value.shichen)
-  ju = bureau_of(palace_ganzhi(minggong, value.ganzhi_year))
+  frame = _chart_frame(value)
   year = value.year_ganzhi
   if value.config.tianma_rule is TianmaRule.YEAR_BRANCH:
     ma_branch = year.dizhi
   elif value.config.tianma_rule is TianmaRule.MONTH_BRANCH:
-    ma_branch = tuple(Dizhi)[month_palace_index(month)]
+    ma_branch = tuple(Dizhi)[month_palace_index(frame.month)]
   else:
     raise ValueError("不支持的天马查法选择")
   positions = (
-    *place_major_stars(ju, value.day),
-    *place_month_stars(month),
+    *place_major_stars(frame.bureau, value.day),
+    *place_month_stars(frame.month),
     *place_hour_stars(value.shichen),
     *place_stem_stars(year.tiangan),
     *place_fire_bell(year.dizhi, value.shichen),

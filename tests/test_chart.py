@@ -18,7 +18,14 @@ from ziwei.chart import ZiweiChart, create_chart
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, TianmaRule, YearBoundary
 from ziwei.decades import Direction, place_decades
 from ziwei.ganzhi import Dizhi
-from ziwei.palaces import PalaceName, effective_month, minggong_dizhi, shengong_dizhi
+from ziwei.palaces import (
+  PalaceName,
+  effective_month,
+  minggong_dizhi,
+  shengong_dizhi,
+  twelve_palaces,
+)
+from ziwei.resolver import resolve
 from ziwei.sihua import SihuaVariant, shengnian_sihua
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import FixedOffset, IanaTimezone
@@ -219,21 +226,23 @@ def test_chart_is_frozen_and_copies_sequences(lunar_chart: ZiweiChart) -> None:
 
 
 @pytest.mark.parametrize(
-  "field,bad",
+  "field,bad,error,location",
   [
-    ("palaces", ()),
-    ("stars", ()),
-    ("decades", ()),
-    ("shengong", Dizhi.子),
-    ("bureau", WuxingJu.水二局),
-    ("calculation", None),
-    ("sihua", None),
-    ("palaces", ["命宫"]),
-    ("shengong", "戌"),
+    ("palaces", (), ValueError, "十二宫数量不符"),
+    ("stars", (), ValueError, "星位数量不符"),
+    ("decades", (), ValueError, "大限数量不符"),
+    ("shengong", Dizhi.子, ValueError, "身宫"),
+    ("bureau", WuxingJu.水二局, ValueError, "五行局"),
+    ("calculation", None, TypeError, "CalculationInput"),
+    ("sihua", None, TypeError, "四化"),
+    ("palaces", ["命宫"], TypeError, "palaces"),
+    ("shengong", "戌", TypeError, "身宫"),
   ],
 )
-def test_chart_rejects_bad_parts(lunar_chart: ZiweiChart, field: str, bad: Any) -> None:
-  with pytest.raises((TypeError, ValueError)):
+def test_chart_rejects_bad_parts(
+  lunar_chart: ZiweiChart, field: str, bad: Any, error: type[Exception], location: str
+) -> None:
+  with pytest.raises(error, match=location):
     replace(lunar_chart, **{field: bad})
 
 
@@ -368,9 +377,128 @@ def test_chart_rejects_inconsistent_calculation(
 
 
 def test_same_string_palace_fields_are_not_domain_members(lunar_chart: ZiweiChart) -> None:
-  palace = replace(lunar_chart.palaces[0], dizhi="戌")  # type: ignore[arg-type]
   with pytest.raises(TypeError, match="领域枚举"):
-    replace(lunar_chart, palaces=(palace, *lunar_chart.palaces[1:]))
+    replace(lunar_chart.palaces[0], dizhi="戌")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("missing", ["shichen", "gender"])
+def test_direct_chart_rejects_unknown(lunar_chart: ZiweiChart, missing: str) -> None:
+  record = replace(
+    lunar_chart.calculation.record,
+    **({"shichen": None} if missing == "shichen" else {"gender": Gender.未知}),
+  )
+  value = replace(
+    lunar_chart.calculation,
+    record=record,
+    shichen=None if missing == "shichen" else lunar_chart.calculation.shichen,
+  )
+  with pytest.raises(ValueError, match="已知时辰与性别"):
+    replace(lunar_chart, calculation=value)
+
+
+def test_component_sequence_errors_locate_first_difference(lunar_chart: ZiweiChart) -> None:
+  branches = tuple(Dizhi)
+  wrong: dict[str, tuple[Any, str]] = {
+    "palaces": (twelve_palaces(Dizhi.子, lunar_chart.calculation.year_ganzhi.tiangan), "十二宫"),
+    "stars": (
+      tuple(
+        replace(p, dizhi=branches[(branches.index(p.dizhi) + 1) % 12]) for p in lunar_chart.stars
+      ),
+      "星位",
+    ),
+    "decades": (tuple(reversed(lunar_chart.decades)), "大限"),
+  }
+  for field, (items, label) in wrong.items():
+    with pytest.raises(ValueError, match=rf"{label}\[0\].*应为.*实际为"):
+      replace(lunar_chart, **{field: items})
+  with pytest.raises(ValueError, match=r"身宫.*应为戌.*实际为子"):
+    replace(lunar_chart, shengong=Dizhi.子)
+  with pytest.raises(ValueError, match=r"五行局.*应为火六局.*实际为水二局"):
+    replace(lunar_chart, bureau=WuxingJu.水二局)
+  other = shengnian_sihua(
+    replace(lunar_chart.calculation, ganzhi_year=1955, lunar_year=1955),
+    lunar_chart.sihua.variant,
+  )
+  with pytest.raises(ValueError, match=r"四化.*生年干.*应为.*实际为"):
+    replace(lunar_chart, sihua=other)
+
+
+@pytest.mark.parametrize(
+  "policy,day,ming_ganzhi,bureau,ziwei,left,right",
+  [
+    (LeapMonthPolicy.全月归本月, 15, "乙卯", WuxingJu.水二局, Dizhi.申, Dizhi.巳, Dizhi.酉),
+    (LeapMonthPolicy.全月归本月, 16, "乙卯", WuxingJu.水二局, Dizhi.酉, Dizhi.巳, Dizhi.酉),
+    (LeapMonthPolicy.全月归下月, 15, "丙辰", WuxingJu.土五局, Dizhi.辰, Dizhi.午, Dizhi.申),
+    (LeapMonthPolicy.全月归下月, 16, "丙辰", WuxingJu.土五局, Dizhi.酉, Dizhi.午, Dizhi.申),
+    (
+      LeapMonthPolicy.上半月归本月下半月归下月,
+      15,
+      "乙卯",
+      WuxingJu.水二局,
+      Dizhi.申,
+      Dizhi.巳,
+      Dizhi.酉,
+    ),
+    (
+      LeapMonthPolicy.上半月归本月下半月归下月,
+      16,
+      "丙辰",
+      WuxingJu.土五局,
+      Dizhi.酉,
+      Dizhi.午,
+      Dizhi.申,
+    ),
+  ],
+)
+def test_hand_derived_leap_boundary_frame(
+  chart_choices: ChartConfig,
+  policy: LeapMonthPolicy,
+  day: int,
+  ming_ganzhi: str,
+  bureau: WuxingJu,
+  ziwei: Dizhi,
+  left: Dizhi,
+  right: Dizhi,
+) -> None:
+  """合成癸卯年闰二月子时女命；非外部原盘。
+
+  下文二月、三月指所选口径处理后的安星月。
+  按已登记口诀手推：癸年甲寅，二月子时命身皆卯、乙卯水二局；三月皆辰、丙辰土五局。
+  水二局十五补一得申、十六得酉；土五局十五得辰、十六补四得酉。阴女顺限。
+  """
+  record = LunarBirthRecord(
+    year=2023, month=2, day=day, is_leap_month=True, shichen=Dizhi.子, gender=Gender.女
+  )
+  choices = replace(chart_choices, leap_month_policy=policy)
+  value = resolve(record, choices)
+  result = create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)
+  assert str(result.palaces[0].ganzhi) == ming_ganzhi
+  assert result.shengong.value == ming_ganzhi[1] and result.bureau is bureau
+  for positions in (result.stars, place_stars(value)):
+    stars = {p.star: p.dizhi for p in positions}
+    assert (stars[Star.紫微], stars[Star.左辅], stars[Star.右弼]) == (ziwei, left, right)
+  for periods in (result.decades, place_decades(value)):
+    assert periods[0].dizhi.value == ming_ganzhi[1]
+    assert periods[0].start_age == bureau.number
+    assert periods[0].direction is Direction.顺行
+
+
+def test_low_level_entry_requirements_remain_separate(lunar_chart: ZiweiChart) -> None:
+  value = replace(
+    lunar_chart.calculation, record=replace(lunar_chart.calculation.record, gender=Gender.未知)
+  )
+  assert place_stars(value) == lunar_chart.stars
+  with pytest.raises(ValueError, match="性别"):
+    place_decades(value)
+  value = replace(value, shichen=None)
+  with pytest.raises(ValueError, match="安星需要已知时辰"):
+    place_stars(value)
+  with pytest.raises(ValueError, match="起大限需要已知时辰"):
+    place_decades(value)
+  with pytest.raises(TypeError, match="CalculationInput"):
+    place_stars(None)  # type: ignore[arg-type]
+  with pytest.raises(TypeError, match="CalculationInput"):
+    place_decades(None)  # type: ignore[arg-type]
 
 
 def test_other_year_sihua_is_rejected(lunar_chart: ZiweiChart, civil_chart: ZiweiChart) -> None:

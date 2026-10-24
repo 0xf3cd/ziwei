@@ -8,11 +8,18 @@
 显示用的宫位名不改变计算结果；身宫是叠在某宫上的标记，不是第十三个宫。
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING, cast
 
+from ziwei.bureau import WuxingJu, bureau_of
 from ziwei.config import LeapMonthPolicy
 from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, palace_stems, year_ganzhi
+
+if TYPE_CHECKING:
+  from ziwei.birth import CalculationInput
 
 
 def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy) -> int:
@@ -22,6 +29,8 @@ def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy
   或初一至十五算作本月而十六日起算作下月的方式。
   闰十二月若需要算作下月（包括按前后半月归属时的十六日起），会因没有第13月而抛错，
   不自行改作来年正月，因为所据规则没有说明这种处理方式。
+
+  只核月1至12、日1至30等基本值域；真实月长与闰月是否存在由历法适配核验。
   """
   if not isinstance(policy, LeapMonthPolicy):
     raise TypeError("闰月口径须为 LeapMonthPolicy 成员")
@@ -31,16 +40,18 @@ def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy
     raise ValueError("农历生月须在1至12之间")
   if type(day) is not int:
     raise TypeError("农历日须为整数，不接受 bool")
-  if day < 1:
-    raise ValueError("农历日须为正整数")
+  if not 1 <= day <= 30:
+    raise ValueError("农历日须在1至30之间")
   if type(is_leap) is not bool:
     raise TypeError("闰月标志须为 bool")
   if policy is LeapMonthPolicy.全月归下月:
     effective = month + 1 if is_leap else month
   elif policy is LeapMonthPolicy.上半月归本月下半月归下月:
     effective = month + 1 if is_leap and day >= 16 else month
-  else:
+  elif policy is LeapMonthPolicy.全月归本月:
     effective = month
+  else:
+    raise ValueError(f"尚未实现的闰月口径：{policy.value}")
   if effective > 12:
     raise ValueError("闰十二月按该口径无对应安星月（不合成来年正月规则）")
   return effective
@@ -81,11 +92,17 @@ class PalaceName(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Palace:
-  """一宫的地支、宫干与宫名；宫名只是显示，不改变计算。"""
+  """一宫的地支、宫干与宫名；构造时核枚举类型与干支配对，宫名不改变计算。"""
 
   dizhi: Dizhi
   tiangan: Tiangan
   name: PalaceName
+
+  def __post_init__(self) -> None:
+    for name, kind in (("dizhi", Dizhi), ("tiangan", Tiangan), ("name", PalaceName)):
+      if not isinstance(getattr(self, name), kind):
+        raise TypeError(f"宫位{name}须为{kind.__name__}成员（领域枚举）")
+    Ganzhi(self.tiangan, self.dizhi)
 
   @property
   def ganzhi(self) -> Ganzhi:
@@ -149,3 +166,19 @@ def palace_ganzhi(minggong: Dizhi, ganzhi_year: int) -> Ganzhi:
     raise TypeError("命宫须为 Dizhi 成员")
   year = year_ganzhi(ganzhi_year)
   return Ganzhi(_stem_for(palace_stems(year.tiangan), minggong), minggong)
+
+
+@dataclass(frozen=True, slots=True)
+class _ChartFrame:
+  month: int
+  minggong: Dizhi
+  bureau: WuxingJu
+
+
+def _chart_frame(value: CalculationInput) -> _ChartFrame:
+  """推导安星月份、命宫与五行局；调用方先核输入类型与已知时辰，允许性别未知。"""
+  month = effective_month(
+    value.month, value.day, value.is_leap_month, value.config.leap_month_policy
+  )
+  minggong = minggong_dizhi(month, cast(Dizhi, value.shichen))
+  return _ChartFrame(month, minggong, bureau_of(palace_ganzhi(minggong, value.ganzhi_year)))
