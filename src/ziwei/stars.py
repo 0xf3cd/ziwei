@@ -481,5 +481,5 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
     _placement(Star.天马, tianma_dizhi(ma_branch), value.config.tianma_rule),
   )
   if len(positions) != len(Star) or {item.star for item in positions} != set(Star):
-    raise ValueError("安星结果须恰有28颗不同星曜")
+    raise ValueError("安星结果须覆盖全部星曜且每颗只出现一次")
   return tuple(sorted(positions, key=lambda item: tuple(Star).index(item.star)))

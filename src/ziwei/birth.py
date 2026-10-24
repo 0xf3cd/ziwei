@@ -162,7 +162,8 @@ class CalculationInput:
   原始记录和实际口径随值保存；阴阳及年干支由该编号派生，不维护可互相矛盾的副本。
   原始时辰未知时，解析时辰不得变为已知。
   lunar_algorithm 与 lunar_algorithm_version 记录所用农历算法及 celestial 版本；
-  supported_lunar_year_range 在构造时取所选算法的当前支持范围，不接受调用方传入。
+  supported_lunar_year_range 在构造时由 ziwei.calendar.supported_lunar_year_range 取得，
+  不接受调用方传入；解析农历年超出所选算法范围时构造失败。
   apparent_solar 记录是否采用真太阳时路径；day_rolled 记录晚子时归次日是否顺延；
   ut1_jd 与 lichun_jd 记录立春换年所比较的出生瞬间与立春时刻（UT1 日数），
   纯民用正月初一路径为 None。

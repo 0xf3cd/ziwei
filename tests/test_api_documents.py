@@ -196,9 +196,14 @@ def rendered_api(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
 
 @pytest.mark.parametrize(
   "target",
-  ["ziwei.decades.DECADE_RULE_ID", "ziwei.config.POLICY_ENUMS", "ziwei.birth.BirthRecord"],
+  [
+    "ziwei.decades.DECADE_RULE_ID",
+    "ziwei.config.POLICY_ENUMS",
+    "ziwei.birth.BirthRecord",
+    "ziwei.birth.shichen_from_time",
+  ],
 )
-def test_removing_real_autodata_is_rejected(
+def test_removing_real_api_declaration_is_rejected(
   rendered_api: tuple[Path, Path], tmp_path: Path, target: str
 ) -> None:
   baseline, _ = rendered_api
@@ -206,11 +211,14 @@ def test_removing_real_autodata_is_rejected(
   shutil.copytree(baseline, source)
   page = source / "docs/api.md"
   original = page.read_text(encoding="utf-8")
-  changed, count = re.subn(
-    rf"(?m)^\.\. autodata:: {re.escape(target)}\n(?:   :[^\n]*\n)*",
-    "",
-    original,
-  )
+  if target == "ziwei.birth.shichen_from_time":
+    changed, count = re.subn(r", shichen_from_time(?=\n)", "", original)
+  else:
+    changed, count = re.subn(
+      rf"(?m)^\.\. autodata:: {re.escape(target)}\n(?:   :[^\n]*\n)*",
+      "",
+      original,
+    )
   assert count == 1
   page.write_text(changed, encoding="utf-8")
   output = tmp_path / "html"

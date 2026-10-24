@@ -53,7 +53,7 @@ True
 ## 计算输入与来源信息
 
 `chart.calculation`保留原始出生记录、口径、解析后的农历年月日时与干支纪年，以及此次使用的农历算法和celestial版本。
-`supported_lunar_year_range`在构造时从所选算法取得，结果保存这次支持范围，不接受调用方传入范围。
+构造`CalculationInput`时，`supported_lunar_year_range`从所选算法取得，结果保存这次支持范围，不接受调用方传入范围。
 星位、四化与大限保留各自的规则标识；规则的定义与来源见所属领域模块和知识目录。
 
 公历且选择立春或提供经度时，`calculation.resolved_time`保存此次取得的本地钟面、UTC、

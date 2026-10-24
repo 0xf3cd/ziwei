@@ -6,7 +6,7 @@ from dataclasses import FrozenInstanceError, replace
 from datetime import date, time, timedelta
 from importlib.util import find_spec
 from itertools import product
-from typing import Any
+from typing import Any, Never
 
 import pytest
 
@@ -21,7 +21,7 @@ from ziwei.ganzhi import Dizhi
 from ziwei.palaces import PalaceName, effective_month, minggong_dizhi, shengong_dizhi
 from ziwei.sihua import SihuaVariant, shengnian_sihua
 from ziwei.stars import Star, place_stars
-from ziwei.timezone import FixedOffset
+from ziwei.timezone import FixedOffset, IanaTimezone
 
 
 @pytest.fixture(autouse=True)
@@ -382,6 +382,70 @@ def test_persistence_surface_is_removed() -> None:
   assert find_spec("ziwei.serialization") is None
   assert not hasattr(module, "recalculate")
   assert "software_version" not in ZiweiChart.__dataclass_fields__
+
+
+@pytest.mark.parametrize("fold", [None, 0, 1])
+@pytest.mark.parametrize(
+  "day,clock",
+  [
+    (date(2000, 6, 1), time(12)),
+    (date(1988, 4, 17), time(2, 30)),
+    (date(1988, 9, 11), time(1, 30)),
+  ],
+)
+def test_pure_civil_chart_preserves_unchecked_fold(
+  chart_choices: ChartConfig,
+  monkeypatch: pytest.MonkeyPatch,
+  fold: int | None,
+  day: date,
+  clock: time,
+) -> None:
+  def unexpected_instant(_: GregorianBirthRecord) -> Never:
+    raise AssertionError("pure civil path resolved an instant")
+
+  monkeypatch.setattr(GregorianBirthRecord, "resolve_time", unexpected_instant)
+  timezone = IanaTimezone("Asia/Shanghai", fold)
+  record = GregorianBirthRecord(
+    birth_date=day,
+    birth_time=clock,
+    time_precision=TimePrecision.分,
+    timezone=timezone,
+    gender=Gender.男,
+  )
+  result = create_chart(record, chart_choices, sihua_variant=SihuaVariant.排命盘口诀转录)
+  assert result.calculation.record is record
+  assert record.timezone is timezone and timezone.fold == fold
+  assert result.calculation.resolved_time is None
+
+
+@pytest.mark.parametrize("path", ["lichun", "solar"])
+@pytest.mark.parametrize("fold", [None, 0, 1])
+def test_chart_distinguishes_requested_and_actual_fold(
+  chart_choices: ChartConfig, path: str, fold: int | None
+) -> None:
+  timezone = IanaTimezone("Asia/Shanghai", fold)
+  record = GregorianBirthRecord(
+    birth_date=date(2000, 6, 1),
+    birth_time=time(12),
+    time_precision=TimePrecision.分,
+    timezone=timezone,
+    gender=Gender.男,
+    longitude_deg=120.0 if path == "solar" else None,
+  )
+  choices = replace(
+    chart_choices,
+    year_boundary=YearBoundary.立春 if path == "lichun" else YearBoundary.农历正月初一,
+  )
+  if fold == 1:
+    with pytest.raises(ValueError, match="fold"):
+      create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)
+  else:
+    result = create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)
+    assert result.calculation.record is record
+    assert record.timezone is timezone and timezone.fold == fold
+    resolved = result.calculation.resolved_time
+    assert resolved is not None and resolved.fold == 0
+    assert isinstance(resolved.zone, IanaTimezone) and resolved.zone.fold == fold
 
 
 def test_solar_late_zi_rollover_at_solar_date(chart_choices: ChartConfig) -> None:

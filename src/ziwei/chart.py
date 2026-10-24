@@ -78,7 +78,7 @@ def _check_calculation(value: CalculationInput) -> None:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ZiweiChart:
-  """完整本命盘，按当前纯规则核对组合，不重做历法或时区解析。
+  """完整本命盘，按规则表与算术核对组件，不重做历法或时区解析。
 
   宫位按宫名序，星曜按Star枚举顺序，大限按起限先后（自命宫起，随顺逆）；序列复制为元组。
   直接构造不重新核验calculation中的公历与农历对应、UT1或IANA偏移；从原始记录排盘使用create_chart。

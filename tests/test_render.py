@@ -35,13 +35,16 @@ def test_grid_shows_twelve_palaces_and_all_stars(lunar_chart: ZiweiChart) -> Non
   assert top.index("己巳") < top.index("庚午") < top.index("辛未") < top.index("壬申")
 
 
-def test_render_does_not_interpolate_untrusted_metadata(lunar_chart: ZiweiChart) -> None:
+@pytest.mark.parametrize("surrogate", ["\ud800", "\udc00", "\ud800\udc00"])
+def test_render_does_not_interpolate_untrusted_metadata(
+  lunar_chart: ZiweiChart, surrogate: str
+) -> None:
   record = replace(
-    lunar_chart.calculation.record, place="\x1b[31m\ud800\udc00", source="\n\x00控制字符"
+    lunar_chart.calculation.record, place="\x1b[31m" + surrogate, source="\n\x00控制字符"
   )
   chart = replace(lunar_chart, calculation=replace(lunar_chart.calculation, record=record))
   text = render_text(chart)
-  assert "\x1b" not in text and "\x00" not in text and "\ud800" not in text
+  assert "\x1b" not in text and "\x00" not in text and surrogate not in text
   assert text == render_text(lunar_chart)
 
 

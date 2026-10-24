@@ -13,7 +13,7 @@ Python 紫微斗数排盘与知识库。历法与时间由
 开发检查与协作约定见[参与开发](docs/contributing.md)。
 首次发布的前置配置、审批与产物核验见[发布准备](docs/releasing.md)。
 
-当前源码为开发版本；已发布版本以
+当前源码为开发版本，版本号暂仍为`0.1.0`，内容与已发布的v0.1.0不同；已发布版本以
 [发布记录](https://github.com/0xf3cd/ziwei/releases)为准。
 与v0.1.0相比，开发源码不再提供命盘JSON保存／恢复与旧盘重算接口，也不读取旧JSON命盘。
 已发布的v0.1.0及其制品不变。
@@ -32,7 +32,7 @@ celestial-calendar 0.8.0在PyPI只提供下列原生wheel，没有源码分发�
 Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖范围内，不能依靠pip自动回退源码构建。
 请使用独立虚拟环境；与不同精确版本的celestial-calendar或tzdata显式共装会冲突。
 安装ziwei时，pip也可能将环境中已有的较新celestial-calendar或tzdata降到上述精确版本。
-当前源代码开发安装与检查见[参与开发](docs/contributing.md)，版本与首次发布仍以发布记录为准。
+当前源代码开发安装与检查见[参与开发](docs/contributing.md)，已发布制品以发布记录为准。
 
 ## 首版目标
 

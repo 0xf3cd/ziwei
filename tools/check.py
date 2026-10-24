@@ -86,7 +86,7 @@ class ApiTargets(HTMLParser):
 
 
 def check_api_reference(directory: Path, root: Path = ROOT) -> None:
-  """核公开定义、类型别名和有变量说明的 Final 常量的真实 HTML 签名。"""
+  """检查公开定义、类型别名与带说明的 Final 常量是否出现在生成的 API 签名中。"""
   expected: set[str] = set()
   for module in (root / "src/ziwei").rglob("*.py"):
     parts = module.relative_to(root / "src").with_suffix("").parts
