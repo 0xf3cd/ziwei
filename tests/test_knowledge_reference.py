@@ -257,10 +257,15 @@ def test_generation_reads_actual_definitions(html: Path, monkeypatch: pytest.Mon
 
 
 @pytest.mark.parametrize(
-  "rule_id", ["variant.star.huoling-forward", "variant.star.ziwei-bureau-day"]
+  "rule_id, star",
+  [
+    ("variant.star.huoling-forward", None),
+    ("variant.star.ziwei-bureau-day", None),
+    ("variant.star.huoling-forward", "火星"),
+  ],
 )
 def test_missing_numeric_group_fails_even_after_regeneration(
-  html: Path, monkeypatch: pytest.MonkeyPatch, rule_id: str
+  html: Path, monkeypatch: pytest.MonkeyPatch, rule_id: str, star: str | None
 ) -> None:
   catalog = load_catalog()
   rows = knowledge_reference._star_rows()
@@ -268,12 +273,18 @@ def test_missing_numeric_group_fails_even_after_regeneration(
   monkeypatch.setattr(
     knowledge_reference,
     "_star_rows",
-    lambda: [row for row in rows if row[0] != rule_id or row[1] == "规则"],
+    lambda: [
+      row
+      for row in rows
+      if row[0] != rule_id or row[1] == "规则" or (star is not None and row[2] != star)
+    ],
   )
   (html / "docs/knowledge-reference.html").write_text(render_catalog(catalog), encoding="utf-8")
   with pytest.raises(ValueError, match="Star reference missing numeric coverage:") as error:
     check_knowledge_reference(html, catalog)
   assert rule_id in str(error.value)
+  if star is not None:
+    assert str((rule_id, star)) in str(error.value)
 
 
 def test_new_rule_without_numeric_reference_is_rejected_by_reference_check(

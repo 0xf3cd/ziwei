@@ -9,7 +9,7 @@
 
 目前提供《排命盘口诀》网页转录与王亭之《紫微斗数初级讲义》转录两套表，无默认。
 前者指2007年论坛帖的网页，后者取讲义网页提取稿。名称只表示实际所见转录，
-不认证某个门派或所有同名刊本。两套在戊科、庚科／忌、壬科上有分歧；
+不认证某个门派或所有同名刊本。两套在戊干化科、庚干化科与化忌、壬干化科上有分歧；
 [完整参考表](knowledge-reference.md#implemented-sihua)从执行定义生成，不另维护一份数值表。
 
 ```{doctest}
@@ -91,26 +91,15 @@ True
 只算四化不要求时辰或性别；从出生输入起大限则二者都须已知。既有`resolve()`和`place_stars()`调用不变。
 四化不附带星位；需要显示在盘上时，可按`Star`身份关联安星结果，不用宫位作为唯一键覆盖同宫多星。
 
-## 来源与验证能说明什么
+## 来源与验证的限度
 
-- 《排命盘口诀》完整十干表取[所见论坛转录](knowledge-reference.md#source.zhongyi999-paimingpan)。
-  甲、乙、丙、丁、己、辛、癸七干与王亭之讲义、读书网转录的[《九千飞星》对照表](knowledge-reference.md#source.jiuqian-dushu)相同；
-  戊壬科另据[玄门转载的令东来说明](knowledge-reference.md#source.lingdonglai-sihua)，
-  庚科忌另据[藏玄易社的独立解释](knowledge-reference.md#source.cangxuan-geng)。
-  没有把这些说明拼成执行表，也没有声称取得第二份完整同表。
-- 王亭之完整表取讲义网页提取稿，并与《九千飞星》对照表的王亭之列逐干核对。戊太阳科有直接文字，
-  但纸本、PDF图像和版次未校，不能说成已认证的原著刊本。
-- 1954甲午盘例检验共有的甲干四化，不能区分庚壬异文。
-  1970庚戌图检验庚干四化；它不是王亭之原图，也不证明图作者采用讲义中庚以外的九干。
-  该图没有完整生日，不能据此重排全星位。逐干字面期望另检全部表值。
-- 论坛原文明说岁数是虚岁；其中的木三局顺逆例与1954火六局例都给出首尾包含的岁数区间。
-  王亭之讲义的网页存档正文另支持局数起限；图四图题与图内岁数本轮未核，不再作为已核区间对照。
-  正文短引不替代图像证据，这些材料也不为本库增加实际换岁日期的合同。
-- 电子《全书》的[邻宫起限异文](knowledge-reference.md#entry.decades.quanshu-adjacent)另存待核、不执行。
-  该句只定父母／兄弟宫起限与顺逆，不借现行局数起岁规则补齐；本版仍从命宫起限。
+两套四化各采用所选转录的完整表，不把不同来源的单行说明拼成第三套表，也不声称取得第二份完整同表。
+逐项支持与盘例限度见[网页转录四化](knowledge-reference.md#entry.sihua.zhongyi999)及
+[讲义四化](knowledge-reference.md#entry.sihua.wangtingzhi-lecture)；纸本、PDF图像与版次尚未核对。
+[1970庚戌图](knowledge-reference.md#citation.doushuxuantan.geng-example)不是王亭之原图，只检验庚干四化；
+没有完整生日，不能重排全星位或证明其余九干。
 
-具体定位、短引、独立支持及未核事项见知识条目
-[网页转录四化](knowledge-reference.md#entry.sihua.zhongyi999)、
-[讲义四化](knowledge-reference.md#entry.sihua.wangtingzhi-lecture)与
-[大限](knowledge-reference.md#entry.decades.xusui-inclusive)。
-来源仍保留转录未校的状态。代码能按所选表计算，但知识条目暂不默认展示，也不据此解读某张命盘。
+大限的虚岁与含首尾区间依据论坛原例，讲义存档正文另支持局数起限；
+图四图题与图内岁数尚未取得图像核对。定位及未核事项见[大限条目](knowledge-reference.md#entry.decades.xusui-inclusive)。
+这些材料不规定实际换岁日期；《全书》的[邻宫起限异文](knowledge-reference.md#entry.decades.quanshu-adjacent)仍待核、不执行。
+规则可以计算，不代表对应知识条目可以默认展示或用来解释某张命盘。

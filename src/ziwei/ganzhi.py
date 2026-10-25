@@ -257,7 +257,7 @@ def nayin(ganzhi: Ganzhi) -> Wuxing:
 
 # 五虎遁：由生年天干定寅宫天干（甲己起丙寅、乙庚起戊寅、丙辛起庚寅、丁壬起壬寅、戊癸起甲寅）。
 # 出处：维基文库《紫微斗數全書/卷二》起五行寅例（修订1963110）；
-# 《渊海子平》论年上起月例、论起大运法与王亭之讲义安十二宫天干所列映射相同，口诀措辞不同。
+# 王亭之讲义安十二宫天干所列映射与此相同，口诀措辞不同。
 WUHU_YIN: Final[tuple[tuple[tuple[Tiangan, Tiangan], Tiangan], ...]] = (
   ((Tiangan.甲, Tiangan.己), Tiangan.丙),
   ((Tiangan.乙, Tiangan.庚), Tiangan.戊),

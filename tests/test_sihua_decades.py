@@ -233,8 +233,8 @@ def test_four_directions_five_bureaus_and_wraparound(
   assert ages == list(range(start_age, start_age + 120))
 
 
-def test_two_original_decade_examples() -> None:
-  """论坛木三局原例与讲义图四金四局原图，前者明示虚岁，后者检区间及方向。"""
+def test_original_wood_and_synthetic_metal_decades() -> None:
+  """论坛木三局顺逆原例，以及合成金四局的局数起限回归。"""
   forward = decade_periods(Dizhi.寅, WuxingJu.木三局, Tiangan.甲, Gender.男)
   reverse = decade_periods(Dizhi.寅, WuxingJu.木三局, Tiangan.甲, Gender.女)
   assert [(p.dizhi, p.start_age, p.end_age) for p in forward[:3]] == [
@@ -247,12 +247,11 @@ def test_two_original_decade_examples() -> None:
     (Dizhi.丑, 13, 22),
     (Dizhi.子, 23, 32),
   ]
-  figure4 = decade_periods(Dizhi.丑, WuxingJu.金四局, Tiangan.甲, Gender.男)
-  assert [(p.dizhi, p.start_age, p.end_age) for p in figure4[:2]] == [
+  metal = decade_periods(Dizhi.丑, WuxingJu.金四局, Tiangan.甲, Gender.男)
+  assert [(p.dizhi, p.start_age, p.end_age) for p in metal[:2]] == [
     (Dizhi.丑, 4, 13),
     (Dizhi.寅, 14, 23),
   ]
-  # 图仅给阳男，本测试用合成甲干表示阳；不补图中未提供的完整生日。
 
 
 @pytest.mark.parametrize("stem", tuple(Tiangan))

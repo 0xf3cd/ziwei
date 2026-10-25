@@ -1,4 +1,4 @@
-"""来源短引、解释层次与领域定义消费的回归。"""
+"""核对短引原字、解释层次，以及知识说明是否取自领域定义。"""
 
 import json
 import shutil
@@ -57,7 +57,7 @@ def test_unverified_figure_identity_is_not_replaced_by_a_body_excerpt() -> None:
   sources = {item.id: item for item in catalog.sources}
   figure = citations["citation.zhongzhou.decades-figure4"]
   assert figure.quote == "安大限"
-  assert all(text in figure.limits for text in ("2017-11-06", "404", "图题与图内岁数本轮未核"))
+  assert all(text in figure.limits for text in ("2017-11-06", "404", "图题与图内岁数未核"))
   assert "支持局数起限、命宫起及含首尾" not in figure.limits
   assert "岁数证据在图中" not in figure.limits
   period = entries["entry.decades.xusui-inclusive"]
@@ -67,6 +67,13 @@ def test_unverified_figure_identity_is_not_replaced_by_a_body_excerpt() -> None:
   assert "2017-11-06" in body.locator and "存档" in body.locator
   assert "只支持局数起限" in body.limits
   assert sources[figure.source_id].status is SourceStatus.待核
+  source = sources[figure.source_id]
+  assert source.url == (
+    "https://web.archive.org/web/20171106140353/"
+    "http://blog.sina.com.cn/s/blog_4ff71e4e0100ciex.html"
+  )
+  assert "2017-11-06" in source.edition and "存档" in source.provenance
+  assert "404" in source.limits
 
 
 def test_source_readings_remain_separate_from_executable_choices() -> None:
