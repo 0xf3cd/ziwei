@@ -76,6 +76,7 @@ def test_file_used_as_directory_is_unknown_timezone(
   [
     pytest.param("A" * 300, id="long-component"),
     pytest.param("Asia/" + "x" * 300, id="long-nested-component"),
+    pytest.param("Asia/" + "x/" * 300 + "Missing", id="long-total-path"),
   ],
 )
 def test_long_timezone_key_keeps_resource_cause(

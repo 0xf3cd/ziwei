@@ -3,7 +3,6 @@
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, timezone
-from errno import ENAMETOOLONG
 from importlib.resources import files
 from struct import error as StructError
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -132,7 +131,14 @@ class AmbiguousTimeError(ValueError):
 
 def _load_zone(key: str) -> tuple[ZoneInfo, TimezoneData]:
   try:
-    resource = files("tzdata.zoneinfo").joinpath(*key.split("/"))
+    resource = files("tzdata.zoneinfo")
+    for part in key.split("/"):
+      if not resource.is_dir():
+        raise NotADirectoryError(key)
+      child = next((item for item in resource.iterdir() if item.name == part), None)
+      if child is None:
+        raise FileNotFoundError(key)
+      resource = child
     if resource.is_dir():
       raise IsADirectoryError(key)
     with resource.open("rb") as stream:
@@ -146,12 +152,7 @@ def _load_zone(key: str) -> tuple[ZoneInfo, TimezoneData]:
     if name != "tzdata" and not name.startswith("tzdata."):
       raise
     raise ZoneInfoNotFoundError(f"缺少tzdata数据包或时区子包：{key}") from error
-  except OSError as error:
-    if (
-      not isinstance(error, FileNotFoundError | IsADirectoryError | NotADirectoryError)
-      and error.errno != ENAMETOOLONG
-    ):
-      raise
+  except (FileNotFoundError, IsADirectoryError, NotADirectoryError) as error:
     raise ZoneInfoNotFoundError(f"IANA 时区标识不存在或不是时区文件：{key}") from error
   return zone, data
 

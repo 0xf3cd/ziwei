@@ -2,9 +2,10 @@
 
 import sys
 import zoneinfo
+from collections.abc import Iterator
 from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, datetime, timedelta
-from errno import EIO
+from errno import EINVAL, EIO
 from importlib.metadata import version
 from importlib.resources import files
 from pathlib import Path
@@ -174,6 +175,7 @@ def test_cached_resource_does_not_hide_missing_version_package(
   [
     PermissionError("denied"),
     OSError(EIO, "read failed"),
+    OSError(EINVAL, "invalid resource operation"),
     RuntimeError("runtime"),
     ModuleNotFoundError("unrelated", name="unrelated"),
   ],
@@ -206,11 +208,14 @@ def test_zone_resource_errors_are_distinct(
   monkeypatch: pytest.MonkeyPatch, resource_error: type[OSError], error: type[Exception]
 ) -> None:
   class Resource:
-    def joinpath(self, *parts: str) -> "Resource":
-      return self
+    def __init__(self, name: str = "") -> None:
+      self.name = name
+
+    def iterdir(self) -> Iterator["Resource"]:
+      yield Resource("Asia")
 
     def is_dir(self) -> bool:
-      return resource_error is IsADirectoryError
+      return not self.name or resource_error is IsADirectoryError
 
     def open(self, mode: str) -> None:
       raise resource_error("资源不可作为时区文件打开")
