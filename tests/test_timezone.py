@@ -4,6 +4,7 @@ import sys
 import zoneinfo
 from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, datetime, timedelta
+from errno import EIO
 from importlib.metadata import version
 from importlib.resources import files
 from pathlib import Path
@@ -172,6 +173,7 @@ def test_cached_resource_does_not_hide_missing_version_package(
   "error",
   [
     PermissionError("denied"),
+    OSError(EIO, "read failed"),
     RuntimeError("runtime"),
     ModuleNotFoundError("unrelated", name="unrelated"),
   ],

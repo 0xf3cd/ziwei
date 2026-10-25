@@ -4,6 +4,7 @@ import subprocess
 import sys
 from dataclasses import replace
 from datetime import date, time, timedelta
+from errno import ENAMETOOLONG
 from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
@@ -63,7 +64,33 @@ def test_file_used_as_directory_is_unknown_timezone(
   with pytest.raises(ZoneInfoNotFoundError, match=key) as caught:
     call_time_entry(entry, record, config(year=year))
   assert type(caught.value) is ZoneInfoNotFoundError
+  # 文件被用作目录时，Windows可报告FileNotFoundError，POSIX通常报告NotADirectoryError。
   assert isinstance(caught.value.__cause__, NotADirectoryError | FileNotFoundError)
+
+
+@pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])
+@pytest.mark.parametrize("year", list(YearBoundary))
+@pytest.mark.parametrize("longitude", [None, 120.0])
+@pytest.mark.parametrize(
+  "key",
+  [
+    pytest.param("A" * 300, id="long-component"),
+    pytest.param("Asia/" + "x" * 300, id="long-nested-component"),
+  ],
+)
+def test_long_timezone_key_keeps_resource_cause(
+  entry: str,
+  year: YearBoundary,
+  longitude: float | None,
+  key: str,
+) -> None:
+  record = gregorian(date(1988, 7, 1), time(12), IanaTimezone(key), longitude_deg=longitude)
+  with pytest.raises(ZoneInfoNotFoundError, match=key) as caught:
+    call_time_entry(entry, record, config(year=year))
+  cause = caught.value.__cause__
+  assert type(caught.value) is ZoneInfoNotFoundError
+  assert isinstance(cause, OSError)
+  assert cause.errno == ENAMETOOLONG or isinstance(cause, FileNotFoundError)
 
 
 @pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])

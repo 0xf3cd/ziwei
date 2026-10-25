@@ -3,6 +3,7 @@
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, timezone
+from errno import ENAMETOOLONG
 from importlib.resources import files
 from struct import error as StructError
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -145,7 +146,12 @@ def _load_zone(key: str) -> tuple[ZoneInfo, TimezoneData]:
     if name != "tzdata" and not name.startswith("tzdata."):
       raise
     raise ZoneInfoNotFoundError(f"缺少tzdata数据包或时区子包：{key}") from error
-  except (FileNotFoundError, IsADirectoryError, NotADirectoryError) as error:
+  except OSError as error:
+    if (
+      not isinstance(error, FileNotFoundError | IsADirectoryError | NotADirectoryError)
+      and error.errno != ENAMETOOLONG
+    ):
+      raise
     raise ZoneInfoNotFoundError(f"IANA 时区标识不存在或不是时区文件：{key}") from error
   return zone, data
 

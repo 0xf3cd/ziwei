@@ -74,7 +74,7 @@ def test_each_leap_second_effective_boundary(
   offset: int,
   seconds: int,
 ) -> None:
-  """独立历史值核偏移，公开换算核接入；模型复算不当作实测UT1。"""
+  """独立历史值核TAI-UTC偏移，再核公开UTC转UT1使用该值；模型复算不作实测UT1。"""
   boundary = date.fromisoformat(label)
   assert (boundary - date(1858, 11, 17)).days == mjd
   instant = datetime.combine(boundary, datetime.min.time(), UTC) + timedelta(seconds=seconds)
@@ -306,7 +306,7 @@ def test_lunar_conversion_rejects_invalid_combinations_before_native_call(
 
 
 def test_ut1_conversion_matches_chart_snapshot() -> None:
-  """八个选定时刻的同依赖模型对照；不证明全域精度或真实地球自转时标。"""
+  """共用celestial的ΔT模型对照八个选定时刻，不证明全域精度或实测UT1。"""
   import celestial_calendar as celestial
 
   location = celestial.GeoLocation(31.2, 121.5)
