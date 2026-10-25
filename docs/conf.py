@@ -39,6 +39,8 @@ myst_heading_anchors = 6
 nitpicky = True
 html_theme = "alabaster"
 html_title = f"ziwei {release}（开发版）"
+html_static_path = ["_static"]
+html_css_files = ["layout.css"]
 
 
 def insert_knowledge_reference(app: Sphinx, docname: str, source: list[str]) -> None:

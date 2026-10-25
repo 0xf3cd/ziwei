@@ -1,0 +1,7 @@
+div.body {
+  overflow-wrap: anywhere;
+}
+
+div.body span.pre {
+  white-space: inherit;
+}

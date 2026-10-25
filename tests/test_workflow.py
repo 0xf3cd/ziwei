@@ -15,6 +15,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github/workflows/checks.yml"
 RELEASE = ROOT / ".github/workflows/release.yml"
+DOCS = ROOT / ".github/workflows/docs.yml"
 UV_VERSION = "0.12.5"
 VERSION = "0.1.0"
 SOURCE_CHECK = (
@@ -45,13 +46,37 @@ def documented_commands() -> tuple[str, ...]:
 
 
 def test_ci_runs_the_documented_locked_commands() -> None:
-  workflow = WORKFLOW.read_text(encoding="utf-8")
+  check_ci_policy(load_workflow(WORKFLOW.read_text(encoding="utf-8")))
+
+
+def check_execution_steps(job: dict[str, Any], expected: tuple[str, ...], label: str) -> None:
+  """按解析后的完整命令与动作顺序核必要步骤，不把注释中的字串算作执行。"""
+  steps = [(step.get("run", step.get("uses", "").split("@", 1)[0]), step) for step in job["steps"]]
+  critical = [(key, step) for key, step in steps if key in expected]
+  require(tuple(key for key, _ in critical) == expected, label)
+  require(all("if" not in step for _, step in critical), label + " must be unconditional")
+  require(all("continue-on-error" not in step for _, step in critical), label + " must fail closed")
+
+
+def check_ci_policy(data: dict[str, Any]) -> None:
   commands = documented_commands()
-  assert commands == ("uv sync --locked --python 3.14", "uv run --locked python tools/check.py")
-  assert "uv sync --locked --python ${{ matrix.python }}" in workflow
-  assert commands[1] in workflow
-  assert "uv sync --python" not in workflow
-  assert "uv run python" not in workflow
+  require(
+    commands == ("uv sync --locked --python 3.14", "uv run --locked python tools/check.py"),
+    "Documented locked commands",
+  )
+  job = data["jobs"]["quality"]
+  require("if" not in job and "continue-on-error" not in job, "Quality job must run")
+  check_execution_steps(
+    job,
+    (
+      "actions/checkout",
+      "actions/setup-python",
+      "astral-sh/setup-uv",
+      commands[0].replace("3.14", "${{ matrix.python }}"),
+      commands[1],
+    ),
+    "Quality execution chain",
+  )
 
 
 def check_action_pins(workflow: str) -> None:
@@ -148,6 +173,19 @@ def check_release_policy(data: dict[str, Any]) -> None:
     "Consume Python follows matrix",
   )
   require("if" not in jobs["build"], "Identity validation must run rather than silently skip")
+  require("if" not in jobs["consume"], "Consumption must not be skipped")
+  check_execution_steps(
+    jobs["consume"],
+    (
+      "actions/checkout",
+      "actions/setup-python",
+      "astral-sh/setup-uv",
+      "actions/download-artifact",
+      'uv sync --locked --python "$PYTHON_VERSION"',
+      "uv run --locked python tools/release.py consume",
+    ),
+    "Consumption execution chain",
+  )
   sync = next(
     step
     for step in jobs["consume"]["steps"]
@@ -246,22 +284,313 @@ def check_release_policy(data: dict[str, Any]) -> None:
       },
       "Fixed upload target and no skip-existing",
     )
-  require(
-    [step["run"] for step in jobs["build"]["steps"] if "run" in step]
-    == [
+  check_execution_steps(
+    jobs["build"],
+    (
+      "actions/checkout",
+      "actions/setup-python",
+      "astral-sh/setup-uv",
       "uv sync --locked --python 3.14",
       SOURCE_CHECK,
       "uv run --locked python tools/release.py validate",
       "uv run --locked python tools/check.py --artifacts-dir dist",
       SOURCE_CHECK,
       "uv run --locked python tools/release.py prepare",
-    ],
+      "actions/upload-artifact",
+    ),
     "Full build gate before retaining outputs",
+  )
+  require(
+    jobs["consume"]["env"]
+    == {
+      "RELEASE_VERSION": "${{ needs.build.outputs.version }}",
+      "RELEASE_SHA": "${{ needs.build.outputs.source_sha }}",
+      "SDIST_SHA256": "${{ needs.build.outputs.sdist_sha256 }}",
+      "WHEEL_SHA256": "${{ needs.build.outputs.wheel_sha256 }}",
+      "PYTHON_VERSION": "${{ matrix.python }}",
+    },
+    "Consumption receives independent build outputs",
+  )
+  require(
+    jobs["publish-pypi"]["steps"][1]["env"]
+    == {
+      "DIST_DIR": "dist",
+      "RELEASE_VERSION": "${{ needs.build.outputs.version }}",
+      "SDIST_NAME": "${{ needs.build.outputs.sdist_name }}",
+      "WHEEL_NAME": "${{ needs.build.outputs.wheel_name }}",
+      "SDIST_SHA256": "${{ needs.build.outputs.sdist_sha256 }}",
+      "WHEEL_SHA256": "${{ needs.build.outputs.wheel_sha256 }}",
+    },
+    "Byte verification receives independent build outputs",
   )
 
 
 def test_release_workflow_obeys_the_publication_contract() -> None:
   check_release_policy(load_workflow(RELEASE.read_text()))
+
+
+@pytest.mark.parametrize(
+  "defect", ["replace", "delete", "skip", "duplicate", "reorder", "job-skip"]
+)
+def test_quality_policy_requires_executed_commands(defect: str) -> None:
+  good = load_workflow(WORKFLOW.read_text())
+  check_ci_policy(good)
+  bad = deepcopy(good)
+  job = bad["jobs"]["quality"]
+  steps = job["steps"]
+  index = next(i for i, step in enumerate(steps) if step.get("run") == documented_commands()[1])
+  match defect:
+    case "replace":
+      steps[index]["run"] = "true"
+    case "delete":
+      steps.pop(index)
+    case "skip":
+      steps[index]["if"] = "false"
+    case "duplicate":
+      steps.append(deepcopy(steps[index]))
+    case "reorder":
+      steps[index - 1], steps[index] = steps[index], steps[index - 1]
+    case "job-skip":
+      job["if"] = "false"
+  with pytest.raises(ValueError, match="Quality"):
+    check_ci_policy(bad)
+
+
+def test_quality_command_in_comment_does_not_execute() -> None:
+  command = documented_commands()[1]
+  original = WORKFLOW.read_text()
+  check_ci_policy(load_workflow(original))
+  assert original.count(command) == 1
+  commented = original.replace(command, "true # " + command)
+  with pytest.raises(ValueError, match="Quality execution chain"):
+    check_ci_policy(load_workflow(commented))
+
+
+@pytest.mark.parametrize(
+  "defect",
+  [
+    "consume-replace",
+    "consume-delete",
+    "consume-if",
+    "consume-job-if",
+    "consume-duplicate",
+    "consume-order",
+    "consume-env",
+    "build-check-if",
+    "build-prepare-if",
+    "build-action-duplicate",
+    "build-action-order",
+    "publish-env",
+  ],
+)
+def test_release_execution_chain_rejects_skipped_or_rebound_steps(defect: str) -> None:
+  good = load_workflow(RELEASE.read_text())
+  check_release_policy(good)
+  bad = deepcopy(good)
+  consume = bad["jobs"]["consume"]
+  steps = consume["steps"]
+  index = next(
+    i
+    for i, step in enumerate(steps)
+    if step.get("run") == "uv run --locked python tools/release.py consume"
+  )
+  build = bad["jobs"]["build"]["steps"]
+  match defect:
+    case "consume-replace":
+      steps[index]["run"] = "true"
+    case "consume-delete":
+      steps.pop(index)
+    case "consume-if":
+      steps[index]["if"] = "false"
+    case "consume-job-if":
+      consume["if"] = "false"
+    case "consume-duplicate":
+      steps.append(deepcopy(steps[index]))
+    case "consume-order":
+      steps[index - 1], steps[index] = steps[index], steps[index - 1]
+    case "consume-env":
+      consume["env"]["RELEASE_SHA"] = "${{ github.sha }}"
+    case "build-check-if":
+      next(
+        step
+        for step in build
+        if step.get("run") == "uv run --locked python tools/check.py --artifacts-dir dist"
+      )["if"] = "false"
+    case "build-prepare-if":
+      next(
+        step
+        for step in build
+        if step.get("run") == "uv run --locked python tools/release.py prepare"
+      )["if"] = "false"
+    case "build-action-duplicate":
+      build.insert(1, deepcopy(build[0]))
+    case "build-action-order":
+      build[0], build[1] = build[1], build[0]
+    case "publish-env":
+      bad["jobs"]["publish-pypi"]["steps"][1]["env"]["WHEEL_SHA256"] = "0" * 64
+  with pytest.raises(
+    ValueError,
+    match=r"execution chain|must not be skipped|Full build gate|independent build outputs",
+  ):
+    check_release_policy(bad)
+
+
+def check_pages_policy(data: dict[str, Any]) -> None:
+  require(set(data["on"]) == {"push", "workflow_dispatch"}, "Pages main push or dispatch only")
+  require(data["on"]["push"] == {"branches": ["main"]}, "Pages main push only")
+  require(data["on"]["workflow_dispatch"] in ("", {}), "Pages dispatch has no ref inputs")
+  require(data["permissions"] == {}, "Pages has no workflow-level permissions")
+  require(
+    data["concurrency"] == {"group": "ziwei-pages", "cancel-in-progress": "false"},
+    "Pages deployments serialize separately from package publishing",
+  )
+  jobs = data["jobs"]
+  require(set(jobs) == {"build", "deploy"}, "Pages has one build and one deployment")
+  for name, job in jobs.items():
+    require(job.get("if") == "github.ref == 'refs/heads/main'", "Pages main ref guard")
+    require(job["runs-on"] == "ubuntu-latest", "Pages uses Linux")
+    require("continue-on-error" not in job, "Pages jobs fail closed")
+    require("env" not in job, "No Pages job-level input rebinding")
+    for step in job["steps"]:
+      require("if" not in step and "continue-on-error" not in step, "Pages steps unconditional")
+      if "uses" in step:
+        require(
+          re.fullmatch(r"[\w-]+/[\w-]+@[0-9a-f]{40}", step["uses"]),
+          "Pages action uses a full commit SHA",
+        )
+    require(
+      job["permissions"]
+      == ({"contents": "read"} if name == "build" else {"pages": "write", "id-token": "write"}),
+      "Pages least-privilege job permissions",
+    )
+  build = jobs["build"]
+  require("needs" not in build and "environment" not in build, "Pages build has no deployment")
+  expected = (
+    "actions/checkout",
+    "actions/setup-python",
+    "astral-sh/setup-uv",
+    "uv sync --locked --python 3.14",
+    "uv run --locked python tools/check.py --docs-dir site",
+    "actions/upload-pages-artifact",
+  )
+  check_execution_steps(build, expected, "Pages build execution chain")
+  require(
+    tuple(step.get("run", step.get("uses", "").split("@", 1)[0]) for step in build["steps"])
+    == expected,
+    "Pages build executes only the checked document pipeline",
+  )
+  steps = build["steps"]
+  require(
+    steps[0]["with"] == {"ref": "${{ github.sha }}", "persist-credentials": "false"},
+    "Pages checks out the event source SHA without stored credentials",
+  )
+  require(steps[1]["with"] == {"python-version": "3.14"}, "Pages pinned Python")
+  require(
+    steps[2]["with"]
+    == {
+      "version": UV_VERSION,
+      "checksum": uv_archive_checksums()["ubuntu-latest"],
+      "enable-cache": "false",
+    },
+    "Pages locked uv version and checksum",
+  )
+  require(
+    steps[4].get("env") == {"SCRATCH": "${{ runner.temp }}"}, "Pages document scratch boundary"
+  )
+  require(
+    steps[5]["with"] == {"name": "github-pages", "path": "site/html", "retention-days": "1"},
+    "Pages uploads only checked HTML under the fixed artifact name",
+  )
+  deploy = jobs["deploy"]
+  require(deploy.get("needs") == "build", "Pages deployment needs the successful build")
+  require(
+    deploy["environment"]
+    == {"name": "github-pages", "url": "${{ steps.deployment.outputs.page_url }}"},
+    "Pages deployment environment and URL binding",
+  )
+  require(
+    len(deploy["steps"]) == 1
+    and deploy["steps"][0].get("uses", "").startswith("actions/deploy-pages@")
+    and deploy["steps"][0].get("id") == "deployment"
+    and deploy["steps"][0].get("with") == {"artifact_name": "github-pages"}
+    and "run" not in deploy["steps"][0],
+    "Pages deployment only consumes its current-run static artifact",
+  )
+
+
+def test_documentation_workflow_has_a_read_only_build_and_isolated_deployment() -> None:
+  check_pages_policy(load_workflow(DOCS.read_text()))
+
+
+@pytest.mark.parametrize(
+  "defect",
+  [
+    "pull-request",
+    "pull-request-target",
+    "dispatch-ref",
+    "push-branch",
+    "build-ref",
+    "deploy-ref",
+    "dependency",
+    "build-permission",
+    "deploy-permission",
+    "environment",
+    "url",
+    "upload-root",
+    "artifact-name",
+    "floating-action",
+    "skip-build",
+    "replace-build",
+    "unchecked-mutation",
+    "deploy-code",
+    "checkout-ref",
+  ],
+)
+def test_pages_policy_rejects_a_single_boundary_defect(defect: str) -> None:
+  good = load_workflow(DOCS.read_text())
+  check_pages_policy(good)
+  bad = deepcopy(good)
+  build = bad["jobs"]["build"]
+  deploy = bad["jobs"]["deploy"]
+  match defect:
+    case "pull-request" | "pull-request-target":
+      bad["on"][defect.replace("-", "_")] = {}
+    case "dispatch-ref":
+      bad["on"]["workflow_dispatch"] = {"inputs": {"ref": {"type": "string"}}}
+    case "push-branch":
+      bad["on"]["push"]["branches"] = ["*"]
+    case "build-ref":
+      build.pop("if")
+    case "deploy-ref":
+      deploy["if"] = "always()"
+    case "dependency":
+      deploy.pop("needs")
+    case "build-permission":
+      build["permissions"]["pages"] = "write"
+    case "deploy-permission":
+      deploy["permissions"]["contents"] = "write"
+    case "environment":
+      deploy["environment"]["name"] = "pypi"
+    case "url":
+      deploy["environment"]["url"] = "https://example.org"
+    case "upload-root":
+      build["steps"][-1]["with"]["path"] = "."
+    case "artifact-name":
+      deploy["steps"][0]["with"]["artifact_name"] = "unchecked"
+    case "floating-action":
+      deploy["steps"][0]["uses"] = "actions/deploy-pages@v5"
+    case "skip-build":
+      build["steps"][4]["if"] = "false"
+    case "replace-build":
+      build["steps"][4]["run"] = "true"
+    case "unchecked-mutation":
+      build["steps"].insert(-1, {"run": "touch site/html/unchecked.html"})
+    case "deploy-code":
+      deploy["steps"].append({"run": "uv run python tools/check.py"})
+    case "checkout-ref":
+      build["steps"][0]["with"]["ref"] = "${{ github.event.inputs.ref }}"
+  with pytest.raises(ValueError, match="Pages"):
+    check_pages_policy(bad)
 
 
 @pytest.mark.parametrize(

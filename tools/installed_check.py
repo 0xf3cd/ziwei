@@ -123,11 +123,12 @@ def check_sihua_decades() -> None:
 def check_calendar() -> None:
   """消费已安装包的历法适配与安星基础；会加载 celestial 原生库，须在隔离检查之后。"""
   from ziwei.bureau import WuxingJu, bureau_of
-  from ziwei.calendar import celestial_version
+  from ziwei.calendar import celestial_version, supported_lunar_year_range
   from ziwei.palaces import effective_month, minggong_dizhi, palace_ganzhi
   from ziwei.resolver import resolve
 
-  if f"celestial-calendar=={celestial_version()}" not in (distribution("ziwei").requires or ()):
+  installed_version = celestial_version()
+  if f"celestial-calendar=={installed_version}" not in (distribution("ziwei").requires or ()):
     raise ValueError("Installed celestial-calendar version differs from the declared pin")
   record = GregorianBirthRecord(
     birth_date=date(1988, 7, 1),
@@ -141,11 +142,19 @@ def check_calendar() -> None:
     day_rollover=DayRollover.晚子时归次日,
     year_boundary=YearBoundary.农历正月初一,
   )
-  value = resolve(record, choices)
+  algorithm = LunarAlgorithm.混合
+  value = resolve(record, choices, algorithm)
   if (value.lunar_year, value.month, value.day) != (1988, 5, 18):
     raise ValueError("Installed resolver produced a wrong lunar date")
   if str(value.year_ganzhi) != "戊辰":
     raise ValueError("Installed resolver produced a wrong ganzhi year")
+  supported_range = supported_lunar_year_range(algorithm)
+  if (
+    value.lunar_algorithm is not algorithm
+    or value.lunar_algorithm_version != installed_version
+    or value.supported_lunar_year_range != supported_range
+  ):
+    raise ValueError("Installed calendar provenance differs from algorithm, version or range")
   effective = effective_month(
     value.month, value.day, value.is_leap_month, choices.leap_month_policy
   )
@@ -163,6 +172,10 @@ def check_calendar() -> None:
     Direction.顺行,
   ):
     raise ValueError("Installed decade composition differs")
+  print(
+    f"Installed calendar: {algorithm.name}, celestial {installed_version}, "
+    f"lunar years {supported_range[0]}-{supported_range[1]}"
+  )
 
 
 def main(expected_version: str) -> None:

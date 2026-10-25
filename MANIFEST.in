@@ -1,6 +1,6 @@
 include AGENTS.md uv.lock
 recursive-include .github/workflows *.yml *.yaml
-recursive-include docs *.md *.py *.inv
+recursive-include docs *.md *.py *.inv *.css
 recursive-include tests *.py
 recursive-include tools *.py
 prune .review

@@ -64,11 +64,12 @@ def check_documents(root: Path = ROOT) -> None:
 
 
 def check_examples(report: str) -> None:
-  """要求贡献指南有已执行的例子。"""
-  marker = "Document: docs/contributing\n"
-  section = re.split(r"(?m)^Document: ", report.partition(marker)[2], maxsplit=1)[0]
-  if not re.search(r"(?m)^[1-9]\d* tests? in \d+ items?\.$", section):
-    raise ValueError("No executed documentation examples in docs/contributing")
+  """要求项目入口、完整盘指南和贡献指南各有已执行的例子。"""
+  for document in ("README", "docs/chart", "docs/contributing"):
+    marker = f"Document: {document}\n"
+    section = re.split(r"(?m)^Document: ", report.partition(marker)[2], maxsplit=1)[0]
+    if not re.search(r"(?m)^[1-9]\d* tests? in \d+ items?\.$", section):
+      raise ValueError(f"No executed documentation examples in {document}")
 
 
 class ApiTargets(HTMLParser):
@@ -157,6 +158,7 @@ def check_distribution(directory: Path, *, artifacts_dir: Path | None = None) ->
 
 def sphinx_report(directory: Path) -> str:
   """严格构建 HTML 与 doctest，返回 doctest 报告。"""
+  directory = directory.resolve()
   for builder in ("html", "doctest"):
     run(
       (
@@ -168,6 +170,8 @@ def sphinx_report(directory: Path) -> str:
         "-n",
         "-W",
         "--keep-going",
+        "-d",
+        str(directory / ".doctrees" / builder),
         "-b",
         builder,
         "-c",
@@ -180,8 +184,34 @@ def sphinx_report(directory: Path) -> str:
   return (directory / "doctest/output.txt").read_text(encoding="utf-8")
 
 
-def main(*, artifacts_dir: Path | None = None) -> None:
-  """运行全部检查，失败即停止。"""
+def check_documentation(directory: Path) -> None:
+  """在不存在或为空的目录中构建并核验站点，不删除已有内容。"""
+  if directory.exists() and (not directory.is_dir() or any(directory.iterdir())):
+    raise ValueError(f"Documentation output must be an empty directory or not exist: {directory}")
+  check_documents(ROOT)
+  check_examples(sphinx_report(directory))
+  html = directory / "html"
+  check_api_reference(html, ROOT)
+  check_knowledge_reference(html)
+  if not (html / "docs/index.html").is_file():
+    raise ValueError("Missing documentation entry point: docs/index.html")
+  (html / "index.html").write_text(
+    '<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n'
+    '<meta http-equiv="refresh" content="0; url=docs/index.html">\n'
+    "<title>ziwei</title>\n</head>\n<body>\n"
+    '<a href="docs/index.html">文档入口</a>\n</body>\n</html>\n',
+    encoding="utf-8",
+  )
+
+
+def main(*, artifacts_dir: Path | None = None, docs_dir: Path | None = None) -> None:
+  """运行全部检查，或只构建并核验文档；失败即停止。"""
+  if docs_dir is not None:
+    if artifacts_dir is not None:
+      raise ValueError("docs_dir and artifacts_dir are mutually exclusive")
+    check_documentation(docs_dir.resolve())
+    print("Documentation checks passed.")
+    return
   commands = (
     ("-m", "ruff", "check", "."),
     ("-m", "ruff", "format", "--check", "."),
@@ -198,14 +228,11 @@ def main(*, artifacts_dir: Path | None = None) -> None:
   )
   for arguments in commands:
     run((sys.executable, *arguments), cwd=ROOT)
-  check_documents()
   with tempfile.TemporaryDirectory(
     prefix="ziwei-check-", dir=os.environ.get("SCRATCH")
   ) as temporary:
     directory = Path(temporary)
-    check_examples(sphinx_report(directory))
-    check_api_reference(directory / "html")
-    check_knowledge_reference(directory / "html")
+    check_documentation(directory)
     check_distribution(directory, artifacts_dir=artifacts_dir)
   print("All checks passed.")
 
@@ -214,9 +241,16 @@ if __name__ == "__main__":
   import argparse
 
   parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument(
+  outputs = parser.add_mutually_exclusive_group()
+  outputs.add_argument(
     "--artifacts-dir",
     type=Path,
     help="把已核sdist、wheel与SHA256SUMS保存到此目录；目录须不存在或为空",
   )
-  main(artifacts_dir=parser.parse_args().artifacts_dir)
+  outputs.add_argument(
+    "--docs-dir",
+    type=Path,
+    help="仅构建并核验文档，输出html与doctest子目录；目录须不存在或为空，不自动清理",
+  )
+  arguments = parser.parse_args()
+  main(artifacts_dir=arguments.artifacts_dir, docs_dir=arguments.docs_dir)

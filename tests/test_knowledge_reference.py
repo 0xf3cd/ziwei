@@ -205,6 +205,7 @@ def test_multiline_quote_survives_the_real_sphinx_pipeline(tmp_path: Path, quote
   (source / "docs").mkdir(parents=True)
   for name in ("conf.py", "python-stdlib.inv"):
     shutil.copyfile(root / "docs" / name, source / "docs" / name)
+  shutil.copytree(root / "docs/_static", source / "docs/_static")
   (source / "docs/index.md").write_text(
     "# 入口\n\n```{toctree}\nknowledge-reference\n```\n", encoding="utf-8"
   )
