@@ -125,6 +125,90 @@ def test_command_failure_propagates(tmp_path: Path) -> None:
   assert caught.value.returncode == 7
 
 
+@pytest.fixture
+def sphinx_source(tmp_path: Path) -> Path:
+  """隔离文档只提供输入；命令、严格参数和失败传播仍来自生产入口。"""
+  source = tmp_path / "source"
+  (source / "docs").mkdir(parents=True)
+  (source / "docs/conf.py").write_text(
+    'extensions = ["sphinx.ext.doctest"]\nmaster_doc = "index"\n', encoding="utf-8"
+  )
+  (source / "index.rst").write_text(
+    "Production fixture\n==================\n\nproduction-fixture-marker\n\n"
+    ".. doctest::\n\n   >>> 2 + 2\n   4\n",
+    encoding="utf-8",
+  )
+  return source
+
+
+def test_real_sphinx_entry_builds_both_outputs(
+  sphinx_source: Path,
+  tmp_path: Path,
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  monkeypatch.setattr(check, "ROOT", sphinx_source)
+  output = tmp_path / "output"
+  report = check.sphinx_report(output)
+  assert "production-fixture-marker" in (output / "html/index.html").read_text(encoding="utf-8")
+  assert report == (output / "doctest/output.txt").read_text(encoding="utf-8")
+  assert "Document: index" in report and "1 test" in report
+  assert "0 failures in tests" in report
+
+
+@pytest.mark.parametrize(
+  "fault, builder",
+  [
+    ("directive-warning", "html"),
+    ("reference-warning", "html"),
+    ("doctest-warning", "doctest"),
+    ("doctest-failure", "doctest"),
+  ],
+)
+def test_real_sphinx_entry_propagates_builder_failure(
+  sphinx_source: Path,
+  tmp_path: Path,
+  monkeypatch: pytest.MonkeyPatch,
+  fault: str,
+  builder: str,
+) -> None:
+  page = sphinx_source / "index.rst"
+  text = page.read_text(encoding="utf-8")
+  if fault == "directive-warning":
+    text += "\n.. unknown-production-directive::\n"
+  elif fault == "reference-warning":
+    text += "\n:py:class:`unknown_production_module.MissingType`\n"
+  elif fault == "doctest-failure":
+    text = text.replace("   4\n", "   5\n")
+  else:
+    config = sphinx_source / "docs/conf.py"
+    config.write_text(
+      config.read_text(encoding="utf-8")
+      + """
+from sphinx.util import logging
+def warn_doctest(app):
+  if app.builder.name == "doctest":
+    logging.getLogger(__name__).warning("doctest-only-warning")
+def setup(app):
+  app.connect("builder-inited", warn_doctest)
+""",
+      encoding="utf-8",
+    )
+  page.write_text(text, encoding="utf-8")
+  monkeypatch.setattr(check, "ROOT", sphinx_source)
+  output = tmp_path / "output"
+  with pytest.raises(subprocess.CalledProcessError) as caught:
+    check.sphinx_report(output)
+  assert caught.value.returncode == 1
+  command = caught.value.cmd
+  assert command[command.index("-b") + 1] == builder
+  if builder == "doctest":
+    assert (output / "html/index.html").is_file()
+    if fault == "doctest-failure":
+      assert "1 failure" in (output / "doctest/output.txt").read_text(encoding="utf-8")
+  else:
+    assert not (output / "doctest").exists()
+
+
 @pytest.mark.parametrize(
   "report",
   [

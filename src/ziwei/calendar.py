@@ -11,10 +11,10 @@ celestial 的节气时刻是 UT1，民用输入是 UTC 或固定偏移；本模�
 - 立春比较：出生瞬间换算到 UT1 日数（`utc_to_ut1_jd`），与立春 UT1 时刻
   （`lichun_jd`）直接比较，不直接比较钟面数值。
 - 换算采用 celestial 的 modelled-UT1 定义：TT=UTC+(ΔAT+32.184s)，UT1=TT-ΔT；
-  ΔAT 取 1972 年起闰秒表（最后一步 2017-01-01 后恒 37s，与 celestial 的 leap_second
-  表一致），ΔT 取 `delta_t` 的 DEFAULT 模型（ALGO5），在 TT 处估一次。该定义已与
-  `chart_snapshot` 返回的 `jd_ut1` 在 1972-2099 网格对拍（亚毫秒级一致）。
-- 1972 年以前的 UTC 时刻由解析层拒绝；本模块只在解析层已取得 UTC 瞬间时被调用。
+   ΔAT 取1972年起的内置闰秒表，2017-01-01起沿用最后已知的37秒，不预测未来闰秒；
+   ΔT 取 `delta_t` 的 DEFAULT 模型（ALGO5），在 TT 处估一次。
+   八个1972至2099年的选定时刻与`chart_snapshot`作模型对照，不保证区间内所有时刻的精度。
+- UTC转UT1与民用时刻解析均拒绝1972年以前的UTC瞬间；无需瞬间的纯民用排盘不受此下界限制。
 
 ## 真太阳时
 
@@ -27,6 +27,8 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 from typing import Any, Final
+
+from ziwei.timezone import _require_modern_utc
 
 
 class LunarAlgorithm(StrEnum):
@@ -46,9 +48,6 @@ _ALGORITHM_RANGE: Final[dict[LunarAlgorithm, tuple[int, int]]] = {
   LunarAlgorithm.ALGO3: (1600, 2199),
 }
 """三种算法的农历年范围；与 celestial 的 supported_lunar_year_range 一致。"""
-
-_DELTA_T_MODEL = "DEFAULT(ALGO5)"
-"""立春比较固定使用的 ΔT 模型；与 celestial 的 jieqi_moment UT1 换算一致。"""
 
 
 def celestial_version() -> str:
@@ -87,8 +86,8 @@ def _native_algorithm(algorithm: LunarAlgorithm, celestial: Any) -> Any:
 def gregorian_to_lunar(algorithm: LunarAlgorithm, day: date) -> tuple[int, int, int, bool]:
   """公历日期标签换农历年月日与闰月标志。
 
-  换算以传入的当地民用日标签为基准：民用路径传 `BirthRecord.birth_date`，真太阳时
-  路径由解析层传真太阳钟的民用日（见 resolver）。超出算法支持范围或日期不可表示时
+  解析层先选民用钟或真太阳钟的日期，再应用子时换日，传入最终取用的日期标签。
+  超出算法支持范围或日期不可表示时
   抛ValueError；年历查询或原生转换的内部故障原样传播。
   """
   _check_algorithm(algorithm)
@@ -157,8 +156,8 @@ def validate_lunar_date(
     raise ValueError(f"{label}没有第{day}日")
 
 
-#: 闰秒表（TAI-UTC，秒），1972-01-01 起；2017-01-01 后恒为 37 秒。
-#: 与 celestial-calendar 的 leap_second 表一致（IERS 闰秒数据，公开资料）。
+#: TAI-UTC生效日与秒数，1972首行是基线；晚于最后一行时沿用最后已知偏移。
+#: IERS历史数据：https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat
 _LEAP_SECOND_TABLE: Final[tuple[tuple[date, int], ...]] = (
   (date(1972, 1, 1), 10),
   (date(1972, 7, 1), 11),
@@ -192,7 +191,7 @@ _LEAP_SECOND_TABLE: Final[tuple[tuple[date, int], ...]] = (
 
 
 def _delta_at(day: date) -> int:
-  """UTC 民用日的闰秒数；2017-01-01 后恒为 37。"""
+  """1972年起UTC日期的TAI-UTC秒数；调用方负责下界，未来沿用最后已知偏移。"""
   value = 37
   for boundary, leap in _LEAP_SECOND_TABLE:
     if day < boundary:
@@ -253,12 +252,12 @@ def utc_to_ut1_jd(utc: datetime) -> float:
   """把 UTC 瞬间按 modelled-UT1 定义换算到 UT1 日数。
 
   TT=UTC+(ΔAT+32.184s)，UT1=TT-ΔT；ΔT 在 TT 处估一次，固定 DEFAULT(ALGO5)。
-  该值与 celestial 的 chart_snapshot(jd_ut1) 在 1972-2099 网格上一致（亚毫秒级）。
+  只支持1972年起的瞬间；内置表末行之后沿用最后已知偏移，不预测未来闰秒。
+  Python datetime不能表达23:59:60，本函数不接受闰秒本秒。
   """
   _check_utc(utc)
   utc_utc = utc.astimezone(UTC)
-  if utc_utc < datetime(1972, 1, 1, tzinfo=UTC):
-    raise ValueError("UTC 早于1972-01-01的时刻须另定时标合同")
+  _require_modern_utc(utc_utc)
   fraction = (
     utc_utc.hour * 3600 + utc_utc.minute * 60 + utc_utc.second + utc_utc.microsecond / 1e6
   ) / 86400.0
@@ -271,7 +270,7 @@ def utc_to_ut1_jd(utc: datetime) -> float:
 
 
 def lichun_jd(year: int) -> float:
-  """农历（干支）年 year 的立春 UT1 时刻（UT1 日数）。
+  """公历年year内的立春UT1时刻（UT1日数）。
 
   jieqi_moment 返回的立春时刻为 UT1；返回日数可直接与 utc_to_ut1_jd 比较。
   立春在某公历年内，出生瞬间 ≥ 该年立春即归该干支年。

@@ -2,7 +2,7 @@
 
 [项目入口](../README.md) · [API 参考](api.md) · [计算边界](architecture.md)
 
-本页的出生资料与计算输入均为合成数据。记录类型保存输入、检查形状并消歧民用时刻；
+本页的出生资料与计算输入均为合成数据。记录类型保存输入、检查形状，`resolve_time()`显式消歧民用时刻；
 历法换算与子时换日由[解析层](resolver.md)执行，28星位置由[安星入口](stars.md)计算。
 
 ## 保存原始公历记录
@@ -70,8 +70,11 @@
 
 IANA 解析显式读取钉版 `tzdata` 包的资源，不查系统数据库，也不修改全局搜索路径。
 `moment.data` 记录实际包版本 `package_version` 与 IANA 发布版本 `iana_version`，两者不是同一个版本号；
-固定偏移结果的 `data` 为 `None`。未知标识抛 `ZoneInfoNotFoundError`，缺包抛 `ModuleNotFoundError`，不回落系统库。
-文件读取发生在 `resolve_time()` 或 `resolve_civil_time()` 调用时，导入包和构造原始记录不读时区文件。
+固定偏移结果的 `data` 为 `None`。指定key的资源加载对未知标识、缺少tzdata或无效时区文件统一抛
+`ZoneInfoNotFoundError`（`KeyError`子类，不是`ValueError`），消息区分成因并在`__cause__`保留原始异常；
+权限或不相关的内部故障原样传播，不回落系统库。直接调用`current_timezone_data()`只查询版本，缺包仍抛`ModuleNotFoundError`。
+`resolve_time()`、`resolve_civil_time()`和`IanaTimezone.require_resolvable()`会读取资源；
+解析层的已知钟点纯民用路径也调用资源校验，但不验证钟点存在性。导入包和构造原始记录不读时区文件。
 
 原始历史日期可以保存；民用时刻解析只支持 UTC 不早于 1972-01-01。
 时标转换、历法算法与版本记录随后续历法适配提供，不用现代 UTC 合同替代更早的历史时标。

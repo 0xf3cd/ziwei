@@ -3,7 +3,6 @@
 import re
 import subprocess
 import sys
-from collections.abc import Iterator
 from dataclasses import asdict, replace
 from importlib.metadata import distribution, version
 from pathlib import Path
@@ -24,13 +23,7 @@ from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
 
-
-@pytest.fixture(autouse=True)
-def _unload_celestial() -> Iterator[None]:
-  """测试后卸载 celestial_calendar，避免 check_calendar 污染后续隔离断言。"""
-  yield
-  for name in [name for name in sys.modules if name.startswith("celestial_calendar")]:
-    del sys.modules[name]
+pytestmark = pytest.mark.usefixtures("unload_celestial")
 
 
 @pytest.fixture

@@ -19,6 +19,7 @@ from ziwei.timezone import (
   NonexistentTimeError,
   ResolvedTime,
   TimezoneData,
+  current_timezone_data,
   resolve_civil_time,
 )
 
@@ -149,8 +150,43 @@ def test_package_data_wins_over_poisoned_system_data(tmp_path: Path) -> None:
 
 def test_missing_data_fails_without_system_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
   monkeypatch.setitem(sys.modules, "tzdata", None)
-  with pytest.raises(ModuleNotFoundError):
+  with pytest.raises(zoneinfo.ZoneInfoNotFoundError) as caught:
     resolve_civil_time(datetime(2000, 1, 1), IanaTimezone("Asia/Shanghai"))
+  assert isinstance(caught.value.__cause__, ModuleNotFoundError)
+
+
+def test_cached_resource_does_not_hide_missing_version_package(
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  resolve_civil_time(datetime(2000, 1, 1), IanaTimezone("Asia/Shanghai"))
+  assert "tzdata.zoneinfo" in sys.modules
+  monkeypatch.setitem(sys.modules, "tzdata", None)
+  with pytest.raises(ModuleNotFoundError):
+    current_timezone_data()
+  with pytest.raises(zoneinfo.ZoneInfoNotFoundError, match="缺少tzdata") as caught:
+    IanaTimezone("Asia/Shanghai").require_resolvable()
+  assert isinstance(caught.value.__cause__, ModuleNotFoundError)
+
+
+@pytest.mark.parametrize(
+  "error",
+  [
+    PermissionError("denied"),
+    RuntimeError("runtime"),
+    ModuleNotFoundError("unrelated", name="unrelated"),
+  ],
+)
+def test_unrelated_loading_faults_are_not_translated(
+  monkeypatch: pytest.MonkeyPatch,
+  error: Exception,
+) -> None:
+  def fail(package: str) -> None:
+    raise error
+
+  monkeypatch.setattr(implementation, "files", fail)
+  with pytest.raises(type(error)) as caught:
+    IanaTimezone("UTC").require_resolvable()
+  assert caught.value is error
 
 
 @pytest.mark.parametrize("key", ["Does/NotExist", "Asia", "leapseconds"])
@@ -160,22 +196,22 @@ def test_unknown_zone(key: str) -> None:
 
 
 @pytest.mark.parametrize(
-  "is_file, error",
-  [(False, zoneinfo.ZoneInfoNotFoundError), (True, PermissionError)],
+  "resource_error, error",
+  [(IsADirectoryError, zoneinfo.ZoneInfoNotFoundError), (PermissionError, PermissionError)],
   ids=["directory", "unreadable-file"],
 )
 def test_zone_resource_errors_are_distinct(
-  monkeypatch: pytest.MonkeyPatch, is_file: bool, error: type[Exception]
+  monkeypatch: pytest.MonkeyPatch, resource_error: type[OSError], error: type[Exception]
 ) -> None:
   class Resource:
     def joinpath(self, *parts: str) -> "Resource":
       return self
 
-    def is_file(self) -> bool:
-      return is_file
+    def is_dir(self) -> bool:
+      return resource_error is IsADirectoryError
 
     def open(self, mode: str) -> None:
-      raise PermissionError("资源不可作为时区文件打开")
+      raise resource_error("资源不可作为时区文件打开")
 
   monkeypatch.setattr(implementation, "files", lambda package: Resource())
   with pytest.raises(error):

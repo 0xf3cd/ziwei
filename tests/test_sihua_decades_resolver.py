@@ -1,7 +1,5 @@
 """真实解析到四化、大限的联动，年干与阴阳必须来自同一个年界选择。"""
 
-import sys
-from collections.abc import Iterator
 from dataclasses import replace
 from datetime import date, time, timedelta
 
@@ -16,12 +14,7 @@ from ziwei.sihua import SihuaVariant, shengnian_sihua
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import FixedOffset
 
-
-@pytest.fixture(autouse=True)
-def _unload_celestial() -> Iterator[None]:
-  yield
-  for name in [name for name in sys.modules if name.startswith("celestial_calendar")]:
-    del sys.modules[name]
+pytestmark = pytest.mark.usefixtures("unload_celestial")
 
 
 @pytest.fixture

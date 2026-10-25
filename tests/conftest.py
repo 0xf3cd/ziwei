@@ -1,5 +1,7 @@
 """整盘测试的合成输入，以及外部1954例的28星期望。"""
 
+import sys
+from collections.abc import Iterator
 from datetime import date, time
 
 import pytest
@@ -11,6 +13,15 @@ from ziwei.ganzhi import Dizhi
 from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star
 from ziwei.timezone import IanaTimezone
+
+
+@pytest.fixture
+def unload_celestial() -> Iterator[None]:
+  """仅供显式选用的历法消费模块在测试后清理原生包导入。"""
+  yield
+  for name in tuple(sys.modules):
+    if name.startswith("celestial_calendar"):
+      del sys.modules[name]
 
 
 @pytest.fixture

@@ -1,7 +1,5 @@
 """从真实解析路径到星位的联动；独立28星例不由本仓算法生成。"""
 
-import sys
-from collections.abc import Iterator
 from dataclasses import replace
 from datetime import date, time, timedelta
 
@@ -23,12 +21,7 @@ from ziwei.resolver import resolve
 from ziwei.stars import Star, StarPlacement, place_major_stars, place_stars
 from ziwei.timezone import FixedOffset
 
-
-@pytest.fixture(autouse=True)
-def _unload_celestial() -> Iterator[None]:
-  yield
-  for name in [name for name in sys.modules if name.startswith("celestial_calendar")]:
-    del sys.modules[name]
+pytestmark = pytest.mark.usefixtures("unload_celestial")
 
 
 @pytest.fixture

@@ -3,7 +3,7 @@
 ## 解析顺序
 
 1. 时刻：只有立春口径或真太阳时（有经度）才调用 `resolve_time()`；正月初一口径加无经度
-   纯民用路径不要求 UTC 不早于 1972。
+   纯民用路径只取钟面标签，不验证DST间隙或fold适用性，也不取得UTC瞬间。
 2. 时辰：民用路径取记录钟面；真太阳时路径取真太阳钟（`apparent_solar`）的钟面。
    时辰所附民用日：民用路径取出生地当地民用日（`record.birth_date`），真太阳时路径取
    真太阳钟的民用日。
@@ -18,6 +18,7 @@
 ## 失败边界
 
 - 农历输入选立春口径：显式失败（农历记录没有瞬间与时区，无法与立春 UT1 时刻同标比较）。
+- 农历记录给经度时无法计算真太阳钟；子时选晚子时归次日时无法区分早晚，均显式失败。
 - 1972 年前的公历记录需要瞬间（立春口径或真太阳时）时：显式失败（`resolve_time` 拒绝
   现代 UTC 合同之前的历史时刻）；正月初一口径加无经度路径不受影响。
 - 请求的农历算法不支持该日期、闰月/日组合不存在、时辰未知但需要瞬间（立春口径或
@@ -71,7 +72,7 @@ def _resolve_gregorian(
     anchor = date(solar_year, solar_month, solar_day)
     apparent = True
   else:
-    if isinstance(record.timezone, IanaTimezone):
+    if resolved is None and isinstance(record.timezone, IanaTimezone):
       record.timezone.require_resolvable()
     shichen = record.shichen
     late_zi = record.birth_time.hour == 23
