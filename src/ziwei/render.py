@@ -39,7 +39,7 @@ def render_text(chart: ZiweiChart) -> str:
       + str(palace.ganzhi)
       + (" 身宫" if palace.dizhi is chart.shengong else ""),
       *stars,
-      f"大限 {decade.start_age}-{decade.end_age}虚岁",
+      f"大限 {decade.start_age}-{decade.end_age}{decade.age_convention}",
     ]
   layout = (
     (Dizhi.巳, Dizhi.午, Dizhi.未, Dizhi.申),
@@ -50,7 +50,12 @@ def render_text(chart: ZiweiChart) -> str:
   width = max(_width(line) for lines in cells.values() for line in lines)
   border = "+" + "+".join("-" * (width + 2) for _ in range(4)) + "+"
   output = [
-    chart.bureau.value + " · 大限" + chart.decades[0].direction.value + " · 虚岁首尾包含",
+    chart.bureau.value
+    + " · 大限"
+    + chart.decades[0].direction.value
+    + " · "
+    + chart.decades[0].age_convention
+    + "首尾包含",
     border,
   ]
   for row in layout:

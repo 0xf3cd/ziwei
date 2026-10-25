@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from ziwei import ganzhi
 from ziwei.ganzhi import JIAZI, YEAR_GANZHI, Dizhi, Ganzhi, Tiangan, Yinyang, year_ganzhi
 
 # 中央气象署《天文日曆2024》印刷第6页（PDF第11页）的“干支順序表”。
@@ -72,6 +73,28 @@ GOLDEN = (
   "壬戌",
   "癸亥",
 )
+
+
+@pytest.mark.parametrize("stem, expected", tuple(zip(Tiangan, "丙戊庚壬甲丙戊庚壬甲", strict=True)))
+def test_wuhu_yin_for_every_year_stem(stem: Tiangan, expected: str) -> None:
+  # 《全书》固定修订1963110起五行寅例，按十干展开，不从执行表重建期望。
+  assert ganzhi.yin_stem(stem).value == expected
+
+
+def test_wuhu_pair_members_are_exhaustive_and_order_independent(
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  members = [stem for pair, _ in ganzhi.WUHU_YIN for stem in pair]
+  assert len(members) == len(Tiangan) and set(members) == set(Tiangan)
+  assert all(members.count(stem) == 1 for stem in Tiangan)
+  monkeypatch.setattr(ganzhi, "WUHU_YIN", tuple(reversed(ganzhi.WUHU_YIN)))
+  assert "".join(ganzhi.yin_stem(stem).value for stem in Tiangan) == "丙戊庚壬甲丙戊庚壬甲"
+
+
+def test_wuhu_missing_pair_fails_explicitly(monkeypatch: pytest.MonkeyPatch) -> None:
+  monkeypatch.setattr(ganzhi, "WUHU_YIN", ganzhi.WUHU_YIN[1:])
+  with pytest.raises(ValueError, match="五虎遁缺少年干：己"):
+    ganzhi.yin_stem(Tiangan.己)
 
 
 def test_independent_full_cycle() -> None:

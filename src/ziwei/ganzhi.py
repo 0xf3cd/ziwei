@@ -257,8 +257,7 @@ def nayin(ganzhi: Ganzhi) -> Wuxing:
 
 # 五虎遁：由生年天干定寅宫天干（甲己起丙寅、乙庚起戊寅、丙辛起庚寅、丁壬起壬寅、戊癸起甲寅）。
 # 出处：维基文库《紫微斗數全書/卷二》起五行寅例（修订1963110）；
-# 同口诀亦见《渊海子平》论起大运法所引年上起月例与王亭之中州派《紫微斗数初级讲义》安十二宫天干。
-# 天干序号按十天干序（甲=0……癸=9），以年干序号对五取余得合组，再定寅宫干。
+# 《渊海子平》论年上起月例、论起大运法与王亭之讲义安十二宫天干所列映射相同，口诀措辞不同。
 WUHU_YIN: Final[tuple[tuple[tuple[Tiangan, Tiangan], Tiangan], ...]] = (
   ((Tiangan.甲, Tiangan.己), Tiangan.丙),
   ((Tiangan.乙, Tiangan.庚), Tiangan.戊),
@@ -273,8 +272,10 @@ def yin_stem(year_tiangan: Tiangan) -> Tiangan:
   """按五虎遁查寅宫天干。"""
   if not isinstance(year_tiangan, Tiangan):
     raise TypeError("年干须为 Tiangan 成员")
-  index = tuple(Tiangan).index(year_tiangan)
-  return WUHU_YIN[index % 5][1]
+  for pair, stem in WUHU_YIN:
+    if year_tiangan in pair:
+      return stem
+  raise ValueError(f"五虎遁缺少年干：{year_tiangan.value}")
 
 
 def palace_stems(year_tiangan: Tiangan) -> tuple[Tiangan, ...]:

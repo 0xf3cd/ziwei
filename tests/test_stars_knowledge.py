@@ -42,6 +42,11 @@ def test_every_star_and_rule_is_queryable_without_birth() -> None:
   assert catalog.filter_entries(default_only=True) == ()
 
 
+def test_rule_meaning_does_not_include_configuration_defaults() -> None:
+  for rule in stars.STAR_RULES:
+    assert all("默认" not in text for text in (rule.definition, rule.scope, *rule.conditions))
+
+
 @pytest.mark.parametrize(
   "change,error_encoding",
   [("append", None), ("rename", None), ("missing-id", None), ("missing-id", "ascii")],

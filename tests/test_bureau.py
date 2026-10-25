@@ -27,6 +27,22 @@ def test_wuxingju_mapping_is_complete() -> None:
   assert {bureau_number(ju) for ju in WuxingJu} == {2, 3, 4, 5, 6}
 
 
+@pytest.mark.parametrize(
+  "text, name, number",
+  [
+    ("丙子", "水二局", 2),
+    ("戊辰", "木三局", 3),
+    ("甲子", "金四局", 4),
+    ("庚午", "土五局", 5),
+    ("丙寅", "火六局", 6),
+  ],
+)
+def test_bureau_name_element_and_number(text: str, name: str, number: int) -> None:
+  result = bureau_of(Ganzhi.from_str(text))
+  assert result.value == name and result.number == number
+  assert nayin(Ganzhi.from_str(text)).value == name[0]
+
+
 def test_nayin_elements_are_uniform() -> None:
   """纳音五行表两两一组，六十甲子都有且只属于一个五行。"""
   from ziwei.ganzhi import JIAZI, NAYIN_ELEMENT
