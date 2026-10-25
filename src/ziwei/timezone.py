@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, timezone
 from importlib.resources import files
+from struct import error as StructError
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
@@ -26,11 +27,8 @@ class IanaTimezone:
         raise ValueError("fold 只能为0或1")
 
   def require_resolvable(self) -> None:
-    """验证 IANA 标识在钉版 tzdata 中可解析为有效时区；与需瞬间路径同一边界。"""
-    try:
-      _load_zone(self.key)
-    except ZoneInfoNotFoundError as error:
-      raise ValueError(f"IANA 时区标识不存在或不是有效时区：{self.key}") from error
+    """核对钉版tzdata资源；不可用时抛ZoneInfoNotFoundError，不验证当地钟点。"""
+    _load_zone(self.key)
 
 
 def _check_offset(offset: timedelta) -> None:
@@ -79,6 +77,12 @@ def _check_wall(wall: datetime) -> None:
     raise ValueError("本地钟面不得自带时区或 fold；消歧选择放在 IanaTimezone")
 
 
+def _require_modern_utc(utc: datetime) -> None:
+  """限制已校验的UTC瞬间；不限制无需瞬间的原始出生记录。"""
+  if utc < datetime(1972, 1, 1, tzinfo=UTC):
+    raise ValueError("不支持早于1972-01-01的UTC瞬间")
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ResolvedTime:
   """消歧后的时刻，保留钟面、UTC、偏移、请求与实际 fold、数据来源。
@@ -100,8 +104,7 @@ class ResolvedTime:
       raise TypeError("UTC 时刻须为 datetime")
     if self.utc.tzinfo is not UTC or self.utc.fold != 0:
       raise ValueError("UTC 时刻须显式使用 timezone.utc")
-    if self.utc < datetime(1972, 1, 1, tzinfo=UTC):
-      raise ValueError("UTC 早于1972-01-01的时刻须另定时标合同")
+    _require_modern_utc(self.utc)
     _check_offset(self.offset)
     if type(self.fold) is not int or self.fold not in (0, 1):
       raise ValueError("实际 fold 须为0或1，不接受 bool")
@@ -128,21 +131,38 @@ class AmbiguousTimeError(ValueError):
 
 def _load_zone(key: str) -> tuple[ZoneInfo, TimezoneData]:
   try:
-    resource = files("tzdata.zoneinfo").joinpath(*key.split("/"))
-    if not resource.is_file():
-      raise ZoneInfoNotFoundError(key)
+    resource = files("tzdata.zoneinfo")
+    for part in key.split("/"):
+      if not resource.is_dir():
+        raise NotADirectoryError(key)
+      child = next((item for item in resource.iterdir() if item.name == part), None)
+      if child is None:
+        raise FileNotFoundError(key)
+      resource = child
+    if resource.is_dir():
+      raise IsADirectoryError(key)
     with resource.open("rb") as stream:
-      zone = ZoneInfo.from_file(stream, key=key)
-  except (FileNotFoundError, IsADirectoryError, ValueError) as error:
-    raise ZoneInfoNotFoundError(key) from error
-  return zone, current_timezone_data()
+      try:
+        zone = ZoneInfo.from_file(stream, key=key)
+      except (ValueError, EOFError, StructError) as error:
+        raise ZoneInfoNotFoundError(f"IANA 时区资源无效：{key}") from error
+    data = current_timezone_data()
+  except ModuleNotFoundError as error:
+    name = error.name or ""
+    if name != "tzdata" and not name.startswith("tzdata."):
+      raise
+    raise ZoneInfoNotFoundError(f"缺少tzdata数据包或时区子包：{key}") from error
+  except (FileNotFoundError, IsADirectoryError, NotADirectoryError) as error:
+    raise ZoneInfoNotFoundError(f"IANA 时区标识不存在或不是时区文件：{key}") from error
+  return zone, data
 
 
 def resolve_civil_time(wall: datetime, zone: IanaTimezone | FixedOffset) -> ResolvedTime:
   """解析无时区钟面，拒绝间隙；重叠须给 fold，普通时刻不能请求 fold=1。
 
   IANA 数据只从已安装的 tzdata 包读取，不查系统库、不修改全局 TZPATH。
-  资源读取只发生在此调用；固定偏移不读时区数据库。超出 datetime 范围显式失败。
+  本调用及require_resolvable会读取资源；固定偏移不读时区数据库。
+  资源不可用抛ZoneInfoNotFoundError并保留原因；超出datetime范围显式失败。
   """
   _check_wall(wall)
   if not isinstance(zone, IanaTimezone | FixedOffset):

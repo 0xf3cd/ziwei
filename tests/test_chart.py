@@ -1,7 +1,5 @@
 """独立原例、注明手推的合成例与组件联动分别验证。"""
 
-import sys
-from collections.abc import Iterator
 from dataclasses import FrozenInstanceError, replace
 from datetime import date, time, timedelta
 from importlib.util import find_spec
@@ -30,13 +28,42 @@ from ziwei.sihua import SihuaVariant, shengnian_sihua
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import FixedOffset, IanaTimezone
 
+pytestmark = pytest.mark.usefixtures("unload_celestial")
 
-@pytest.fixture(autouse=True)
-def _unload_celestial() -> Iterator[None]:
-  yield
-  for name in tuple(sys.modules):
-    if name.startswith("celestial_calendar"):
-      del sys.modules[name]
+
+@pytest.mark.parametrize("longitude, clock", [(None, time(23, 30)), (120.0, time(23, 40))])
+def test_full_chart_algorithm_end_and_rollover(
+  chart_choices: ChartConfig,
+  longitude: float | None,
+  clock: time,
+) -> None:
+  """完整盘入口覆盖ALGO3农历2199年末及顺延越界，不作独立天文参考。"""
+  record = GregorianBirthRecord(
+    birth_date=date(2200, 2, 14),
+    birth_time=clock,
+    time_precision=TimePrecision.分,
+    timezone=FixedOffset(timedelta(hours=8)),
+    gender=Gender.男,
+    longitude_deg=longitude,
+  )
+  same = create_chart(
+    record,
+    replace(chart_choices, day_rollover=DayRollover.早晚子时同日),
+    sihua_variant=SihuaVariant.排命盘口诀转录,
+    lunar_algorithm=LunarAlgorithm.混合,
+  )
+  value = same.calculation
+  assert (value.lunar_year, value.month, value.day, value.is_leap_month) == (2199, 12, 30, False)
+  assert value.shichen is Dizhi.子 and value.day_rolled is False
+  assert value.apparent_solar is (longitude is not None)
+  assert len(same.palaces) == 12 and len(same.stars) == 28
+  with pytest.raises(ValueError, match=r"2200-02-15.*混合支持范围"):
+    create_chart(
+      record,
+      replace(chart_choices, day_rollover=DayRollover.晚子时归次日),
+      sihua_variant=SihuaVariant.排命盘口诀转录,
+      lunar_algorithm=LunarAlgorithm.混合,
+    )
 
 
 def test_external_1954_full_chart(

@@ -1,11 +1,20 @@
 """解析层的测试：三口径、真太阳时、立春时标合同与失败边界。"""
 
+import subprocess
 import sys
-from collections.abc import Iterator
+from dataclasses import replace
 from datetime import date, time, timedelta
+from errno import ENAMETOOLONG
+from importlib.resources import files
+from importlib.resources.abc import Traversable
+from pathlib import Path
+from struct import error as StructError
+from struct import pack
+from zoneinfo import ZoneInfoNotFoundError
 
 import pytest
 
+from ziwei import timezone as timezone_module
 from ziwei.birth import (
   Gender,
   GregorianBirthRecord,
@@ -14,23 +23,280 @@ from ziwei.birth import (
 )
 from ziwei.calendar import (
   LunarAlgorithm,
+  lichun_jd,
   lunar_year_info,
   supported_lunar_year_range,
   utc_to_ut1_jd,
 )
+from ziwei.chart import create_chart
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.ganzhi import Dizhi, Ganzhi
 from ziwei.palaces import effective_month, minggong_dizhi
 from ziwei.resolver import resolve
-from ziwei.timezone import FixedOffset, IanaTimezone
+from ziwei.sihua import SihuaVariant
+from ziwei.timezone import AmbiguousTimeError, FixedOffset, IanaTimezone, NonexistentTimeError
+
+pytestmark = pytest.mark.usefixtures("unload_celestial")
 
 
-@pytest.fixture(autouse=True)
-def _unload_celestial() -> Iterator[None]:
-  """测试后卸载 celestial_calendar，避免污染安装隔离检查的同进程断言。"""
-  yield
-  for name in [name for name in sys.modules if name.startswith("celestial_calendar")]:
-    del sys.modules[name]
+def call_time_entry(entry: str, record: GregorianBirthRecord, choices: ChartConfig) -> None:
+  if entry == "civil":
+    record.resolve_time()
+  elif entry == "resolve":
+    resolve(record, choices)
+  elif entry == "chart":
+    create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)
+  else:
+    raise ValueError(entry)
+
+
+@pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])
+@pytest.mark.parametrize("year", list(YearBoundary))
+@pytest.mark.parametrize("longitude", [None, 120.0])
+@pytest.mark.parametrize("key", ["UTC/x", "Etc/UTC/x", "Asia/Shanghai/x"])
+def test_file_used_as_directory_is_unknown_timezone(
+  entry: str,
+  year: YearBoundary,
+  longitude: float | None,
+  key: str,
+) -> None:
+  record = gregorian(date(1988, 7, 1), time(12), IanaTimezone(key), longitude_deg=longitude)
+  with pytest.raises(ZoneInfoNotFoundError, match=key) as caught:
+    call_time_entry(entry, record, config(year=year))
+  assert type(caught.value) is ZoneInfoNotFoundError
+  # 文件被用作目录时，Windows可报告FileNotFoundError，POSIX通常报告NotADirectoryError。
+  assert isinstance(caught.value.__cause__, NotADirectoryError | FileNotFoundError)
+
+
+@pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])
+@pytest.mark.parametrize("year", list(YearBoundary))
+@pytest.mark.parametrize("longitude", [None, 120.0])
+@pytest.mark.parametrize(
+  "key",
+  [
+    pytest.param("A" * 300, id="long-component"),
+    pytest.param("Asia/" + "x" * 300, id="long-nested-component"),
+    pytest.param("Asia/" + "x/" * 300 + "Missing", id="long-total-path"),
+  ],
+)
+def test_long_timezone_key_keeps_resource_cause(
+  entry: str,
+  year: YearBoundary,
+  longitude: float | None,
+  key: str,
+) -> None:
+  record = gregorian(date(1988, 7, 1), time(12), IanaTimezone(key), longitude_deg=longitude)
+  with pytest.raises(ZoneInfoNotFoundError, match=key) as caught:
+    call_time_entry(entry, record, config(year=year))
+  cause = caught.value.__cause__
+  assert type(caught.value) is ZoneInfoNotFoundError
+  assert isinstance(cause, OSError)
+  assert cause.errno == ENAMETOOLONG or isinstance(cause, FileNotFoundError)
+
+
+@pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])
+@pytest.mark.parametrize("year", list(YearBoundary))
+@pytest.mark.parametrize("longitude", [None, 120.0])
+def test_missing_timezone_subpackage_keeps_import_cause(
+  entry: str,
+  year: YearBoundary,
+  longitude: float | None,
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  assert timezone_module.current_timezone_data().package_version
+  monkeypatch.setitem(sys.modules, "tzdata.zoneinfo", None)
+  record = gregorian(date(1988, 7, 1), time(12), longitude_deg=longitude)
+  with pytest.raises(ZoneInfoNotFoundError, match=r"缺少tzdata.*Asia/Shanghai") as caught:
+    call_time_entry(entry, record, config(year=year))
+  cause = caught.value.__cause__
+  assert type(caught.value) is ZoneInfoNotFoundError
+  assert isinstance(cause, ModuleNotFoundError) and cause.name == "tzdata.zoneinfo"
+
+
+@pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])
+@pytest.mark.parametrize("year", list(YearBoundary))
+@pytest.mark.parametrize("longitude", [None, 120.0])
+@pytest.mark.parametrize("fault", ["unknown-key", "invalid-tzif", "truncated-tzif"])
+def test_resource_failures_share_type_and_keep_cause(
+  entry: str,
+  year: YearBoundary,
+  longitude: float | None,
+  fault: str,
+  tmp_path: Path,
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  key = "No/Such_Zone" if fault == "unknown-key" else "Asia/Shanghai"
+  if fault != "unknown-key":
+    resource = tmp_path / "Asia/Shanghai"
+    resource.parent.mkdir()
+    resource.write_bytes(
+      b"invalid"
+      if fault == "invalid-tzif"
+      else b"TZif\0" + bytes(15) + pack(">6l", 0, 0, 0, 0, 1, 4)
+    )
+    monkeypatch.setattr(timezone_module, "files", lambda package: tmp_path)
+  record = gregorian(date(1988, 7, 1), time(12), IanaTimezone(key), longitude_deg=longitude)
+  with pytest.raises(ZoneInfoNotFoundError, match=key) as caught:
+    call_time_entry(entry, record, config(year=year))
+  assert type(caught.value) is ZoneInfoNotFoundError
+  cause = (
+    FileNotFoundError
+    if fault == "unknown-key"
+    else (ValueError if fault == "invalid-tzif" else StructError)
+  )
+  assert isinstance(caught.value.__cause__, cause)
+  assert ("标识不存在" if fault == "unknown-key" else "资源无效") in str(caught.value)
+
+
+@pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])
+@pytest.mark.parametrize("year", list(YearBoundary))
+@pytest.mark.parametrize("longitude", [None, 120.0])
+@pytest.mark.parametrize("mode", [(), ("-O",)])
+def test_real_missing_package_import_in_isolated_process(
+  entry: str,
+  year: YearBoundary,
+  longitude: float | None,
+  mode: tuple[str, ...],
+  tmp_path: Path,
+) -> None:
+  """-S让已安装的tzdata真实不可导入；失败须发生在历法依赖加载之前。"""
+  source = Path(__file__).resolve().parents[1] / "src"
+  action = {
+    "civil": "record.resolve_time()",
+    "resolve": "resolve(record, choices)",
+    "chart": "create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)",
+  }[entry]
+  script = f"""
+import sys
+sys.path.insert(0, {str(source)!r})
+from datetime import date, time, datetime, timedelta
+from zoneinfo import ZoneInfoNotFoundError
+from ziwei.birth import GregorianBirthRecord, TimePrecision, Gender
+from ziwei.config import ChartConfig, LeapMonthPolicy, DayRollover, YearBoundary
+from ziwei.timezone import IanaTimezone, FixedOffset, resolve_civil_time
+from ziwei.resolver import resolve
+from ziwei.chart import create_chart
+from ziwei.sihua import SihuaVariant
+record = GregorianBirthRecord(birth_date=date(1988,7,1), birth_time=time(12),
+  time_precision=TimePrecision.分, timezone=IanaTimezone('Asia/Shanghai'), gender=Gender.男,
+  longitude_deg={longitude!r})
+choices = ChartConfig(leap_month_policy=LeapMonthPolicy.全月归本月,
+  day_rollover=DayRollover.早晚子时同日, year_boundary=YearBoundary({year.value!r}))
+try:
+  {action}
+except ZoneInfoNotFoundError as error:
+  cause = error.__cause__
+  if not isinstance(cause, ModuleNotFoundError) or cause.name != 'tzdata':
+    raise RuntimeError('wrong missing-package cause')
+  if 'Asia/Shanghai' not in str(error) or 'tzdata' not in str(error):
+    raise RuntimeError('missing resource context')
+else:
+  raise RuntimeError('missing package accepted')
+if 'celestial_calendar' in sys.modules:
+  raise RuntimeError('failure reached native calendar')
+resolve_civil_time(datetime(1988,7,1,12), FixedOffset(timedelta(hours=8)))
+print('missing package rejected; fixed offset independent')
+"""
+  result = subprocess.run(
+    (sys.executable, *mode, "-I", "-S", "-c", script),
+    cwd=tmp_path,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 0, result.stdout + result.stderr
+  assert "missing package rejected; fixed offset independent" in result.stdout
+
+
+@pytest.mark.parametrize("year", list(YearBoundary))
+@pytest.mark.parametrize("longitude", [None, 120.0])
+@pytest.mark.parametrize("entry", ["resolve", "chart"])
+def test_resource_is_read_once_per_iana_entry(
+  year: YearBoundary,
+  longitude: float | None,
+  entry: str,
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  calls: list[str] = []
+
+  def counted(package: str) -> Traversable:
+    calls.append(package)
+    return files(package)
+
+  monkeypatch.setattr(timezone_module, "files", counted)
+  record = gregorian(date(1988, 7, 1), time(12), longitude_deg=longitude)
+  call_time_entry(entry, record, config(year=year))
+  assert calls == ["tzdata.zoneinfo"]
+  calls.clear()
+  call_time_entry(
+    entry, replace(record, timezone=FixedOffset(timedelta(hours=8))), config(year=year)
+  )
+  assert calls == []
+
+
+def test_unknown_clock_does_not_consume_timezone(monkeypatch: pytest.MonkeyPatch) -> None:
+  def forbidden(package: str) -> Traversable:
+    raise RuntimeError("unknown clock must not read timezone")
+
+  monkeypatch.setattr(timezone_module, "files", forbidden)
+  record = gregorian(date(1950, 1, 1), None, IanaTimezone("No/Such_Zone"))
+  value = resolve(record, config())
+  assert value.shichen is None and value.resolved_time is None
+  with pytest.raises(ValueError, match="完整命盘需要"):
+    call_time_entry("chart", record, config())
+  with pytest.raises(ValueError, match="立春换年需要已知钟点"):
+    call_time_entry("chart", record, config(year=YearBoundary.立春))
+  with pytest.raises(ValueError, match="真太阳时需要已知钟点"):
+    resolve(replace(record, longitude_deg=120.0), config())
+
+
+@pytest.mark.parametrize(
+  "day, clock, kind",
+  [
+    (date(1988, 4, 17), time(2, 30), "gap"),
+    (date(1988, 9, 11), time(1, 30), "overlap"),
+    (date(1988, 7, 1), time(12), "ordinary"),
+  ],
+)
+@pytest.mark.parametrize("fold", [None, 0, 1])
+@pytest.mark.parametrize(
+  "year, longitude",
+  [
+    (YearBoundary.农历正月初一, None),
+    (YearBoundary.立春, None),
+    (YearBoundary.农历正月初一, 120.0),
+    (YearBoundary.立春, 120.0),
+  ],
+)
+def test_label_only_and_instant_paths_have_distinct_dst_contracts(
+  day: date,
+  clock: time,
+  kind: str,
+  fold: int | None,
+  year: YearBoundary,
+  longitude: float | None,
+) -> None:
+  record = gregorian(day, clock, IanaTimezone("Asia/Shanghai", fold), longitude_deg=longitude)
+  plain = year is YearBoundary.农历正月初一 and longitude is None
+  error: type[ValueError] | None = None
+  if not plain:
+    if kind == "gap":
+      error = NonexistentTimeError
+    elif kind == "overlap" and fold is None:
+      error = AmbiguousTimeError
+    elif kind == "ordinary" and fold == 1:
+      error = ValueError
+  for entry in ("resolve", "chart"):
+    if error is not None:
+      with pytest.raises(error):
+        call_time_entry(entry, record, config(year=year))
+    else:
+      call_time_entry(entry, record, config(year=year))
+  if plain:
+    value = resolve(record, config(year=year))
+    assert isinstance(value.record, GregorianBirthRecord)
+    assert value.resolved_time is None and value.record.timezone == record.timezone
+    assert value.shichen is record.shichen
 
 
 def config(
@@ -75,7 +341,7 @@ def test_gregorian_lunar_new_year_boundary() -> None:
 
 
 def test_between_lunar_new_year_and_lichun() -> None:
-  """正月初一与立春之间：正月初一口径取农历年，立春口径取立春后的干支。"""
+  """立春与春节之间：正月初一口径取旧年，立春口径用出生公历年的立春判新年。"""
   record = gregorian(date(2024, 2, 10), time(12))  # 2024-02-10 为甲辰年正月初一
   with_lunar = resolve(record, config(year=YearBoundary.农历正月初一))
   assert with_lunar.ganzhi_year == 2024
@@ -92,6 +358,7 @@ def test_between_lunar_new_year_and_lichun() -> None:
   assert inside_lunar.ganzhi_year == 2023
   assert inside_lunar.year_ganzhi == Ganzhi.from_str("癸卯")
   inside_lichun = resolve(inside, config(year=YearBoundary.立春))
+  assert inside_lichun.lunar_year == 2023 and inside_lichun.lichun_jd == lichun_jd(2024)
   assert inside_lichun.ganzhi_year == 2024
   assert inside_lichun.year_ganzhi == Ganzhi.from_str("甲辰")
 
@@ -213,14 +480,14 @@ def test_unknown_time_with_longitude_rejected() -> None:
 def test_civil_path_rejects_invalid_iana() -> None:
   """纯民用路径也验证 IANA 时区标识可解析：无效标识显式失败，不静默进时辰计算。"""
   record = gregorian(date(1988, 7, 1), time(12), timezone=IanaTimezone("No/Such_Zone"))
-  with pytest.raises(ValueError, match="No/Such_Zone"):
+  with pytest.raises(ZoneInfoNotFoundError, match="No/Such_Zone"):
     resolve(record, config())
 
 
 def test_civil_path_rejects_non_tzif_iana() -> None:
   """纯民用路径拒绝 tzdata 中非时区的文件（如 leapseconds），与需瞬间路径一致。"""
   record = gregorian(date(1988, 7, 1), time(12), timezone=IanaTimezone("leapseconds"))
-  with pytest.raises(ValueError, match="leapseconds"):
+  with pytest.raises(ZoneInfoNotFoundError, match="leapseconds"):
     resolve(record, config())
 
 

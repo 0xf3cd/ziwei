@@ -1,7 +1,5 @@
 """celestial 适配与时标合同的测试。"""
 
-import sys
-from collections.abc import Iterator
 from datetime import UTC, date, datetime, timedelta
 from importlib.metadata import version
 from pathlib import Path
@@ -9,6 +7,7 @@ from typing import Never
 
 import pytest
 
+from ziwei import calendar as implementation
 from ziwei.calendar import (
   LunarAlgorithm,
   apparent_solar,
@@ -23,13 +22,88 @@ from ziwei.calendar import (
   validate_lunar_date,
 )
 
+pytestmark = pytest.mark.usefixtures("unload_celestial")
 
-@pytest.fixture(autouse=True)
-def _unload_celestial() -> Iterator[None]:
-  """测试后卸载 celestial_calendar，避免污染安装隔离检查的同进程断言。"""
-  yield
-  for name in [name for name in sys.modules if name.startswith("celestial_calendar")]:
-    del sys.modules[name]
+
+# IERS Leap_Second.dat（查阅2026-10-24）：生效日、MJD、TAI-UTC；首行是基线。
+# https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat
+# NIST插入日加一天与该生效日相符，不从生产表生成预期。
+# https://www.nist.gov/pml/time-and-frequency-division/time-realization/leap-seconds
+LEAP_SECOND_REFERENCE = (
+  ("1972-01-01", 41317, 10),
+  ("1972-07-01", 41499, 11),
+  ("1973-01-01", 41683, 12),
+  ("1974-01-01", 42048, 13),
+  ("1975-01-01", 42413, 14),
+  ("1976-01-01", 42778, 15),
+  ("1977-01-01", 43144, 16),
+  ("1978-01-01", 43509, 17),
+  ("1979-01-01", 43874, 18),
+  ("1980-01-01", 44239, 19),
+  ("1981-07-01", 44786, 20),
+  ("1982-07-01", 45151, 21),
+  ("1983-07-01", 45516, 22),
+  ("1985-07-01", 46247, 23),
+  ("1988-01-01", 47161, 24),
+  ("1990-01-01", 47892, 25),
+  ("1991-01-01", 48257, 26),
+  ("1992-07-01", 48804, 27),
+  ("1993-07-01", 49169, 28),
+  ("1994-07-01", 49534, 29),
+  ("1996-01-01", 50083, 30),
+  ("1997-07-01", 50630, 31),
+  ("1999-01-01", 51179, 32),
+  ("2006-01-01", 53736, 33),
+  ("2009-01-01", 54832, 34),
+  ("2012-07-01", 56109, 35),
+  ("2015-07-01", 57204, 36),
+  ("2017-01-01", 57754, 37),
+)
+
+
+def test_leap_second_table_matches_independent_history() -> None:
+  expected = tuple((date.fromisoformat(day), offset) for day, _, offset in LEAP_SECOND_REFERENCE)
+  assert expected == implementation._LEAP_SECOND_TABLE
+
+
+@pytest.mark.parametrize("label, mjd, offset", LEAP_SECOND_REFERENCE)
+@pytest.mark.parametrize("seconds", [-1, 0, 1])
+def test_each_leap_second_effective_boundary(
+  label: str,
+  mjd: int,
+  offset: int,
+  seconds: int,
+) -> None:
+  """独立历史值核TAI-UTC偏移，再核公开UTC转UT1使用该值；模型复算不作实测UT1。"""
+  boundary = date.fromisoformat(label)
+  assert (boundary - date(1858, 11, 17)).days == mjd
+  instant = datetime.combine(boundary, datetime.min.time(), UTC) + timedelta(seconds=seconds)
+  if offset == 10 and seconds < 0:
+    with pytest.raises(ValueError, match="1972"):
+      utc_to_ut1_jd(instant)
+    return
+  expected_offset = offset - 1 if seconds < 0 else offset
+  assert implementation._delta_at(instant.date()) == expected_offset
+  import celestial_calendar as celestial
+
+  tt = instant + timedelta(seconds=expected_offset + 32.184)
+  start = datetime(tt.year, 1, 1, tzinfo=UTC)
+  end = datetime(tt.year + 1, 1, 1, tzinfo=UTC)
+  decimal_year = tt.year + (tt - start) / (end - start)
+  delta_t = celestial.delta_t(decimal_year, celestial.DeltaTModel.DEFAULT)
+  expected = mjd + 2400000.5 + (seconds + expected_offset + 32.184 - delta_t) / 86400
+  assert abs(utc_to_ut1_jd(instant) - expected) * 86400 < 0.0001
+
+
+def test_future_offset_uses_last_known_value_not_a_prediction() -> None:
+  assert implementation._delta_at(date(2099, 6, 30)) == 37
+
+
+def test_utc_lower_bound_compares_instants_not_local_date() -> None:
+  from datetime import timezone
+
+  with pytest.raises(ValueError, match="1972"):
+    utc_to_ut1_jd(datetime(1972, 1, 1, 0, 30, tzinfo=timezone(timedelta(hours=8))))
 
 
 def test_version_is_installed_package() -> None:
@@ -232,7 +306,7 @@ def test_lunar_conversion_rejects_invalid_combinations_before_native_call(
 
 
 def test_ut1_conversion_matches_chart_snapshot() -> None:
-  """modelled-UT1 定义与 chart_snapshot.jd_ut1 在 1972-2099 网格上一致（亚毫秒级）。"""
+  """共用celestial的ΔT模型对照八个选定时刻，不证明全域精度或实测UT1。"""
   import celestial_calendar as celestial
 
   location = celestial.GeoLocation(31.2, 121.5)
@@ -257,7 +331,7 @@ def test_ut1_conversion_matches_chart_snapshot() -> None:
       celestial.DeltaTModel.DEFAULT,
     )
     worst_seconds = max(worst_seconds, abs(mine - snapshot.times.jd_ut1) * 86400.0)
-  assert worst_seconds < 0.01  # 10 毫秒容差，实测亚毫秒
+  assert worst_seconds < 0.01  # 八个选定时刻的模型回归阈值，不是全域精度保证。
 
 
 def test_lichun_jd_is_ut1_comparable() -> None:

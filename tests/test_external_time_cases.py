@@ -1,7 +1,5 @@
 """外部分钟历书、经验均时差与手推组件组成的合成取证；不是完整外部原盘。"""
 
-import sys
-from collections.abc import Iterator
 from dataclasses import replace
 from datetime import UTC, date, datetime, time, timedelta
 from math import cos, pi, sin
@@ -19,13 +17,7 @@ from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star
 from ziwei.timezone import FixedOffset
 
-
-@pytest.fixture(autouse=True)
-def _unload_celestial() -> Iterator[None]:
-  yield
-  for name in tuple(sys.modules):
-    if name.startswith("celestial_calendar"):
-      del sys.modules[name]
+pytestmark = pytest.mark.usefixtures("unload_celestial")
 
 
 @pytest.fixture
@@ -100,13 +92,12 @@ def test_hko_lichun_synthetic_components(
   )
 
 
-def test_solar_clock_matches_corrected_spencer_for_selected_case() -> None:
+def spencer_solar_clock(utc: datetime, longitude: float) -> datetime:
   """pvlib校正Spencer71五项式，固定365与0.0000075；不声称全域60秒精度。
 
   https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.solarposition.equation_of_time_spencer71.html
   日序采用UTC小时的日中插值；公式不读celestial太阳位置。
   """
-  utc = datetime(2024, 11, 2, 16, 20, tzinfo=UTC)
   doy_in = utc.timetuple().tm_yday + (utc.hour + utc.minute / 60 + utc.second / 3600 - 12) / 24
   angle = 2 * pi * (doy_in - 1) / 365
   eot_minutes = (
@@ -120,12 +111,56 @@ def test_solar_clock_matches_corrected_spencer_for_selected_case() -> None:
       - 0.040849 * sin(2 * angle)
     )
   )
-  independent = utc.replace(tzinfo=None) + timedelta(hours=100 / 15, minutes=eot_minutes)
+  return utc.replace(tzinfo=None) + timedelta(hours=longitude / 15, minutes=eot_minutes)
+
+
+def test_solar_clock_matches_corrected_spencer_for_selected_case() -> None:
+  utc = datetime(2024, 11, 2, 16, 20, tzinfo=UTC)
+  independent = spencer_solar_clock(utc, 100.0)
   assert independent.date() == date(2024, 11, 2)
   assert time(23, 15) < independent.time() < time(23, 18)
   year, month, day, fraction = apparent_solar(utc, 100.0)
   actual = datetime(year, month, day) + timedelta(days=fraction)
   assert abs((actual - independent).total_seconds()) < 60
+
+
+@pytest.mark.parametrize("rollover", list(DayRollover))
+def test_independent_solar_forward_midnight(choices: ChartConfig, rollover: DayRollover) -> None:
+  """同一Spencer五项式给太阳钟次日00:38，HKO T2024e.txt给该日十月初三。
+
+  十月子时命身同亥，甲年亥宫为乙亥、纳音山头火，取火六局。
+  初三加补数3凑到6，除以6得商1，从寅宫逆行3步，紫微在亥。
+  太阳钟已是早子时，早晚子时同日、晚子时归次日两口径均不再顺延。
+  民用晚子时顺延也会得到同一日期与星位，故另核day_rolled为False。
+  """
+  utc = datetime(2024, 11, 2, 15, 50, tzinfo=UTC)
+  independent = spencer_solar_clock(utc, 128.0)
+  assert independent.date() == date(2024, 11, 3)
+  assert time(0, 37) < independent.time() < time(0, 40)
+  year, month, day, fraction = apparent_solar(utc, 128.0)
+  actual = datetime(year, month, day) + timedelta(days=fraction)
+  assert actual.date() == independent.date()
+  assert abs((actual - independent).total_seconds()) < 60
+  record = GregorianBirthRecord(
+    birth_date=date(2024, 11, 2),
+    birth_time=time(23, 50),
+    time_precision=TimePrecision.分,
+    timezone=FixedOffset(timedelta(hours=8)),
+    gender=Gender.男,
+    longitude_deg=128.0,
+  )
+  chart = create_chart(
+    record, replace(choices, day_rollover=rollover), sihua_variant=SihuaVariant.排命盘口诀转录
+  )
+  value = chart.calculation
+  assert record.birth_date == date(2024, 11, 2) and record.birth_time == time(23, 50)
+  assert value.resolved_time is not None and value.resolved_time.utc == utc
+  assert (value.lunar_year, value.month, value.day, value.is_leap_month) == (2024, 10, 3, False)
+  assert value.shichen is Dizhi.子 and value.apparent_solar is True
+  assert value.day_rolled is False
+  assert str(chart.palaces[0].ganzhi) == "乙亥" and chart.shengong is Dizhi.亥
+  assert chart.bureau is WuxingJu.火六局
+  assert next(p.dizhi for p in chart.stars if p.star is Star.紫微) is Dizhi.亥
 
 
 @pytest.mark.parametrize("rollover", list(DayRollover))
