@@ -17,7 +17,7 @@ from ziwei.timezone import IanaTimezone
 
 @pytest.fixture
 def unload_celestial() -> Iterator[None]:
-  """仅供显式选用的历法消费模块在测试后清理原生包导入。"""
+  """只清理显式选用模块的历法导入，避免污染安装入口的同进程导入隔离检查。"""
   yield
   for name in tuple(sys.modules):
     if name.startswith("celestial_calendar"):

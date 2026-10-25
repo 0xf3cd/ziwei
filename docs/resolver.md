@@ -23,8 +23,9 @@
 
 ## 失败边界
 
-- 指定IANA资源不可用时，三个时间入口在适用路径统一抛`ZoneInfoNotFoundError`并保留原因，详见[出生输入](birth.md)。
-  已知钟点纯民用路径核资源一次，需瞬间路径复用已加载资源；固定偏移不读tzdata。
+- 指定IANA资源不可用时，`record.resolve_time()`、`resolve()`与`create_chart()`统一抛
+  `ZoneInfoNotFoundError`并保留原因，详见[出生输入](birth.md)。后两者的已知钟点纯民用路径核资源一次，
+  需瞬间路径复用已加载资源；固定偏移不读tzdata。
   未知钟点的纯民用`resolve()`不消费时区，也不校验key，结果保留`shichen=None`与`resolved_time=None`。
   完整盘先解析再核完整性：需瞬间而缺钟点时先报解析错误；纯民用解析成功后再拒绝缺时辰／性别。
 - 农历输入选立春口径：显式失败（农历记录没有瞬间与时区，无法与立春 UT1 时刻同标比较）。

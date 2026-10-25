@@ -128,8 +128,10 @@ def test_solar_clock_matches_corrected_spencer_for_selected_case() -> None:
 def test_independent_solar_forward_midnight(choices: ChartConfig, rollover: DayRollover) -> None:
   """同一Spencer五项式给太阳钟次日00:38，HKO T2024e.txt给该日十月初三。
 
-  十月子时命身同亥，甲年为乙亥火六局；初三补3至6，商1，从寅逆行3步紫微在亥。
-  太阳钟已是早子时，两口径都不再顺延；单比星位不能区分民用晚子时顺延得到的同一天。
+  十月子时命身同亥，甲年亥宫为乙亥、纳音山头火，取火六局。
+  初三加补数3凑到6，除以6得商1，从寅宫逆行3步，紫微在亥。
+  太阳钟已是早子时，早晚子时同日、晚子时归次日两口径均不再顺延。
+  民用晚子时顺延也会得到同一日期与星位，故另核day_rolled为False。
   """
   utc = datetime(2024, 11, 2, 15, 50, tzinfo=UTC)
   independent = spencer_solar_clock(utc, 128.0)

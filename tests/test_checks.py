@@ -1,6 +1,7 @@
 """开发检查必须发现的失败。"""
 
 import io
+import os
 import re
 import shutil
 import subprocess
@@ -35,6 +36,58 @@ SOURCE = (
   ".github/workflows/checks.yml",
   ".github/workflows/release.yml",
 )
+
+
+@pytest.mark.parametrize("mode", [(), ("-O",)])
+def test_calendar_cleanup_fixture_is_opt_in_and_cleans_after_each_test(
+  tmp_path: Path,
+  mode: tuple[str, ...],
+) -> None:
+  """加载真实共享fixture：选用模块清理，未选用模块保留导入哨兵。"""
+  source = Path(__file__).with_name("conftest.py")
+  (tmp_path / "conftest.py").write_text(
+    "from importlib.util import spec_from_file_location, module_from_spec\n"
+    f"spec = spec_from_file_location('production_conftest', {str(source)!r})\n"
+    "module = module_from_spec(spec)\nspec.loader.exec_module(module)\n"
+    "unload_celestial = module.unload_celestial\n",
+    encoding="utf-8",
+  )
+  for selected in (True, False):
+    label = "selected" if selected else "unselected"
+    marker = 'pytestmark = pytest.mark.usefixtures("unload_celestial")' if selected else ""
+    comparison = "not in" if selected else "in"
+    (tmp_path / f"test_{label}.py").write_text(
+      "import sys\nfrom types import ModuleType\nimport pytest\n"
+      f"{marker}\n"
+      "def test_a_install_sentinel():\n"
+      "  sys.modules['celestial_calendar.scope_probe'] = ModuleType('celestial_calendar.scope_probe')\n"
+      "def test_b_observe_teardown_scope():\n"
+      f"  assert 'celestial_calendar.scope_probe' {comparison} sys.modules\n",
+      encoding="utf-8",
+    )
+  result = subprocess.run(
+    (
+      sys.executable,
+      *mode,
+      "-B",
+      "-I",
+      "-m",
+      "pytest",
+      "--confcutdir",
+      str(tmp_path),
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      str(tmp_path),
+    ),
+    cwd=tmp_path,
+    env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 0, result.stdout + result.stderr
+  assert "4 passed" in result.stdout
 
 
 @pytest.fixture

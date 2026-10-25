@@ -80,7 +80,7 @@ def _check_wall(wall: datetime) -> None:
 def _require_modern_utc(utc: datetime) -> None:
   """限制已校验的UTC瞬间；不限制无需瞬间的原始出生记录。"""
   if utc < datetime(1972, 1, 1, tzinfo=UTC):
-    raise ValueError("不支持早于1972-01-01的UTC瞬间；可保留原始出生记录而不解析为瞬间")
+    raise ValueError("不支持早于1972-01-01的UTC瞬间")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -145,7 +145,7 @@ def _load_zone(key: str) -> tuple[ZoneInfo, TimezoneData]:
     if name != "tzdata" and not name.startswith("tzdata."):
       raise
     raise ZoneInfoNotFoundError(f"缺少tzdata数据包或时区子包：{key}") from error
-  except (FileNotFoundError, IsADirectoryError) as error:
+  except (FileNotFoundError, IsADirectoryError, NotADirectoryError) as error:
     raise ZoneInfoNotFoundError(f"IANA 时区标识不存在或不是时区文件：{key}") from error
   return zone, data
 

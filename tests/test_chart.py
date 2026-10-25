@@ -37,7 +37,7 @@ def test_full_chart_algorithm_end_and_rollover(
   longitude: float | None,
   clock: time,
 ) -> None:
-  """组合入口的真实上界；底层各算法范围另测，不把此例当独立天文参考。"""
+  """完整盘入口覆盖ALGO3农历2199年末及顺延越界，不作独立天文参考。"""
   record = GregorianBirthRecord(
     birth_date=date(2200, 2, 14),
     birth_time=clock,

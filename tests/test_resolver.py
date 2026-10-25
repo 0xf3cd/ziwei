@@ -52,6 +52,42 @@ def call_time_entry(entry: str, record: GregorianBirthRecord, choices: ChartConf
 @pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])
 @pytest.mark.parametrize("year", list(YearBoundary))
 @pytest.mark.parametrize("longitude", [None, 120.0])
+@pytest.mark.parametrize("key", ["UTC/x", "Etc/UTC/x", "Asia/Shanghai/x"])
+def test_file_used_as_directory_is_unknown_timezone(
+  entry: str,
+  year: YearBoundary,
+  longitude: float | None,
+  key: str,
+) -> None:
+  record = gregorian(date(1988, 7, 1), time(12), IanaTimezone(key), longitude_deg=longitude)
+  with pytest.raises(ZoneInfoNotFoundError, match=key) as caught:
+    call_time_entry(entry, record, config(year=year))
+  assert type(caught.value) is ZoneInfoNotFoundError
+  assert isinstance(caught.value.__cause__, NotADirectoryError | FileNotFoundError)
+
+
+@pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])
+@pytest.mark.parametrize("year", list(YearBoundary))
+@pytest.mark.parametrize("longitude", [None, 120.0])
+def test_missing_timezone_subpackage_keeps_import_cause(
+  entry: str,
+  year: YearBoundary,
+  longitude: float | None,
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  assert timezone_module.current_timezone_data().package_version
+  monkeypatch.setitem(sys.modules, "tzdata.zoneinfo", None)
+  record = gregorian(date(1988, 7, 1), time(12), longitude_deg=longitude)
+  with pytest.raises(ZoneInfoNotFoundError, match=r"缺少tzdata.*Asia/Shanghai") as caught:
+    call_time_entry(entry, record, config(year=year))
+  cause = caught.value.__cause__
+  assert type(caught.value) is ZoneInfoNotFoundError
+  assert isinstance(cause, ModuleNotFoundError) and cause.name == "tzdata.zoneinfo"
+
+
+@pytest.mark.parametrize("entry", ["civil", "resolve", "chart"])
+@pytest.mark.parametrize("year", list(YearBoundary))
+@pytest.mark.parametrize("longitude", [None, 120.0])
 @pytest.mark.parametrize("fault", ["unknown-key", "invalid-tzif", "truncated-tzif"])
 def test_resource_failures_share_type_and_keep_cause(
   entry: str,
@@ -277,7 +313,7 @@ def test_gregorian_lunar_new_year_boundary() -> None:
 
 
 def test_between_lunar_new_year_and_lichun() -> None:
-  """立春与春节之间仍属旧农历年；立春查询使用出生公历年，不使用农历年。"""
+  """立春与春节之间：正月初一口径取旧年，立春口径用出生公历年的立春判新年。"""
   record = gregorian(date(2024, 2, 10), time(12))  # 2024-02-10 为甲辰年正月初一
   with_lunar = resolve(record, config(year=YearBoundary.农历正月初一))
   assert with_lunar.ganzhi_year == 2024
