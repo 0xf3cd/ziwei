@@ -3,8 +3,10 @@
 from datetime import date
 from typing import Final
 
+from ziwei.bureau import WuxingJu
 from ziwei.config import DayRollover, LeapMonthPolicy, TianmaRule, YearBoundary
 from ziwei.decades import DECADE_DEFINITION, DECADE_RULE_ID
+from ziwei.ganzhi import WUHU_YIN
 from ziwei.knowledge.model import (
   Citation,
   Concept,
@@ -19,11 +21,15 @@ from ziwei.knowledge.model import (
   SourceStatus,
   TextLayer,
 )
+from ziwei.palaces import PalaceName
 from ziwei.sihua import SIHUA_TABLES, SihuaVariant
 from ziwei.stars import STAR_RULES, Star, StarRule
 
-CATALOG_VERSION: Final = "2026.10.21.1"
+CATALOG_VERSION: Final = "2026.10.25.1"
 """语料版本，与开发包版本分别记录。"""
+
+_BUREAU_NAMES = "、".join(ju.value for ju in WuxingJu)
+_SOURCE_RESEARCH_URL = "https://github.com/0xf3cd/ziwei/issues/43"
 
 CONCEPTS = (
   *(
@@ -275,7 +281,7 @@ VARIANTS = (
   RuleVariant(
     id="variant.palace.twelve",
     name="安十二宫例",
-    definition="自命宫起逆排：命宫、兄弟、妻妾、子女、财帛、疾厄、迁移、奴仆、官禄、田宅、福德、父母。",
+    definition="自命宫起逆排：" + "、".join(name.value for name in PalaceName) + "。",
     scope="本命盘十二宫顺序",
     concept_ids=("concept.palace.palaces-12",),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/3",
@@ -283,7 +289,10 @@ VARIANTS = (
   RuleVariant(
     id="variant.palace.wuhu-dun",
     name="五虎遁起寅",
-    definition="甲己起丙寅、乙庚起戊寅、丙辛起庚寅、丁壬起壬寅、戊癸起甲寅；寅宫干定后顺十天干排十二宫。",
+    definition="、".join(
+      f"{first.value}{second.value}起{stem.value}寅" for (first, second), stem in WUHU_YIN
+    )
+    + "；寅宫干定后顺十天干排十二宫。",
     scope="十二宫宫干与命宫干支",
     concept_ids=("concept.palace.palace-stem",),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/3",
@@ -300,7 +309,7 @@ VARIANTS = (
   RuleVariant(
     id="variant.wuxingju.mapping",
     name="纳音五行定局",
-    definition="水二局、木三局、金四局、土五局、火六局；局数即大限起始年龄。",
+    definition=_BUREAU_NAMES + "；局数即大限起始年龄。",
     scope="本命盘五行局与起限年龄",
     concept_ids=("concept.wuxingju",),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/3",
@@ -311,7 +320,7 @@ SOURCES = (
   Source(
     id="source.zhongyi999-paimingpan",
     title="排命盘口诀（2007论坛转录）",
-    edition="2026-10-20所见thread-1744，页内2007发帖；原著作者与底本未核",
+    edition="2026-10-25复核thread-1744，页内2007发帖；原著作者与底本未核",
     url="http://www.zhongyi999.com.cn/thread-1744-1-1.html",
     layer=TextLayer.今人说明,
     lineage_id="lineage.zhongyi999-paimingpan",
@@ -320,7 +329,7 @@ SOURCES = (
     limits="整套组合只核到此转录；具体规则另核独立说明，不声称取得第二份完整同表或纸本。",
     rights="只收必要短引与自撰规则说明，不转载全文。",
     status=SourceStatus.待核,
-    checked_on=date(2026, 10, 20),
+    checked_on=date(2026, 10, 25),
   ),
   Source(
     id="source.lingdonglai-sihua",
@@ -373,11 +382,11 @@ SOURCES = (
     layer=TextLayer.原文,
     lineage_id="lineage.quanshu-wikisource",
     provenance="维基文库所见录文；底本刊本未确认，不与其他全书转录自动合并。",
-    claims="支持所列主星宫格、两系、辅星、天马、四化、身命段与安大限诀的实际措辞和查法；火铃段仅给起点。",
+    claims="支持所列主星宫格、两系、辅星、天马、四化、身命段与安大限诀的实际措辞和查法；火铃段只列年支四组与宫位，未明说子时起数或方向。",
     limits="电子录文已核不等于底本校勘；不据此认证全书各版或一整个流派。",
     rights="古籍正文短引；电子转录来源署名保留，具体使用条件见来源页。",
     status=SourceStatus.已核,
-    checked_on=date(2026, 10, 19),
+    checked_on=date(2026, 10, 25),
   ),
   Source(
     id="source.jingcheng-golla",
@@ -412,30 +421,30 @@ SOURCES = (
     id="source.lifedna-flying",
     title="LifeDNA飞星紫微斗数排盘说明",
     authors=("LifeDNA",),
-    edition="2026-10-19所见作者站网页，第2、3节",
+    edition="2026-10-25复核作者站网页，第1至3节",
     url="https://www.lifedna.com.tw/t/map/f/",
     layer=TextLayer.今人说明,
     lineage_id="lineage.lifedna-flying",
     provenance="作者站自述；其中古籍转引未回原典核实。",
-    claims="支持该站所列闰月方式及其分早晚子时的主张。",
+    claims="支持该站列出的三种闰月方式、分早晚子时的主张，以及反对立春换年、23点加日的意见。",
     limits="不证明其古籍年代论证，也未实测该站排盘器的行为。",
     rights="仅必要短引，其他内容用有定位的仓内概述。",
     status=SourceStatus.已核,
-    checked_on=date(2026, 10, 19),
+    checked_on=date(2026, 10, 25),
   ),
   Source(
     id="source.zhongzhou-wangtingzhi",
     title="王亭之中州派《紫微斗数初级讲义》（新浪博客转录）",
-    edition="2009-04-10成路先生博客转录；纸本版本未核",
-    url="http://blog.sina.com.cn/s/blog_4ff71e4e0100ciex.html",
+    edition="2009-04-10博客转录；2017-11-06网页存档正文；纸本版本未核",
+    url="https://web.archive.org/web/20171106140353/http://blog.sina.com.cn/s/blog_4ff71e4e0100ciex.html",
     layer=TextLayer.今人说明,
     lineage_id="lineage.zhongzhou-wangtingzhi",
-    provenance="只核到博客转录，未核讲义纸本或转录授权。",
-    claims="安命身宫诀、五虎遁诀与定五行局段支持所引安星查法；与全书规则一致处仍以原文为据。",
-    limits="博客转录不是讲义原书版本认证；不把中州派说法当古籍原文。",
+    provenance="原博客现页未取得正文，文字核自2017-11-06存档；未核讲义纸本或转录授权。",
+    claims="存档正文支持安命身、五虎遁、定五行局与局数起限的所引措辞；不以未取得的图四证明图内岁数。",
+    limits="博客转录不是原书版本认证；指定存档的12张正文图片请求返回404，不推出原图不存在，不把今人说明当古籍明文。",
     rights="仅必要短引，不收讲义全文。",
     status=SourceStatus.待核,
-    checked_on=date(2026, 10, 19),
+    checked_on=date(2026, 10, 25),
   ),
   Source(
     id="source.zhongzhou-5shubook",
@@ -544,11 +553,20 @@ CITATIONS = (
   Citation(
     id="citation.zhongzhou.decades-figure4",
     source_id="source.zhongzhou-wangtingzhi",
-    locator="讲义转录图四/安大限；金四局阳男命宫丑的大限岁数",
+    locator="讲义转录图四/原有记录中的图题及金四局岁数，图像未取得",
     quote="安大限",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="短引只是图题，岁数证据在图中：丑4至13、寅14至23，支持局数起限、命宫起及含首尾；酉宫未见岁数，不补写。此图不单独定义换岁日。",
+    limits="原有记录中的图题短引尚未取得图像核对。2026-10-25核2017-11-06存档正文未见“安大限”字串，指定图片存档请求返回404；图题与图内岁数未核，不由该图证明含首尾或换岁日。",
+  ),
+  Citation(
+    id="citation.zhongzhou.decades-text",
+    source_id="source.zhongzhou-wangtingzhi",
+    locator="2017-11-06网页存档/起大限段",
+    quote="悉依局数",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="节选自起限岁数句，只支持局数起限；这四字不独自证明命宫起、每限十年或含首尾，图四仍未核。",
   ),
   Citation(
     id="citation.quanshu.geng",
@@ -641,6 +659,24 @@ CITATIONS = (
     limits="同句随后说明铃星也顺数至生时。只补已见明文，未核原著；不因网址不同就认定为独立谱系。",
   ),
   Citation(
+    id="citation.zhongyi999.huoling-year-only",
+    source_id="source.zhongyi999-paimingpan",
+    locator="安时系诸星诀/安火星铃星诀/转述另一查法并反对的段落",
+    quote="而不论生时",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="论坛转述的主体是未具名的“有的书”；其反对意见属于该页作者，不能据此裁定古籍原意。",
+  ),
+  Citation(
+    id="citation.zhongyi999.kongjie-name",
+    source_id="source.zhongyi999-paimingpan",
+    locator="安时系诸星诀/安地劫天空诀/时辰例后的按语",
+    quote="又名“地空”",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="时系天空的称名来自今人按语，不是古籍白文，不把同名年系天空也当作地空。",
+  ),
+  Citation(
     id="citation.jingcheng.birth-month",
     layer=TextLayer.今人说明,
     source_id="source.jingcheng-golla",
@@ -704,6 +740,33 @@ CITATIONS = (
     limits="只记录该站主张，不认证文中引用的古籍推论。",
   ),
   Citation(
+    id="citation.lifedna.leap-next",
+    source_id="source.lifedna-flying",
+    locator="第2节/三种排法第2项",
+    quote="統一算次月",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="该站列举此法，自述采用的却是前后半月法；不当作该站自选或项目默认。",
+  ),
+  Citation(
+    id="citation.lifedna.opposes-lichun",
+    source_id="source.lifedna-flying",
+    locator="第1节/反对以立春作为生年分界的评价",
+    quote="很大的錯誤",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="这是作者对立春换年的反对意见，不证明流派共识，也不是项目立春选项的支持出处。",
+  ),
+  Citation(
+    id="citation.lifedna.opposes-late-zi",
+    source_id="source.lifedna-flying",
+    locator="第3节/末段反对晚上11点多将日期加一日的评价",
+    quote="那也是有問題的",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="只记录作者反对23点加日，不把其早晚子命盘不同的主张等同项目早晚子时同日选项。",
+  ),
+  Citation(
     id="citation.lifedna.day-rollover",
     layer=TextLayer.今人说明,
     source_id="source.lifedna-flying",
@@ -728,7 +791,7 @@ CITATIONS = (
     locator="安十二宫例",
     quote="一 命宫、二兄弟、三妻妾、四子女、五财帛、六疾厄、七迁移、八奴仆、九官禄、十田宅、十一福德、十二父母",
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="标题后缀「男女俱从逆转」；妻妾、奴仆等为原用名，现代别名不改变顺序。",
+    limits="标题后缀节选「男女俱从逆转」，后接原字「切忌莫顺去」；妻妾、奴仆等为原用名，现代别名不改变顺序。",
   ),
   Citation(
     id="citation.quanshu.wuhu-yin",
@@ -850,11 +913,11 @@ CITATIONS = (
   Citation(
     id="citation.quanshu.huoling-starts",
     source_id="source.quanshu-wikisource",
-    locator="安火铃二星诀/四组三合年支起点",
+    locator="安火铃二星诀/四组年支与宫位",
     quote="寅午戌人丑卯方",
     layer=TextLayer.原文,
     aspects=(EvidenceAspect.规则,),
-    limits="本段按年支列出火星、铃星的四组起始宫位，但没有说明应顺数还是逆数到出生时辰。",
+    limits="本段只列年支四组与宫位，未明说子时起数、随生时移动或顺逆；这些查法不能倒归作该段原文。",
   ),
   Citation(
     id="citation.quanshu.kongjie",
@@ -1003,11 +1066,15 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
         "citation.jingcheng.huoling-direction",
         "citation.zhongyi999.huoling-direction",
       ),
-      "火星、铃星在子时的四组起始宫位见《全书》、中州派讲义和《精成》。两星均顺数到出生时辰，依据讲义例解及《精成》、论坛明文；《全书》该段没有说明方向。",
+      "《全书》该段只列年支四组与宫位。子时起数、两星均顺数到生时由讲义例解及《精成》、论坛明文支持，不倒归作该段古籍明文；论坛还转述并反对未具名资料中不论生时的查法，该异读另记待核。",
     ),
     "variant.star.kongjie-hour": (
-      ("citation.quanshu.kongjie", "citation.zhongzhou.fubi-wen-kongjie"),
-      "此处只安按时辰确定位置的地空、地劫。《全书》与《精成》把这里的地空称为天空，中州派讲义与星侨网站称为地空；另有一颗按年支安的天空，本版不安那颗星。",
+      (
+        "citation.quanshu.kongjie",
+        "citation.zhongzhou.fubi-wen-kongjie",
+        "citation.zhongyi999.kongjie-name",
+      ),
+      "此处只安按时辰确定位置的地空、地劫。《全书》称这颗星为天空，中州派讲义称为地空，论坛今人按语另说天空又名地空；称名各归所引材料。另有按年支安的天空，本版不安那颗星。",
     ),
   }
   selected = tuple(rule for rule in rules if rule.tianma_rule is None)
@@ -1031,7 +1098,11 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
         if Star.紫微 in rule.stars
         else "取得所引电子录文底本与现代讲义具版次原书，核对应规则、查法与例解；同文转录不增独立来源数。"
       ),
-      tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
+      tracking_url=(
+        _SOURCE_RESEARCH_URL
+        if Star.火星 in rule.stars or Star.地空 in rule.stars
+        else "https://github.com/0xf3cd/ziwei/issues/4"
+      ),
     )
     for rule in selected
   )
@@ -1082,14 +1153,14 @@ ENTRIES = (
     statement=DECADE_DEFINITION,
     concept_ids=("concept.decades",),
     variant_ids=(DECADE_RULE_ID,),
-    citation_ids=("citation.zhongyi999.decades", "citation.zhongzhou.decades-figure4"),
+    citation_ids=("citation.zhongyi999.decades", "citation.zhongzhou.decades-text"),
     premises=("命宫、五行局与年干已经按所选口径确定，性别已知",),
     premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.已整理,
-    limits="只输出十二限的虚岁标签，首尾包含；首限之前不补小限或童限，不换算当前虚岁或起止日期，也不指定换岁日。转录原著版次未核。",
+    limits="只输出十二限的虚岁标签，首尾包含；年龄计法与区间依据论坛明文，讲义存档短引只支持局数起限，图四图题与图内岁数未核。不补首限前的小限或童限，不换算当前虚岁、起止日期或换岁日；转录原著版次未核。",
     recheck="取得两份转录所据纸本的大限起算及年龄说明页；若需日期换算，先取得明确换岁日的具名口径，不从岁数标签推定。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
+    tracking_url=_SOURCE_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.decades.quanshu-adjacent",
@@ -1103,7 +1174,7 @@ ENTRIES = (
     curation=CurationStatus.待整理,
     limits="不借用现行局数起岁规则补成可执行变体；底本未核。",
     recheck="取得该录文底本安大限诀影像及同版起岁说明，核父母宫、兄弟宫起限与年龄规则的关系。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/5",
+    tracking_url=_SOURCE_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.sihua.geng-wikisource",
@@ -1232,17 +1303,17 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.leap-month.next",
-    statement="电子全书的闰正月安身命例按二月起身命，范围限定在该段。",
+    statement="电子全书闰正月安身命例按二月起身命；LifeDNA另列全月算次月的方式，但该站自选前后半月法。",
     concept_ids=("concept.policy.leap-month", "concept.palace.minggong"),
     variant_ids=("variant.leap-month.next",),
-    citation_ids=("citation.quanshu.leap-next",),
-    premises=("仅据安身命例说明命身归月",),
+    citation_ids=("citation.quanshu.leap-next", "citation.lifedna.leap-next"),
+    premises=("全书例只说明命身归月；LifeDNA这里只列举该方式",),
     premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.已整理,
-    limits="不能推出其他月系星的闰月规则。",
+    limits="身命例不能外推其他月系星；站方列举不代表自选，也不认证其所转引古籍的推论。",
     recheck="核该底本其他月系星是否有闰月例，不能从身命段外推。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url=_SOURCE_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.leap-month.split",
@@ -1256,7 +1327,7 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="未核其所引古籍，不把网站主张称作历法必然。",
     recheck="回核该站所引古籍原段是否实际讨论紫微安星归月。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url=_SOURCE_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.leap-month.month-stars-scope",
@@ -1271,7 +1342,7 @@ ENTRIES = (
     alternatives=("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星"),
     limits="这两种读法讨论的是安身命例的适用范围，并非各有直接出处的规则；同段后文“凡有闰月具要依此为例”是待对照的范围线索，不否认已明确的身命归月。",
     recheck="取得同版其他月系星的闰月例，核安身命例的归月是否被沿用；不由身命段自行外推。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url=_SOURCE_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.day-rollover.midnight",
@@ -1285,7 +1356,7 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="页面中的历法史归因未核。",
     recheck="取得有例盘的直接作者说明，区分23点前后与零点前后的命盘日期。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url=_SOURCE_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.day-rollover.late-zi",
@@ -1299,7 +1370,7 @@ ENTRIES = (
     curation=CurationStatus.待整理,
     limits="不是查无出处，也不提供换日实现。",
     recheck="取得明确把23时后的出生日期加一日的作者原文与例盘，并登记版本定位。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url=_SOURCE_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.year-boundary.lunar-new-year",
@@ -1327,7 +1398,35 @@ ENTRIES = (
     curation=CurationStatus.待整理,
     limits="历书的立春时刻只证明时间，不证明紫微斗数应在该时刻换年。",
     recheck="取得明确用于紫微生年干支的立春换年作者原文与两侧例盘，登记版本定位。",
-    tracking_url="https://github.com/0xf3cd/ziwei/issues/2",
+    tracking_url=_SOURCE_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.lifedna.opposes-lichun",
+    statement="LifeDNA第1节反对以立春作为紫微生年分界，这是该站作者的评价。",
+    concept_ids=("concept.policy.year-boundary",),
+    variant_ids=(),
+    citation_ids=("citation.lifedna.opposes-lichun",),
+    premises=("只记录站方明确写出的反对意见",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="不证明所有流派均反对，也不是项目立春选项的支持出处；站方历史论证未回原典。",
+    recheck="取得明确讨论紫微换年分界的具名原著和例盘，分别记录所采用的年界与理由。",
+    tracking_url=_SOURCE_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.lifedna.opposes-late-zi",
+    statement="LifeDNA第3节反对晚上11点多输入后自动将日期加一天，这是该站作者的意见。",
+    concept_ids=("concept.policy.day-rollover",),
+    variant_ids=(),
+    citation_ids=("citation.lifedna.opposes-late-zi",),
+    premises=("只记录站方末段的反对意见，不验证其排盘器",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="不为项目晚子时归次日选项背书；该站还主张早晚子命盘不同，不能将其主张等同项目同日选项。",
+    recheck="取得作者的23点前后及零点前后例盘，核日期处理与早晚子时所指差异。",
+    tracking_url=_SOURCE_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.palace.minggong-shengong",
@@ -1359,7 +1458,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.palace.wuhu-dun",
-    statement="宫干由年干经五虎遁定寅宫干后顺十天干排布；全书起五行寅例与中州派五虎遁诀一致。",
+    statement="宫干由年干经五虎遁定寅宫干后顺十天干排布；全书与中州派讲义的映射相同，口诀措辞不同。",
     concept_ids=("concept.palace.palace-stem",),
     variant_ids=("variant.palace.wuhu-dun",),
     citation_ids=("citation.quanshu.wuhu-yin", "citation.zhongzhou.wuhu"),
@@ -1367,8 +1466,8 @@ ENTRIES = (
     premise_status=PremiseStatus.已明确,
     display=DisplayEligibility.暂不默认展示,
     curation=CurationStatus.已整理,
-    limits="五虎遁同见于子平年上起月，但本条目只用于紫微宫干。",
-    recheck="核中州派讲义纸本五虎遁段与渊海子平年上起月例原文。",
+    limits="只用于紫微宫干，不由同名五虎遁推定其他术数的用途或出处。",
+    recheck="核中州派讲义有明确版次的纸本五虎遁段。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/3",
   ),
   KnowledgeEntry(
@@ -1387,7 +1486,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.wuxingju.mapping",
-    statement="五行局由命宫干支纳音定：水二局、木三局、金四局、土五局、火六局；局数即大限起始年龄。",
+    statement="五行局由命宫干支纳音定：" + _BUREAU_NAMES + "；局数即大限起始年龄。",
     concept_ids=("concept.wuxingju",),
     variant_ids=("variant.wuxingju.mapping",),
     citation_ids=("citation.quanshu.wuxingju", "citation.zhongzhou.wuxingju"),
@@ -1400,6 +1499,21 @@ ENTRIES = (
     tracking_url="https://github.com/0xf3cd/ziwei/issues/3",
   ),
   *_star_entries(STAR_RULES),
+  KnowledgeEntry(
+    id="entry.star.huoling-year-only-pending",
+    statement="论坛转述未具名资料中只按年支、不论生时的火铃查法，并表示反对；所指资料仍待核。",
+    concept_ids=(Star.火星.concept_id, Star.铃星.concept_id),
+    variant_ids=(),
+    citation_ids=("citation.zhongyi999.huoling-year-only",),
+    premises=("只登记论坛对未具名另一查法的转述，不先判定古籍原意",),
+    premise_status=PremiseStatus.待定,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.待整理,
+    alternatives=("年支定宫后不随生时移动", "年支定子时宫位后顺数到生时"),
+    limits="两项用于比较论坛转述的不论生时法与项目采用的顺数法。反对属于论坛作者的评价，不证明另一查法必为讹误；本条无执行变体，现行顺数规则的前提不降级。",
+    recheck="取得论坛所指资料，或核有明确版次的全书火铃段是否有子时起数例解、是否载有论坛所录“再从始处来起子，顺至生时是炎乡”一句；固定修订未见不外推其他刊本。",
+    tracking_url=_SOURCE_RESEARCH_URL,
+  ),
   KnowledgeEntry(
     id="entry.star.kuiyue-quanshu-pending",
     statement="电子全书魁钺录文与现代说明在辛干次序和丙丁第二支不同；本项目只执行现代表，古籍异文保留待核。",

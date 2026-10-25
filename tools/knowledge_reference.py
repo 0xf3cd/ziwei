@@ -51,12 +51,17 @@ def _star_rows() -> list[tuple[str, ...]]:
       rows.append((rule.id, "规则", star.value, rule.definition))
   for ju in WuxingJu:
     for day in range(1, 31):
-      rows.append(("紫微", f"{ju.value}/{day}日", "紫微", stars.ziwei_dizhi(ju, day).value))
+      rows.append(
+        (stars._ZIWEI.id, f"{ju.value}/{day}日", "紫微", stars.ziwei_dizhi(ju, day).value)
+      )
   for branch in Dizhi:
-    rows.append(("天府对应", branch.value, "天府", stars.tianfu_dizhi(branch).value))
-  for title, offsets in (("紫微系偏移", stars.ZIWEI_OFFSETS), ("天府系偏移", stars.TIANFU_OFFSETS)):
+    rows.append((stars._TIANFU.id, branch.value, "天府", stars.tianfu_dizhi(branch).value))
+  for rule, offsets in (
+    (stars._ZIWEI_SERIES, stars.ZIWEI_OFFSETS),
+    (stars._TIANFU_SERIES, stars.TIANFU_OFFSETS),
+  ):
     for star, offset in offsets:
-      rows.append((title, "顺为正、逆为负", star.value, str(offset)))
+      rows.append((rule.id, "顺为正、逆为负", star.value, str(offset)))
   for month in range(1, 13):
     for position in stars.place_month_stars(month):
       rows.append((position.rule_id, str(month), position.star.value, position.dizhi.value))
@@ -158,7 +163,7 @@ def render_catalog(catalog: Catalog) -> str:
     ),
     (
       "implemented-decades",
-      "大限示例（命宫寅，虚岁首尾包含）",
+      "大限示例（命宫寅，首尾包含）",
       ("年干", "性别", "五行局", "方向", "首限", "次限", "年龄计法", "规则"),
       _decade_rows(),
     ),
@@ -289,6 +294,14 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
     "implemented-stars"
   ) != [(), *_star_rows()]:
     raise ValueError("Star reference differs from definition")
+  expected_stars = {(rule.id, star.value) for rule in stars.STAR_RULES for star in rule.stars}
+  numeric_stars = {
+    (row[0], row[2])
+    for row in parser.rows["implemented-stars"]
+    if len(row) == 4 and row[1] != "规则"
+  }
+  if missing := expected_stars - numeric_stars:
+    raise ValueError(f"Star reference missing numeric coverage: {sorted(missing)}")
   for section, rows in (
     ("implemented-sihua", _sihua_rows()),
     ("implemented-decades", _decade_rows()),

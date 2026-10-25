@@ -1,5 +1,6 @@
 """显示只读、同宫多星保全和等宽终端列宽；不把显示当计算参考。"""
 
+from copy import deepcopy
 from dataclasses import asdict, replace
 from unicodedata import east_asian_width
 
@@ -33,6 +34,19 @@ def test_grid_shows_twelve_palaces_and_all_stars(lunar_chart: ZiweiChart) -> Non
   assert len(widths) == 1
   top = rows[1]
   assert top.index("己巳") < top.index("庚午") < top.index("辛未") < top.index("壬申")
+
+
+def test_header_and_each_palace_consume_stored_age_convention(lunar_chart: ZiweiChart) -> None:
+  chart = deepcopy(lunar_chart)
+  units = tuple(branch.value + "龄" for branch in Dizhi)
+  for decade, unit in zip(chart.decades, units, strict=True):
+    object.__setattr__(decade, "age_convention", unit)
+  text = render_text(chart)
+  assert units[0] in text.splitlines()[0]
+  assert text.count(units[0]) == 2
+  assert all(text.count(unit) == 1 for unit in units[1:])
+  assert "虚岁" not in text
+  assert all(decade.age_convention == "虚岁" for decade in lunar_chart.decades)
 
 
 @pytest.mark.parametrize("surrogate", ["\ud800", "\udc00", "\ud800\udc00"])

@@ -280,7 +280,7 @@ def catalog() -> Catalog:
 
 def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   catalog = load_catalog()
-  assert catalog.version == "2026.10.21.1"
+  assert catalog.version == "2026.10.25.1"
   assert {item.kind for item in catalog.concepts} == set(ConceptKind)
   assert len({item.id for item in catalog.records}) == len(catalog.records)
   assert catalog.find("天馬") == catalog.find("tianma")
@@ -290,6 +290,7 @@ def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   assert [item.id for item in pending] == [
     "entry.decades.quanshu-adjacent",
     "entry.leap-month.month-stars-scope",
+    "entry.star.huoling-year-only-pending",
     "entry.star.kuiyue-quanshu-pending",
   ]
   leap = catalog.get("entry.leap-month.month-stars-scope")

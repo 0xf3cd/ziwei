@@ -2,7 +2,7 @@
 
 [API 参考](api.md#五行局) · [命宫身宫与十二宫](palaces.md) · [项目入口](../README.md)
 
-五行局由命宫干支的纳音五行定：水二局、木三局、金四局、土五局、火六局；
+五行局由命宫干支的纳音五行定，五局名称见[定义生成的说明](knowledge-reference.md#variant.wuxingju.mapping)。
 局数即首限起始虚岁，区间与顺逆见[四化与大限](sihua-decades.md)。
 
 - 纳音五行表（六十甲子两两一组）见[知识参考](knowledge-reference.md#implemented-nayin)，
