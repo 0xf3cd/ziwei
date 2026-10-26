@@ -20,7 +20,8 @@ celestial 的节气时刻是 UT1，民用输入是 UTC 或固定偏移；本模�
 --------------------------------
 
 `apparent_solar` 调用 celestial 的 `apparent_solar_time`，以 UTC 民用时刻与东经经度换算
-当地真太阳钟，返回年月日与当日小数。换算保留 UT1-UTC 的亚秒差距，取时辰时通常不影响。
+当地真太阳钟，返回年月日与当日小数。此处直接传入 UTC 钟面值，不修正 UT1-UTC 的亚秒差距；
+取时辰时通常不影响。
 """
 
 from __future__ import annotations
