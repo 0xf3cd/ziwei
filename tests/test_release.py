@@ -223,7 +223,7 @@ def run_publish_script(
     ("packages-symlink", "Artifact packages must be a regular directory", "[[ ! -L {packages} ]]"),
     ("bundle-symlink", "Artifact bundle must be a regular directory", "[[ ! -L {directory} ]]"),
     ("filename", "Expected exactly the release sdist and wheel", "[[ -f {wheel} ]]"),
-    # 发布Bash只核packages字节，以下额外合同由build和consume的Python核验承担。
+    # 发布Bash核packages的成员、文件名、类型和摘要；以下额外合同由build和consume的Python核验承担。
     ("checksum", "Checksum file differs", None),
     ("crlf", "Checksum file differs", None),
     ("manifest-digest", "Manifest differs", None),
