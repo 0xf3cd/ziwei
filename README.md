@@ -88,7 +88,7 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 - 安命宫、身宫与十二宫宫干，定五行局，安紫微、天府两系十四主星。
 - 安六吉、六煞、禄存与天马；按所选具名四化表取生年四化。
 - 起大限：顺逆由年干阴阳与性别定，首限起始虚岁由五行局数定。
-- 输出不可变结构、文本与静态SVG盘面，保留输入、口径、历法版本与派生结果。
+- 命盘结果不可变，保留输入、口径、历法版本与派生结果；另提供文本与静态SVG盘面用于显示。
 
 首版交付记录见[v0.1.0 milestone](https://github.com/0xf3cd/ziwei/milestone/1)，
 当前改进由[v0.2.0 milestone](https://github.com/0xf3cd/ziwei/milestone/4)追踪。

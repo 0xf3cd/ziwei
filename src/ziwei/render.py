@@ -26,10 +26,10 @@ _SVG_STYLE: Final = """
 .ziwei-chart .decade{font-size:13px;fill:#52645f}
 .ziwei-chart .divider{stroke:#d9dfdb;stroke-width:1}
 .ziwei-chart .selected rect{fill:#f8e8dd;stroke:#a74c30;stroke-width:3}
-.ziwei-chart .sanh rect{fill:#e8f1eb;stroke:#377461;stroke-width:2}
+.ziwei-chart .sanhe rect{fill:#e8f1eb;stroke:#377461;stroke-width:2}
 .ziwei-chart .opposite rect{fill:#eaf0f3;stroke:#4b6d83;stroke-width:2;stroke-dasharray:6 4}
 .ziwei-chart .selected .relation{fill:#913e26}
-.ziwei-chart .sanh .relation{fill:#28624f}
+.ziwei-chart .sanhe .relation{fill:#28624f}
 .ziwei-chart .opposite .relation{fill:#3b5d73}
 .ziwei-chart .summary text{text-anchor:middle}
 .ziwei-chart .title{font-size:32px;font-weight:600}
@@ -104,9 +104,9 @@ def render_svg(chart: ZiweiChart, *, selected_palace: PalaceName | Dizhi | None 
   """返回自包含的静态SVG，显示已有十二宫、星曜、生年四化、身宫与大限。
 
   selected_palace接受宫名或地支枚举，突出本宫、两个三合宫和对宫；None不高亮。
-  错类型抛TypeError，不接受同值字符串。显示不重算或修改命盘，也不输出出生记录中的
+  类型错误时抛TypeError，不接受字符串（如"命宫"或"子"）。显示不重算或修改命盘，也不输出出生记录中的
   生日、地点、来源等任意元数据。SVG不含脚本或外部资源；写入文件时须使用UTF-8。
-  宫格高度随实际星数调整，星曜按原盘顺序从左到右、从上到下排列。
+  整盘共用按最多星数调整的格高，星曜按原盘顺序从左到右、从上到下排列。
   """
   if not isinstance(chart, ZiweiChart):
     raise TypeError("SVG盘面须使用 ZiweiChart")
@@ -117,12 +117,12 @@ def render_svg(chart: ZiweiChart, *, selected_palace: PalaceName | Dizhi | None 
     else dict(
       zip(
         sanfang_sizheng(selected.palace.dizhi),
-        ("selected", "sanh", "sanh", "opposite"),
+        ("selected", "sanhe", "sanhe", "opposite"),
         strict=True,
       )
     )
   )
-  labels = {"selected": "本宫", "sanh": "三合", "opposite": "对宫"}
+  labels = {"selected": "本宫", "sanhe": "三合", "opposite": "对宫"}
   views = {palace.dizhi: palace_view(chart, palace.dizhi) for palace in chart.palaces}
   decades = {decade.dizhi: decade for decade in chart.decades}
   star_rows = max((len(view.stars) + 1) // 2 for view in views.values())

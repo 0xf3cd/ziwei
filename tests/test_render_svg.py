@@ -158,11 +158,11 @@ def test_svg_highlights_exact_relationship_roles(
   expected = dict(
     zip(
       (Dizhi[branch].name.lower() for branch in members),
-      ("selected", "sanh", "sanh", "opposite"),
+      ("selected", "sanhe", "sanhe", "opposite"),
       strict=True,
     )
   )
-  labels = {"selected": "本宫", "sanh": "三合", "opposite": "对宫"}
+  labels = {"selected": "本宫", "sanhe": "三合", "opposite": "对宫"}
   for branch, cell in cells.items():
     role = expected.get(branch)
     assert cell.attrib["class"] == "palace" + (" " + role if role is not None else "")
@@ -177,6 +177,54 @@ def test_svg_palace_names_and_branches_are_equivalent(lunar_chart: ZiweiChart) -
   assert render_svg(lunar_chart, selected_palace=PalaceName.夫妻) == render_svg(
     lunar_chart, selected_palace=PalaceName.妻妾
   )
+
+
+@pytest.mark.parametrize("selected", [None, *Dizhi])
+def test_svg_selection_changes_summary_but_not_stored_palace_content(
+  svg_chart: ZiweiChart, selected: Dizhi | None
+) -> None:
+  root = _safe_tree(render_svg(svg_chart, selected_palace=selected))
+  summary = root.find(SVG + "g[@class='summary']")
+  assert summary is not None
+  if selected is None:
+    selection = "未选择高亮宫位"
+  else:
+    palace = next(palace for palace in svg_chart.palaces if palace.dizhi is selected)
+    selection = f"选宫 · {palace.name.value} {palace.ganzhi}"
+  expected = [
+    ("title", "紫微斗数"),
+    ("subtitle", "本命十二宫"),
+    ("bureau", svg_chart.bureau.value),
+    (
+      "age",
+      "大限"
+      + svg_chart.decades[0].direction.value
+      + " · "
+      + svg_chart.decades[0].age_convention
+      + "首尾包含",
+    ),
+    ("selection", selection),
+  ]
+  if selected is not None:
+    expected.append(("legend", "本宫 · 三合两宫 · 对宫"))
+  assert [(node.get("class"), node.text) for node in summary.findall(SVG + "text")] == expected
+  assert root.findtext(SVG + "desc") == "只显示已有命盘，不重新排盘或解释吉凶。" + (
+    "未选择高亮宫位。" if selected is None else "以文字和边框区分本宫、两个三合宫与对宫。"
+  )
+  plain_cells = _palaces(_safe_tree(render_svg(svg_chart)))
+  for branch, cell in _palaces(root).items():
+    for class_name in ("name", "ganzhi", "body", "star", "decade"):
+      assert _texts(cell, class_name) == _texts(plain_cells[branch], class_name)
+
+
+def test_svg_does_not_print_software_versions(svg_chart: ZiweiChart) -> None:
+  root = _safe_tree(render_svg(svg_chart, selected_palace=PalaceName.命宫))
+  content = " ".join(
+    node.text or ""
+    for node in root.iter()
+    if node.tag in (SVG + "text", SVG + "title", SVG + "desc")
+  )
+  assert re.search(r"(?<!\d)v?\d+\.\d+(?:\.\d+)?(?:[-+][\w.]+)?", content, re.IGNORECASE) is None
 
 
 def test_svg_styles_are_scoped_to_the_chart(lunar_chart: ZiweiChart) -> None:

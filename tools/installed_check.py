@@ -240,7 +240,7 @@ def check_chart() -> None:
     for cell in cells
     if len(cell.attrib["class"].split()) == 2
   }
-  if roles != {"zi": "selected", "chen": "sanh", "shen": "sanh", "wu": "opposite"}:
+  if roles != {"zi": "selected", "chen": "sanhe", "shen": "sanhe", "wu": "opposite"}:
     raise ValueError("Installed SVG chart has incorrect selected-palace relationships")
   selected_cell = next(cell for cell in cells if cell.attrib["data-dizhi"] == "zi")
   labels = {
