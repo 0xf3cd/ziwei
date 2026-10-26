@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from ziwei.bureau import WuxingJu, bureau_of
 from ziwei.config import LeapMonthPolicy
@@ -20,6 +20,36 @@ from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, palace_stems, year_ganzhi
 
 if TYPE_CHECKING:
   from ziwei.birth import CalculationInput
+
+OPPOSITE_RULE_ID: Final = "variant.palace.opposite"
+"""对宫关系在知识目录中的标识。"""
+SANFANG_SIZHENG_RULE_ID: Final = "variant.palace.sanfang-sizheng"
+"""三方四正四成员关系在知识目录中的标识。"""
+
+
+def opposite_dizhi(dizhi: Dizhi) -> Dizhi:
+  """返回对宫地支，即十二宫环上相隔六宫的位置。
+
+  NTNU个人空间《名詞解釋》与安迪《紫微斗數解盤：三方四正的應用》的对宫说明及命宫例互证；
+  只据所见现代网页，不认证古籍底本。来源与短引见知识目录。
+  """
+  if not isinstance(dizhi, Dizhi):
+    raise TypeError("宫位地支须为 Dizhi 成员")
+  order = tuple(Dizhi)
+  return order[(order.index(dizhi) + 6) % 12]
+
+
+def sanfang_sizheng(dizhi: Dizhi) -> tuple[Dizhi, Dizhi, Dizhi, Dizhi]:
+  """返回本宫、两个三合宫与对宫，不借星或解释吉凶。
+
+  顺序固定为本宫、沿子丑寅顺行偏移四宫、偏移八宫、对宫；这是项目API约定。
+  两份现代网页的命宫与夫妻宫例支持这四个成员，不规定此顺序，也不用于定义单独的“三方”称谓。
+  """
+  if not isinstance(dizhi, Dizhi):
+    raise TypeError("宫位地支须为 Dizhi 成员")
+  order = tuple(Dizhi)
+  start = order.index(dizhi)
+  return dizhi, order[(start + 4) % 12], order[(start + 8) % 12], opposite_dizhi(dizhi)
 
 
 def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy) -> int:

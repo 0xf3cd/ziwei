@@ -21,11 +21,11 @@ from ziwei.knowledge.model import (
   SourceStatus,
   TextLayer,
 )
-from ziwei.palaces import PalaceName
+from ziwei.palaces import OPPOSITE_RULE_ID, SANFANG_SIZHENG_RULE_ID, PalaceName
 from ziwei.sihua import SIHUA_TABLES, SihuaVariant
 from ziwei.stars import STAR_RULES, Star, StarRule
 
-CATALOG_VERSION: Final = "2026.10.25.1"
+CATALOG_VERSION: Final = "2026.10.26.1"
 """语料版本，与开发包版本分别记录。"""
 
 _BUREAU_NAMES = "、".join(ju.value for ju in WuxingJu)
@@ -56,6 +56,19 @@ CONCEPTS = (
     aliases=("宮干",),
     kind=ConceptKind.宫位,
     related_ids=("concept.palace.palaces-12",),
+  ),
+  Concept(
+    id="concept.palace.opposite",
+    name="对宫",
+    aliases=("對宮",),
+    kind=ConceptKind.宫位,
+    related_ids=("concept.palace.palaces-12",),
+  ),
+  Concept(
+    id="concept.palace.sanfang-sizheng",
+    name="三方四正",
+    kind=ConceptKind.宫位,
+    related_ids=("concept.palace.palaces-12", "concept.palace.opposite"),
   ),
   Concept(
     id="concept.nayin",
@@ -100,6 +113,24 @@ CONCEPTS = (
 )
 
 VARIANTS = (
+  RuleVariant(
+    id=OPPOSITE_RULE_ID,
+    name="十二宫对宫",
+    definition="十二宫环上与本宫相对的位置；不借取对宫星曜。",
+    scope="已定十二宫的地支关系，不作吉凶解释",
+    concept_ids=("concept.palace.opposite",),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/39",
+    implementation="ziwei.palaces.opposite_dizhi",
+  ),
+  RuleVariant(
+    id=SANFANG_SIZHENG_RULE_ID,
+    name="三方四正四成员",
+    definition="本宫、两个三合宫与对宫，共四个不同宫位；返回顺序是项目API约定。",
+    scope="以调用者选定的宫位为本宫，只返回宫位关系，不定义单独的三方称谓",
+    concept_ids=("concept.palace.sanfang-sizheng",),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/39",
+    implementation="ziwei.palaces.sanfang_sizheng",
+  ),
   *(
     RuleVariant(
       id=table.id,
@@ -318,6 +349,39 @@ VARIANTS = (
 
 SOURCES = (
   Source(
+    id="source.ntnu-palace-glossary",
+    title="名詞解釋（NTNU个人空间网页）",
+    edition="2026-10-26取得的9854字节Big5网页；SHA256 "
+    "690ad963d3b29749576bfc90f1c1a39d7f07d1edbfc5330777382c541c1a433c",
+    url="https://web.ntnu.edu.tw/~69320010/new_page_7.htm",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.ntnu-palace-glossary",
+    provenance="无署名的个人空间名词页，正文提到科技紫微網；与该站的转载关系未核，不作校方认证。",
+    claims="对宫定义、三方四正的一般位置说明及命宫等例子。",
+    limits="子女例首项写作兄弟宮，与本页一般定义不一致，该例不用作规则验收；"
+    "没有核纸本或古籍传承，不据所列顺序制定API顺序。",
+    rights="仅取必要短引及出处说明，网页转载许可未核，不转载全文。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 10, 26),
+  ),
+  Source(
+    id="source.andy-sanfang-sizheng",
+    title="紫微斗數解盤：三方四正的應用",
+    authors=("安迪老師",),
+    edition="网页标注发布2025-04-27、更新2026-10-22；2026-10-26取得，SHA256 "
+    "9c92ea89f67b5757a20080b2a98035c948001adeb768fe04b61547e0e50ac9d7",
+    url="https://andylifemap.com/san-fang-si-zheng/",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.andy-sanfang-sizheng",
+    provenance="具名作者站的现代说明；与名词页措辞不同，历史传承关系未核，不认证为独立古传。",
+    claims="三方四正含本宫的四成员关系，命宫及夫妻宫的具体例子。",
+    limits="仅采用组合成员与对宫信息，不收其权重或吉凶解释；"
+    "不把语境中的三方称谓当作单独定义，不将修订页面当成2025初版。",
+    rights="仅取必要短引及出处说明，网页转载许可未核，不转载全文。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 10, 26),
+  ),
+  Source(
     id="source.zhongyi999-paimingpan",
     title="排命盘口诀（2007论坛转录）",
     edition="2026-10-25复核thread-1744，页内2007发帖；原著作者与底本未核",
@@ -478,6 +542,45 @@ SOURCES = (
 )
 
 CITATIONS = (
+  Citation(
+    id="citation.ntnu.palace-opposite",
+    source_id="source.ntnu-palace-glossary",
+    locator="问答：什麼是對宮？",
+    quote="對宮指的就是所要看的宮位對角線的宮位。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="同处列命迁等六对；只核所见匿名网页，不认证其原始出处。",
+  ),
+  Citation(
+    id="citation.ntnu.sanfang-sizheng",
+    source_id="source.ntnu-palace-glossary",
+    locator="问答：什麼是三方四正？定义句",
+    quote="三方指的就是所看的宮位為基準點，往左數第五個宮位、往右數第五個宮位稱為三方，"
+    "再加上所看宮位的對宮便是四正。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="按紧随的命宫例核第五个含起点；同页子女例首项与一般定义冲突，不改其原字，也不用作验收。",
+  ),
+  Citation(
+    id="citation.andy.sanfang-sizheng-minggong",
+    source_id="source.andy-sanfang-sizheng",
+    locator="什麼是紫微斗數中的三方四正？命宫例",
+    quote="命宮的三方四正包括：命宮本身、遷移宮（命宮的對宮）、財帛宮（命宮逆時針數四格）、"
+    "官祿宮（命宮順時針數四格）。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="截取例句，不纳入下一句性格与发展解释；所列次序不是本项目返回顺序。",
+  ),
+  Citation(
+    id="citation.andy.sanfang-sizheng-qiqie",
+    source_id="source.andy-sanfang-sizheng",
+    locator="夫妻宮的三方四正紫微解析，首句",
+    quote="夫妻宮的三方四正包括：夫妻宮、官祿宮（夫妻宮的對宮）、遷移宮（夫妻宮逆時針數四格）、"
+    "福德宮（夫妻宮順時針數四格）。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="只支持四成员，后续感情推断不收；不是另一条独立传承的出处。",
+  ),
   Citation(
     id="citation.zhongyi999.sihua",
     source_id="source.zhongyi999-paimingpan",
@@ -1109,6 +1212,39 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
 
 
 ENTRIES = (
+  KnowledgeEntry(
+    id="entry.palace.opposite",
+    statement="对宫查询只返回与所选宫位相对的地支，不将该宫星曜移入本宫。",
+    concept_ids=("concept.palace.opposite",),
+    variant_ids=(OPPOSITE_RULE_ID,),
+    citation_ids=("citation.ntnu.palace-opposite", "citation.andy.sanfang-sizheng-minggong"),
+    premises=("已确定十二宫，以调用者选定的宫位为本宫",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="所见为两份现代网页，不认证独立古籍传承；借星与吉凶均不在本条范围。",
+    recheck="核名词页与科技紫微網原站的关系，并取得有明确版次的紫微斗数讲义对宫定义与例子。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/39",
+  ),
+  KnowledgeEntry(
+    id="entry.palace.sanfang-sizheng",
+    statement="三方四正查询采用两份网页共同支持的四成员，不裁定单独的三方称谓；"
+    "元组的返回次序是项目API约定。",
+    concept_ids=("concept.palace.sanfang-sizheng",),
+    variant_ids=(SANFANG_SIZHENG_RULE_ID,),
+    citation_ids=(
+      "citation.ntnu.sanfang-sizheng",
+      "citation.andy.sanfang-sizheng-minggong",
+      "citation.andy.sanfang-sizheng-qiqie",
+    ),
+    premises=("已确定本宫与十二宫位置，只查询本宫、两个三合宫与对宫的集合",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="原站谱系与纸本未核；匿名页的子女错例不作为支持，现代文章的强弱及解释不纳入计算。",
+    recheck="取得有明确版次的紫微斗数讲义三方四正定义与命宫、夫妻宫例，核成员与本宫包含关系。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/39",
+  ),
   KnowledgeEntry(
     id="entry.sihua.zhongyi999",
     statement="采用《排命盘口诀》所见转录的完整十干表。每行按生年干取禄权科忌，具体规则另核独立说明；不把不同作者的格子拼为一表。",

@@ -76,6 +76,38 @@
 没有吉凶解释或图形绘制。等宽终端按东亚宽字符两列对齐，比例字体或不同终端宽度规则可能影响对齐。
 盘面不输出地点、来源等任意文本，所以它们携带的控制字符不会成为终端指令。
 
+## 按宫读取
+
+v0.2.0（开发中）提供`palace_view()`，从已有`ZiweiChart`读取一宫的结构化内容。
+宫名是相对命宫的“田宅”等名称，地支是“巳”等固定位置；二者查询同一宫时返回相同结果。
+下面继续读取上例，不重新排盘：
+
+```{doctest}
+>>> from ziwei.chart import palace_view
+>>> from ziwei.palaces import PalaceName
+>>> view = palace_view(chart, PalaceName.田宅)
+>>> view.palace.name.value, str(view.palace.ganzhi)
+('田宅', '己巳')
+>>> tuple(position.star.value for position in view.stars)
+('武曲', '破军')
+>>> view.quan.value, view.ke.value
+('破军', '武曲')
+>>> view == palace_view(chart, Dizhi.巳)
+True
+>>> palace_view(chart, PalaceName.命宫).is_shengong
+True
+```
+
+返回的`PalaceView`不可变：`palace`保留宫名、地支与宫干，`stars`保留原盘顺序的星位及规则标识；
+`lu`、`quan`、`ke`、`ji`分别是本宫中带生年禄、权、科、忌的星曜，不在本宫时为`None`。
+`is_shengong`表示身宫叠在本宫。这里只读取原盘的生年四化，不按宫干另算飞化。
+空宫的`stars`为空元组、四化全为`None`，不借入对宫星曜；星集只涉及当前已实现星曜。
+
+查询只接受`ZiweiChart`与`PalaceName`或`Dizhi`成员，合法中文别名等同原成员，其他类型抛`TypeError`。
+它不修改原盘，不重新解析出生记录或访问历法、时区资源。
+直接构造`PalaceView`会复制星位序列，检查成员类型、星位属本宫、无重复星曜和四化标记的本宫归属；
+这不认证它来自某张完整命盘。宫位间的对宫／三方四正查询见[宫位关系](palaces.md#对宫与三方四正)。
+
 ## 计算输入与来源信息
 
 `chart.calculation`保留原始出生记录、口径、解析后的农历年月日时与干支纪年，以及此次使用的农历算法和celestial版本。

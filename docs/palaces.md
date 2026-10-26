@@ -47,3 +47,27 @@
 >>> palaces[0].name.value, str(palaces[0].ganzhi)
 ('命宫', '丙子')
 ```
+
+## 对宫与三方四正
+
+v0.2.0（开发中）提供两个不依赖出生资料的关系查询。`opposite_dizhi()`返回相隔六宫的对宫；
+`sanfang_sizheng()`返回本宫、两个三合宫与对宫。元组顺序固定为本宫、沿子丑寅顺行偏移四宫、
+偏移八宫、对宫，这是项目API约定，不是来源规定的排列顺序。
+
+```{doctest}
+>>> from ziwei.palaces import opposite_dizhi, sanfang_sizheng
+>>> opposite_dizhi(Dizhi.子).value
+'午'
+>>> tuple(branch.value for branch in sanfang_sizheng(Dizhi.寅))
+('寅', '午', '戌', '申')
+```
+
+两个入口只接受`Dizhi`成员，同值字符串、整数或`bool`抛`TypeError`；不重算历法、不借星、不作吉凶解释。
+以宫名读取命盘中的星曜与四化，见[按宫读取](chart.md#按宫读取)。
+
+成员关系据[匿名名词页](knowledge-reference.md#source.ntnu-palace-glossary)与
+[安迪作者站](knowledge-reference.md#source.andy-sanfang-sizheng)的现代说明及具体例子登记。
+两页对单独“三方”的表达不同，本接口只提供成员一致的“三方四正”组合，不据此定义单独的“三方”。
+匿名页的子女例与其一般定义不一致，不用于验收；两路的原始谱系与纸本均未核，不声称古籍或流派共识。
+执行规则与短引见[对宫](knowledge-reference.md#variant.palace.opposite)、
+[三方四正](knowledge-reference.md#variant.palace.sanfang-sizheng)。
