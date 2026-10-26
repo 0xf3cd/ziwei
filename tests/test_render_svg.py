@@ -237,6 +237,16 @@ def test_svg_styles_are_scoped_to_the_chart(lunar_chart: ZiweiChart) -> None:
     assert all(selector.strip().startswith(".ziwei-chart ") for selector in rule.split(","))
 
 
+@pytest.mark.parametrize("role", ["selected", "sanhe", "opposite"])
+def test_svg_relationship_role_classes_have_color_styles(
+  lunar_chart: ZiweiChart, role: str
+) -> None:
+  root = _safe_tree(render_svg(lunar_chart, selected_palace=PalaceName.命宫))
+  style = root.findtext(SVG + "style") or ""
+  rules = re.findall(rf"\.ziwei-chart\s+\.{role}\s+(?:rect|\.relation)\s*\{{([^}}]*)\}}", style)
+  assert any(re.search(r"(?:^|;)\s*(?:fill|stroke)\s*:\s*[^;\s]+", rule) for rule in rules)
+
+
 @pytest.mark.parametrize("bad", [None, True, 1, {}, "chart"])
 def test_svg_rejects_non_chart(bad: object) -> None:
   with pytest.raises(TypeError):
