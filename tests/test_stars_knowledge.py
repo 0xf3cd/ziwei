@@ -12,11 +12,101 @@ import pytest
 
 from tools.knowledge_reference import check_knowledge_reference, render_catalog
 from ziwei import stars
+from ziwei.bureau import WuxingJu
 from ziwei.config import POLICY_ENUMS, TianmaRule
-from ziwei.ganzhi import Dizhi
+from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.data import _star_entries
 from ziwei.knowledge.model import Concept, ConceptKind, RuleVariant, Source, SourceStatus
+
+# 固定既有规则的身份，不从执行定义或知识目录生成期望；新增规则不改写这些绑定。
+EXPECTED_RULE_STARS = {
+  "variant.star.ziwei-bureau-day": (stars.Star.紫微,),
+  "variant.star.ziwei-series": (
+    stars.Star.天机,
+    stars.Star.太阳,
+    stars.Star.武曲,
+    stars.Star.天同,
+    stars.Star.廉贞,
+  ),
+  "variant.star.tianfu-reflection": (stars.Star.天府,),
+  "variant.star.tianfu-series": (
+    stars.Star.太阴,
+    stars.Star.贪狼,
+    stars.Star.巨门,
+    stars.Star.天相,
+    stars.Star.天梁,
+    stars.Star.七杀,
+    stars.Star.破军,
+  ),
+  "variant.star.fubi-effective-month": (stars.Star.左辅, stars.Star.右弼),
+  "variant.star.wenchang-wenqu-hour": (stars.Star.文昌, stars.Star.文曲),
+  "variant.star.kuiyue-modern": (stars.Star.天魁, stars.Star.天钺),
+  "variant.star.lucun-stem": (stars.Star.禄存,),
+  "variant.star.yangtuo-lucun": (stars.Star.擎羊, stars.Star.陀罗),
+  "variant.star.huoling-forward": (stars.Star.火星, stars.Star.铃星),
+  "variant.star.kongjie-hour": (stars.Star.地空, stars.Star.地劫),
+  "variant.tianma.year-branch": (stars.Star.天马,),
+  "variant.tianma.month-branch": (stars.Star.天马,),
+}
+
+
+def _pure_star_positions() -> tuple[stars.StarPlacement, ...]:
+  return (
+    *stars.place_major_stars(WuxingJu.火六局, 7),
+    *stars.place_month_stars(1),
+    *stars.place_hour_stars(Dizhi.子),
+    *stars.place_stem_stars(Tiangan.甲),
+    *stars.place_fire_bell(Dizhi.辰, Dizhi.子),
+  )
+
+
+@pytest.mark.parametrize("identifier,members", EXPECTED_RULE_STARS.items())
+def test_existing_star_rule_identities_keep_their_meaning(
+  identifier: str, members: tuple[stars.Star, ...]
+) -> None:
+  rules = tuple(rule for rule in stars.STAR_RULES if rule.id == identifier)
+  assert len(rules) == 1
+  assert set(rules[0].stars) == set(members)
+  variant = load_catalog().get(identifier)
+  assert isinstance(variant, RuleVariant)
+  assert set(variant.concept_ids) == {star.concept_id for star in members}
+
+
+def test_low_level_positions_keep_existing_rule_identities() -> None:
+  positions = _pure_star_positions()
+  expected = {
+    star: identifier
+    for identifier, members in EXPECTED_RULE_STARS.items()
+    for star in members
+    if star is not stars.Star.天马
+  }
+  assert len(positions) == len(expected)
+  assert {position.star: position.rule_id for position in positions} == expected
+
+
+@pytest.mark.parametrize(
+  "choice,identifier",
+  [
+    (TianmaRule.年支天马, "variant.tianma.year-branch"),
+    (TianmaRule.月支天马, "variant.tianma.month-branch"),
+  ],
+)
+def test_tianma_choices_keep_distinct_rule_identities(choice: TianmaRule, identifier: str) -> None:
+  rules = tuple(rule for rule in stars.STAR_RULES if rule.tianma_rule is choice)
+  assert len(rules) == 1
+  assert rules[0].id == identifier
+
+
+def test_rule_display_names_do_not_change_position_identities(
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  original = _pure_star_positions()
+  rules = stars.STAR_RULES
+  renamed = tuple(replace(rule, name=f"显示名{index}") for index, rule in enumerate(rules))
+  monkeypatch.setattr(stars, "STAR_RULES", renamed)
+  assert all(before.name != after.name for before, after in zip(rules, renamed, strict=True))
+  assert _pure_star_positions() == original
 
 
 def test_every_star_and_rule_is_queryable_without_birth() -> None:
@@ -49,7 +139,15 @@ def test_rule_meaning_does_not_include_configuration_defaults() -> None:
 
 @pytest.mark.parametrize(
   "change,error_encoding",
-  [("append", None), ("rename", None), ("missing-id", None), ("missing-id", "ascii")],
+  [
+    ("append", None),
+    ("rename", None),
+    ("display-name", None),
+    ("alias", None),
+    ("rule-name", None),
+    ("missing-id", None),
+    ("missing-id", "ascii"),
+  ],
 )
 def test_star_concepts_have_explicit_identity(
   tmp_path: Path, change: str, error_encoding: str | None
@@ -68,6 +166,12 @@ def test_star_concepts_have_explicit_identity(
     code = code.replace("  ZIWEI = ", "  ZIWEI_RENAMED = ").replace(
       marker, "  紫微 = ZIWEI_RENAMED"
     )
+  elif change == "display-name":
+    code = code.replace('ZIWEI = "紫微",', 'ZIWEI = "紫微（显示名）",')
+  elif change == "alias":
+    code = code.replace(marker, "  新增别名 = ZIWEI\n" + marker)
+  elif change == "rule-name":
+    code = code.replace('"紫微系固定关系"', '"紫微系显示名"')
   else:
     member = '  FUTURE = "测试星", "concept.star.future"\n'
     if change == "missing-id":
@@ -97,6 +201,14 @@ if Star.紫微.concept_id != 'concept.star.ziwei':
   raise RuntimeError('renamed member changed identity')
 if sys.argv[2] == 'rename' and Star.紫微.name != 'ZIWEI_RENAMED':
   raise RuntimeError('rename was not applied')
+if sys.argv[2] == 'display-name' and Star.紫微.value != '紫微（显示名）':
+  raise RuntimeError('display name was not changed')
+if sys.argv[2] == 'alias' and Star.新增别名 is not Star.紫微:
+  raise RuntimeError('alias was not added')
+if sys.argv[2] == 'rule-name':
+  rule = catalog.get('variant.star.ziwei-series')
+  if rule.name != '紫微系显示名' or 'concept.star.tianji' not in rule.concept_ids:
+    raise RuntimeError('rule display name changed identity')
 print('CONCEPTS_OK', len(Star))
 """
   result = subprocess.run(
