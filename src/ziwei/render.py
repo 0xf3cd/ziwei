@@ -1,9 +1,42 @@
-"""只读文本盘面；不执行历法、改变星位或输出任意出生元数据。"""
+"""只读文本与SVG盘面；不执行历法、改变星位或输出任意出生元数据。"""
 
+from typing import Final
 from unicodedata import east_asian_width
+from xml.etree.ElementTree import Element, SubElement, tostring
 
-from ziwei.chart import ZiweiChart
+from ziwei.chart import ZiweiChart, palace_view
 from ziwei.ganzhi import Dizhi
+from ziwei.palaces import PalaceName, sanfang_sizheng
+
+_PALACE_LAYOUT: Final = (
+  (Dizhi.巳, Dizhi.午, Dizhi.未, Dizhi.申),
+  (Dizhi.辰, None, None, Dizhi.酉),
+  (Dizhi.卯, None, None, Dizhi.戌),
+  (Dizhi.寅, Dizhi.丑, Dizhi.子, Dizhi.亥),
+)
+
+_SVG_STYLE: Final = """
+.ziwei-chart text{font-family:"Noto Sans CJK SC","Microsoft YaHei","PingFang SC",sans-serif;fill:#263e3b}
+.ziwei-chart .palace rect{fill:#fffefa;stroke:#c5ceca;stroke-width:1}
+.ziwei-chart .palace .name{font-size:22px;font-weight:600}
+.ziwei-chart .ganzhi{font-size:16px;text-anchor:end}
+.ziwei-chart .body,.ziwei-chart .relation{font-size:14px}
+.ziwei-chart .relation{text-anchor:end;font-weight:600}
+.ziwei-chart .star{font-size:19px}
+.ziwei-chart .decade{font-size:13px;fill:#52645f}
+.ziwei-chart .divider{stroke:#d9dfdb;stroke-width:1}
+.ziwei-chart .selected rect{fill:#f8e8dd;stroke:#a74c30;stroke-width:3}
+.ziwei-chart .sanh rect{fill:#e8f1eb;stroke:#377461;stroke-width:2}
+.ziwei-chart .opposite rect{fill:#eaf0f3;stroke:#4b6d83;stroke-width:2;stroke-dasharray:6 4}
+.ziwei-chart .selected .relation{fill:#913e26}
+.ziwei-chart .sanh .relation{fill:#28624f}
+.ziwei-chart .opposite .relation{fill:#3b5d73}
+.ziwei-chart .summary text{text-anchor:middle}
+.ziwei-chart .title{font-size:32px;font-weight:600}
+.ziwei-chart .subtitle,.ziwei-chart .age,.ziwei-chart .legend{font-size:14px;fill:#52645f}
+.ziwei-chart .bureau{font-size:26px;font-weight:600}
+.ziwei-chart .selection{font-size:18px}
+""".strip()
 
 
 def _width(text: str) -> int:
@@ -41,12 +74,6 @@ def render_text(chart: ZiweiChart) -> str:
       *stars,
       f"大限 {decade.start_age}-{decade.end_age}{decade.age_convention}",
     ]
-  layout = (
-    (Dizhi.巳, Dizhi.午, Dizhi.未, Dizhi.申),
-    (Dizhi.辰, None, None, Dizhi.酉),
-    (Dizhi.卯, None, None, Dizhi.戌),
-    (Dizhi.寅, Dizhi.丑, Dizhi.子, Dizhi.亥),
-  )
   width = max(_width(line) for lines in cells.values() for line in lines)
   border = "+" + "+".join("-" * (width + 2) for _ in range(4)) + "+"
   output = [
@@ -58,7 +85,7 @@ def render_text(chart: ZiweiChart) -> str:
     + "首尾包含",
     border,
   ]
-  for row in layout:
+  for row in _PALACE_LAYOUT:
     height = max(len(cells[branch]) for branch in row)
     for index in range(height):
       lines = [cells[branch][index] if index < len(cells[branch]) else "" for branch in row]
@@ -67,3 +94,152 @@ def render_text(chart: ZiweiChart) -> str:
       )
     output.append(border)
   return "\n".join(output) + "\n"
+
+
+def _svg_text(parent: Element, value: str, *, x: int, y: int, class_name: str) -> None:
+  SubElement(parent, "text", {"x": str(x), "y": str(y), "class": class_name}).text = value
+
+
+def render_svg(chart: ZiweiChart, *, selected_palace: PalaceName | Dizhi | None = None) -> str:
+  """返回自包含的静态SVG，显示已有十二宫、星曜、生年四化、身宫与大限。
+
+  selected_palace接受宫名或地支枚举，突出本宫、两个三合宫和对宫；None不高亮。
+  错类型抛TypeError，不接受同值字符串。显示不重算或修改命盘，也不输出出生记录中的
+  生日、地点、来源等任意元数据。SVG不含脚本或外部资源；写入文件时须使用UTF-8。
+  宫格高度随实际星数调整，星曜按原盘顺序从左到右、从上到下排列。
+  """
+  if not isinstance(chart, ZiweiChart):
+    raise TypeError("SVG盘面须使用 ZiweiChart")
+  selected = None if selected_palace is None else palace_view(chart, selected_palace)
+  relations = (
+    {}
+    if selected is None
+    else dict(
+      zip(
+        sanfang_sizheng(selected.palace.dizhi),
+        ("selected", "sanh", "sanh", "opposite"),
+        strict=True,
+      )
+    )
+  )
+  labels = {"selected": "本宫", "sanh": "三合", "opposite": "对宫"}
+  views = {palace.dizhi: palace_view(chart, palace.dizhi) for palace in chart.palaces}
+  decades = {decade.dizhi: decade for decade in chart.decades}
+  star_rows = max((len(view.stars) + 1) // 2 for view in views.values())
+  cell_width = 256
+  cell_height = max(208, 120 + star_rows * 28)
+  margin = 16
+  width = 4 * cell_width + 2 * margin
+  height = 4 * cell_height + 2 * margin
+
+  root = Element(
+    "svg",
+    {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": str(width),
+      "height": str(height),
+      "viewBox": f"0 0 {width} {height}",
+      "role": "img",
+      "class": "ziwei-chart",
+      "aria-label": "紫微斗数十二宫命盘",
+    },
+  )
+  SubElement(root, "title").text = "紫微斗数十二宫命盘"
+  SubElement(root, "desc").text = "只显示已有命盘，不重新排盘或解释吉凶。" + (
+    "未选择高亮宫位。" if selected is None else "以文字和边框区分本宫、两个三合宫与对宫。"
+  )
+  SubElement(root, "style").text = _SVG_STYLE
+  SubElement(root, "rect", {"width": str(width), "height": str(height), "fill": "#f8f6f1"})
+
+  for row_index, row in enumerate(_PALACE_LAYOUT):
+    for column, branch in enumerate(row):
+      if branch is None:
+        continue
+      view = views[branch]
+      role = relations.get(branch)
+      group = SubElement(
+        root,
+        "g",
+        {
+          "class": "palace" + (" " + role if role is not None else ""),
+          "data-dizhi": branch.name.lower(),
+          "transform": f"translate({margin + column * cell_width} {margin + row_index * cell_height})",
+        },
+      )
+      SubElement(group, "rect", {"width": str(cell_width), "height": str(cell_height)})
+      _svg_text(group, view.palace.name.value, x=16, y=30, class_name="name")
+      _svg_text(group, str(view.palace.ganzhi), x=cell_width - 16, y=30, class_name="ganzhi")
+      if view.is_shengong:
+        _svg_text(group, "身宫", x=16, y=58, class_name="body")
+      if role is not None:
+        _svg_text(group, labels[role], x=cell_width - 16, y=58, class_name="relation")
+      changes = {
+        star: label
+        for star, label in zip(
+          (view.lu, view.quan, view.ke, view.ji), ("禄", "权", "科", "忌"), strict=True
+        )
+        if star is not None
+      }
+      for index, position in enumerate(view.stars):
+        star = position.star
+        _svg_text(
+          group,
+          star.value + ("[" + changes[star] + "]" if star in changes else ""),
+          x=16 + index % 2 * 112,
+          y=88 + index // 2 * 28,
+          class_name="star",
+        )
+      SubElement(
+        group,
+        "line",
+        {
+          "x1": "16",
+          "x2": str(cell_width - 16),
+          "y1": str(cell_height - 35),
+          "y2": str(cell_height - 35),
+          "class": "divider",
+        },
+      )
+      decade = decades[branch]
+      _svg_text(
+        group,
+        f"大限 {decade.start_age}-{decade.end_age}{decade.age_convention}",
+        x=16,
+        y=cell_height - 15,
+        class_name="decade",
+      )
+
+  summary = SubElement(
+    root,
+    "g",
+    {
+      "class": "summary",
+      "transform": f"translate({width // 2} {margin + cell_height})",
+    },
+  )
+  _svg_text(summary, "紫微斗数", x=0, y=72, class_name="title")
+  _svg_text(summary, "本命十二宫", x=0, y=101, class_name="subtitle")
+  _svg_text(summary, chart.bureau.value, x=0, y=160, class_name="bureau")
+  _svg_text(
+    summary,
+    "大限"
+    + chart.decades[0].direction.value
+    + " · "
+    + chart.decades[0].age_convention
+    + "首尾包含",
+    x=0,
+    y=191,
+    class_name="age",
+  )
+  _svg_text(
+    summary,
+    "未选择高亮宫位"
+    if selected is None
+    else f"选宫 · {selected.palace.name.value} {selected.palace.ganzhi}",
+    x=0,
+    y=249,
+    class_name="selection",
+  )
+  if selected is not None:
+    _svg_text(summary, "本宫 · 三合两宫 · 对宫", x=0, y=286, class_name="legend")
+  return tostring(root, encoding="unicode") + "\n"

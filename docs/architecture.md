@@ -4,7 +4,7 @@
 
 本页描述目标架构；已实现的API见[出生输入](birth.md)、[历法与时间](calendar.md)、
 [解析层](resolver.md)、[命宫身宫与十二宫](palaces.md)、[五行局](bureau.md)、[安星](stars.md)、
-[四化与大限](sihua-decades.md)、[完整命盘与文本盘面](chart.md)与[独立知识目录](knowledge.md)。首个目标是可复现的本命盘：安星、生年四化与大限，
+[四化与大限](sihua-decades.md)、[完整命盘与盘面](chart.md)与[独立知识目录](knowledge.md)。首个目标是可复现的本命盘：安星、生年四化与大限，
 并能独立查阅排盘所依据的规则与出处。
 
 ## 结构组织
@@ -24,7 +24,7 @@ src/ziwei/
   sihua.py          生年四化的具名变体
   decades.py        大限的顺逆与起止
   chart.py          组合与不可变命盘结果
-  render.py         只读文本十二宫格
+  render.py         只读文本与静态SVG十二宫格
   knowledge/        概念、来源、条目及独立查询
 tests/              领域测试与真实安装消费测试
 docs/               中文指南与说明

@@ -172,7 +172,8 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ## 完整命盘与显示
 
-[用法与参考盘例](chart.md)。从原始出生记录排盘并生成只读文本盘面，不提供命盘保存／恢复接口。
+[用法与参考盘例](chart.md)。从原始出生记录排盘，生成只读文本或静态SVG盘面，不提供命盘保存／恢复接口。
+`render_svg()`为v0.2.0开发中的新增入口，已发布的PyPI 0.1.0不包含它。
 
 ```{eval-rst}
 .. automodule:: ziwei.chart
@@ -181,7 +182,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
    :member-order: bysource
 
 .. automodule:: ziwei.render
-   :members: render_text
+   :members: render_text, render_svg
 ```
 
 ## 独立知识目录

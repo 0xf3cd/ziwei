@@ -249,6 +249,37 @@ def test_full_chart_consumer_rejects_faulty_rendering(monkeypatch: pytest.Monkey
     installed_check.check_chart()
 
 
+@pytest.mark.parametrize("defect", ["root", "palace", "star", "highlight", "content"])
+def test_full_chart_consumer_rejects_faulty_svg(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  from xml.etree.ElementTree import fromstring, tostring
+
+  from ziwei.render import render_svg
+
+  def faulty(*args: Any, **kwargs: Any) -> str:
+    root = fromstring(render_svg(*args, **kwargs))
+    cells = [cell for cell in root if "data-dizhi" in cell.attrib]
+    if defect == "root":
+      root.tag = "wrong"
+    elif defect == "palace":
+      root.remove(cells[0])
+    elif defect == "star":
+      cell = next(cell for cell in cells if any(node.get("class") == "star" for node in cell))
+      cell.remove(next(node for node in cell if node.get("class") == "star"))
+    elif defect == "highlight":
+      next(cell for cell in cells if cell.get("class") == "palace selected").set("class", "palace")
+    else:
+      for node in root.iter():
+        if node.get("class") == "ganzhi":
+          node.text = "wrong"
+    return tostring(root, encoding="unicode")
+
+  monkeypatch.setattr(installed_check, "render_svg", faulty)
+  with pytest.raises(ValueError, match="Installed SVG chart"):
+    installed_check.check_chart()
+
+
 def test_installed_consumer_rejects_consistent_wrong_positions(
   monkeypatch: pytest.MonkeyPatch,
 ) -> None:

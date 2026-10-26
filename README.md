@@ -12,10 +12,10 @@ GitHub上的文档修订不会重写已上传0.1.0的长描述或Documentation U
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
 （公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、28星安星、具名生年四化与大限，
-以及完整命盘组合、只读按宫查询与宫位关系、文本十二宫格和独立知识目录。
+以及完整命盘组合、只读按宫查询与宫位关系、文本十二宫格、静态SVG盘面和独立知识目录。
 用法见[出生输入](docs/birth.md)、[历法与时间](docs/calendar.md)、[解析层](docs/resolver.md)、
 [命宫身宫与十二宫](docs/palaces.md)、[五行局](docs/bureau.md)、[安星](docs/stars.md)、
-[四化与大限](docs/sihua-decades.md)、[完整命盘与文本盘面](docs/chart.md)和[知识查询](docs/knowledge.md)，
+[四化与大限](docs/sihua-decades.md)、[完整命盘与盘面](docs/chart.md)和[知识查询](docs/knowledge.md)，
 开发检查与协作约定见[参与开发](docs/contributing.md)，发布状态与失败处理见[发布指南](docs/releasing.md)。
 
 开发源码不再提供命盘JSON保存／恢复与旧盘重算接口，也不读取旧JSON命盘。
@@ -88,7 +88,7 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 - 安命宫、身宫与十二宫宫干，定五行局，安紫微、天府两系十四主星。
 - 安六吉、六煞、禄存与天马；按所选具名四化表取生年四化。
 - 起大限：顺逆由年干阴阳与性别定，首限起始虚岁由五行局数定。
-- 输出不可变结构与文本盘面，保留输入、口径、历法版本与派生结果。
+- 输出不可变结构、文本与静态SVG盘面，保留输入、口径、历法版本与派生结果。
 
 首版交付记录见[v0.1.0 milestone](https://github.com/0xf3cd/ziwei/milestone/1)，
 当前改进由[v0.2.0 milestone](https://github.com/0xf3cd/ziwei/milestone/4)追踪。

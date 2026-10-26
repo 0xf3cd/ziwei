@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from importlib import import_module
 from importlib.metadata import distribution
 from pathlib import Path
+from xml.etree.ElementTree import fromstring
 
 import ziwei
 from ziwei.birth import (
@@ -24,7 +25,7 @@ from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import KnowledgeEntry, PremiseStatus
 from ziwei.palaces import Palace, PalaceName, effective_month
-from ziwei.render import render_text
+from ziwei.render import render_svg, render_text
 from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
 from ziwei.stars import Star
 from ziwei.timezone import AmbiguousTimeError, IanaTimezone, NonexistentTimeError
@@ -226,6 +227,31 @@ def check_chart() -> None:
   text = render_text(chart)
   if not all(part in text for part in ("命宫", "甲子", "大限 4-13虚岁", "紫微", "右弼[科]")):
     raise ValueError("Installed text chart is incomplete")
+  image = fromstring(render_svg(chart, selected_palace=PalaceName.命宫))
+  namespace = "{http://www.w3.org/2000/svg}"
+  if image.tag != namespace + "svg":
+    raise ValueError("Installed SVG chart has the wrong root")
+  cells = [node for node in image.findall(namespace + "g") if "data-dizhi" in node.attrib]
+  stars = [node for cell in cells for node in cell if node.get("class") == "star"]
+  if len(cells) != 12 or len(stars) != 28:
+    raise ValueError("Installed SVG chart is incomplete")
+  roles = {
+    cell.attrib["data-dizhi"]: cell.attrib["class"].split()[1]
+    for cell in cells
+    if len(cell.attrib["class"].split()) == 2
+  }
+  if roles != {"zi": "selected", "chen": "sanh", "shen": "sanh", "wu": "opposite"}:
+    raise ValueError("Installed SVG chart has incorrect selected-palace relationships")
+  selected_cell = next(cell for cell in cells if cell.attrib["data-dizhi"] == "zi")
+  labels = {
+    node.attrib["class"]: node.text
+    for node in selected_cell
+    if node.get("class") in ("ganzhi", "decade")
+  }
+  if labels != {"ganzhi": "甲子", "decade": "大限 4-13虚岁"} or not any(
+    node.text == "右弼[科]" for node in stars
+  ):
+    raise ValueError("Installed SVG chart lost palace content")
   # 论坛《排命盘口诀》1954例第6至9步的独立星位；大限按同页规则推得，不由待测实现生成。
   reference = create_chart(
     LunarBirthRecord(
