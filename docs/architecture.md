@@ -4,7 +4,7 @@
 
 本页描述目标架构；已实现的API见[出生输入](birth.md)、[历法与时间](calendar.md)、
 [解析层](resolver.md)、[命宫身宫与十二宫](palaces.md)、[五行局](bureau.md)、[安星](stars.md)、
-[四化与大限](sihua-decades.md)、[完整命盘与文本盘面](chart.md)与[独立知识目录](knowledge.md)。首个目标是可复现的本命盘：安星、生年四化与大限，
+[四化与大限](sihua-decades.md)、[完整命盘与盘面](chart.md)与[独立知识目录](knowledge.md)。首个目标是可复现的本命盘：安星、生年四化与大限，
 并能独立查阅排盘所依据的规则与出处。
 
 ## 结构组织
@@ -24,7 +24,7 @@ src/ziwei/
   sihua.py          生年四化的具名变体
   decades.py        大限的顺逆与起止
   chart.py          组合与不可变命盘结果
-  render.py         只读文本十二宫格
+  render.py         只读文本与静态SVG十二宫格
   knowledge/        概念、来源、条目及独立查询
 tests/              领域测试与真实安装消费测试
 docs/               中文指南与说明
@@ -100,7 +100,7 @@ celestial-calendar 负责公历与农历互转、闰月与各月长、节气时�
 `shengnian_sihua()`使用解析后的年干，并要求显式选择`SihuaVariant`，不改动既有`ChartConfig`。
 `place_decades()`使用同一解析结果的年干阴阳、性别、命宫与五行局，只给首尾包含的虚岁标签；
 不换算日期、不指定换岁日。低层入口分别只需年干，或命宫、五行局、年干和性别。
-`chart.create_chart()`组合这些组件，并以同一计算输入核对完整结果；用法与验收限度见[完整命盘与文本盘面](chart.md)。
+`chart.create_chart()`组合这些组件，并以同一计算输入核对完整结果；用法与验收限度见[完整命盘与盘面](chart.md)。
 
 安星月份→命宫→命宫干支→五行局的共享推导归`palaces`，由命盘工厂、命盘构造器、安星与大限入口使用。
 私有不可变结果只保存安星月份、命宫与五行局，命宫干支只在求局时中转；不增加公开框架类型。
