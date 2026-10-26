@@ -13,13 +13,14 @@ from ziwei.decades import Decade, place_decades
 from ziwei.ganzhi import Dizhi
 from ziwei.palaces import (
   Palace,
+  PalaceName,
   _chart_frame,
   shengong_dizhi,
   twelve_palaces,
 )
 from ziwei.resolver import DEFAULT_LUNAR_ALGORITHM, resolve
 from ziwei.sihua import SihuaResult, SihuaVariant, shengnian_sihua
-from ziwei.stars import StarPlacement, place_stars
+from ziwei.stars import Star, StarPlacement, place_stars
 
 _T = TypeVar("_T")
 
@@ -130,6 +131,73 @@ class ZiweiChart:
     if self.sihua != sihua:
       raise ValueError(f"四化与解析后的生年干及规则不符：应为{sihua!r}，实际为{self.sihua!r}")
     _check_component_sequence(self.decades, place_decades(value), "大限")
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PalaceView:
+  """一宫的只读内容，保留原星位与规则标识，不借对宫星。
+
+  lu、quan、ke、ji是本宫星曜中的生年四化；不在本宫时为None。is_shengong表示身宫叠在此宫。
+  stars复制为元组；构造器核类型、星位属本宫、星曜不重复、四化标记属于本宫星集，
+  且同一颗星不能有多个生年四化标记。不核出生资料或认证四化与某张完整盘一致。
+  """
+
+  palace: Palace
+  stars: tuple[StarPlacement, ...]
+  lu: Star | None = None
+  quan: Star | None = None
+  ke: Star | None = None
+  ji: Star | None = None
+  is_shengong: bool = False
+
+  def __post_init__(self) -> None:
+    if not isinstance(self.palace, Palace):
+      raise TypeError("宫位视图须使用 Palace")
+    if type(self.is_shengong) is not bool:
+      raise TypeError("身宫标记须为 bool")
+    stars = tuple(self.stars)
+    if any(not isinstance(position, StarPlacement) for position in stars):
+      raise TypeError("宫位视图的星位须使用 StarPlacement")
+    if any(position.dizhi is not self.palace.dizhi for position in stars):
+      raise ValueError("星位须属于视图中的宫位")
+    members = {position.star for position in stars}
+    if len(members) != len(stars):
+      raise ValueError("宫位视图的星曜不可重复")
+    marks = tuple(star for star in (self.lu, self.quan, self.ke, self.ji) if star is not None)
+    if any(not isinstance(star, Star) for star in marks):
+      raise TypeError("四化标记须使用 Star 成员或 None")
+    if any(star not in members for star in marks):
+      raise ValueError("四化标记须属于本宫星集")
+    if len(set(marks)) != len(marks):
+      raise ValueError("同一颗星不能有多个生年四化标记")
+    object.__setattr__(self, "stars", stars)
+
+
+def palace_view(chart: ZiweiChart, palace: PalaceName | Dizhi) -> PalaceView:
+  """按宫名或地支读取已有盘，星位保持原盘顺序；不重算或访问历法、时区资源。
+
+  只接受ZiweiChart和领域枚举，不接受同值字符串、整数或bool；类型错误抛TypeError。
+  四化只从chart.sihua筛出本宫成员，空宫的stars为空元组且四化全None，身宫仍按原盘标记。
+  """
+  if not isinstance(chart, ZiweiChart):
+    raise TypeError("按宫查询须使用 ZiweiChart")
+  if isinstance(palace, PalaceName):
+    selected = next(item for item in chart.palaces if item.name is palace)
+  elif isinstance(palace, Dizhi):
+    selected = next(item for item in chart.palaces if item.dizhi is palace)
+  else:
+    raise TypeError("按宫查询须使用 PalaceName 或 Dizhi 成员")
+  positions = tuple(position for position in chart.stars if position.dizhi is selected.dizhi)
+  members = {position.star for position in positions}
+  return PalaceView(
+    palace=selected,
+    stars=positions,
+    lu=chart.sihua.lu if chart.sihua.lu in members else None,
+    quan=chart.sihua.quan if chart.sihua.quan in members else None,
+    ke=chart.sihua.ke if chart.sihua.ke in members else None,
+    ji=chart.sihua.ji if chart.sihua.ji in members else None,
+    is_shengong=selected.dizhi is chart.shengong,
+  )
 
 
 def create_chart(

@@ -97,9 +97,15 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.palaces
-   :members: PalaceName, Palace, effective_month, month_palace_index, minggong_dizhi, shengong_dizhi, twelve_palaces, palace_ganzhi
+   :members: PalaceName, Palace, opposite_dizhi, sanfang_sizheng, effective_month, month_palace_index, minggong_dizhi, shengong_dizhi, twelve_palaces, palace_ganzhi
    :undoc-members:
    :member-order: bysource
+
+.. autodata:: ziwei.palaces.OPPOSITE_RULE_ID
+   :no-value:
+
+.. autodata:: ziwei.palaces.SANFANG_SIZHENG_RULE_ID
+   :no-value:
 ```
 
 ## 五行局
@@ -170,7 +176,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.chart
-   :members: ZiweiChart, create_chart
+   :members: ZiweiChart, PalaceView, palace_view, create_chart
    :undoc-members:
    :member-order: bysource
 

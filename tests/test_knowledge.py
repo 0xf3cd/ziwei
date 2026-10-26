@@ -27,6 +27,8 @@ from ziwei.knowledge.model import (
 
 def test_known_knowledge_identifiers_remain_queryable() -> None:
   expected = (
+    "citation.andy.sanfang-sizheng-minggong",
+    "citation.andy.sanfang-sizheng-qiqie",
     "citation.cangxuan.geng",
     "citation.doushuxuantan.geng-example",
     "citation.jingcheng.birth-month",
@@ -43,6 +45,8 @@ def test_known_knowledge_identifiers_remain_queryable() -> None:
     "citation.lifedna.leap-split",
     "citation.lingdonglai.birth-stem",
     "citation.lingdonglai.wu-ren",
+    "citation.ntnu.palace-opposite",
+    "citation.ntnu.sanfang-sizheng",
     "citation.quanshu.decades-adjacent",
     "citation.quanshu.fubi",
     "citation.quanshu.geng",
@@ -84,8 +88,10 @@ def test_known_knowledge_identifiers_remain_queryable() -> None:
     "concept.decades",
     "concept.nayin",
     "concept.palace.minggong",
+    "concept.palace.opposite",
     "concept.palace.palace-stem",
     "concept.palace.palaces-12",
+    "concept.palace.sanfang-sizheng",
     "concept.palace.shengong",
     "concept.policy.day-rollover",
     "concept.policy.leap-month",
@@ -131,6 +137,8 @@ def test_known_knowledge_identifiers_remain_queryable() -> None:
     "entry.leap-month.split",
     "entry.nayin.sixty-jiazi",
     "entry.palace.minggong-shengong",
+    "entry.palace.opposite",
+    "entry.palace.sanfang-sizheng",
     "entry.palace.twelve",
     "entry.palace.wuhu-dun",
     "entry.sihua.geng-jiuqian-quanshu",
@@ -158,12 +166,14 @@ def test_known_knowledge_identifiers_remain_queryable() -> None:
     "entry.wuxingju.mapping",
     "entry.year-boundary.lichun",
     "entry.year-boundary.lunar-new-year",
+    "source.andy-sanfang-sizheng",
     "source.cangxuan-geng",
     "source.doushuxuantan-geng",
     "source.jingcheng-golla",
     "source.jiuqian-dushu",
     "source.lifedna-flying",
     "source.lingdonglai-sihua",
+    "source.ntnu-palace-glossary",
     "source.quanshu-wikisource",
     "source.yuanhai-changxian",
     "source.zhongyi999-paimingpan",
@@ -178,6 +188,8 @@ def test_known_knowledge_identifiers_remain_queryable() -> None:
     "variant.leap-month.split",
     "variant.nayin.sixty-jiazi",
     "variant.palace.minggong-shengong",
+    "variant.palace.opposite",
+    "variant.palace.sanfang-sizheng",
     "variant.palace.twelve",
     "variant.palace.wuhu-dun",
     "variant.sihua.geng-jiuqian-quanshu",
@@ -280,7 +292,7 @@ def catalog() -> Catalog:
 
 def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   catalog = load_catalog()
-  assert catalog.version == "2026.10.25.1"
+  assert catalog.version == "2026.10.26.1"
   assert {item.kind for item in catalog.concepts} == set(ConceptKind)
   assert len({item.id for item in catalog.records}) == len(catalog.records)
   assert catalog.find("天馬") == catalog.find("tianma")
