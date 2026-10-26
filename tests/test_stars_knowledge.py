@@ -19,7 +19,8 @@ from ziwei.knowledge import load_catalog
 from ziwei.knowledge.data import _star_entries
 from ziwei.knowledge.model import Concept, ConceptKind, RuleVariant, Source, SourceStatus
 
-# 固定既有规则的身份，不从执行定义或知识目录生成期望；新增规则不改写这些绑定。
+# 用字面值固定规则ID对应的星曜，否则执行定义与目录一起错绑时，期望也会跟着改变。
+# 新增规则另加期望，不改已有规则的ID与星曜对应关系。
 EXPECTED_RULE_STARS = {
   "variant.star.ziwei-bureau-day": (stars.Star.紫微,),
   "variant.star.ziwei-series": (
