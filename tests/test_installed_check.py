@@ -75,7 +75,12 @@ def test_installed_check_passes_for_consumer(
   consumer: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
   installed_check.main(version("ziwei"))
-  assert "Installed ziwei" in capsys.readouterr().out
+  output = capsys.readouterr().out
+  assert "Installed ziwei" in output
+  assert (
+    f"Installed calendar: ALGO3, celestial {version('celestial-calendar')}, lunar years 1600-2199"
+    in output
+  )
 
 
 def test_calendar_consumer_rejects_faulty_resolve(monkeypatch: pytest.MonkeyPatch) -> None:

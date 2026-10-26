@@ -21,17 +21,19 @@ CI在Linux x86_64的3.11／3.14、Linux ARM64的3.14和macOS／Windows3.14上运
 本地验证下限时使用 `uv sync --locked --python 3.11`。
 优化模式也使用`tools/check.py`入口；它为pytest设置所需的警告过滤，裸跑`python -O -m pytest`不等价。
 
-该命令检查 Ruff lint 与两空格格式、严格 mypy、普通与优化模式下的 pytest、文档本地链接、
-严格 HTML／doctest 全量构建、sdist 内容及隔离安装的 wheel。
-API 检查比对源码中的公开类、函数、方法及显式类型别名与实际 HTML 签名，拒绝被渲染成正文的指令。
-知识参考页从内置记录与配置定义生成，检查字段、口径表配对及稳定锚点；遗漏成员或指向未知记录都须失败。
-标准库类型链接使用随文档保存的离线 inventory，不在构建时下载。
-锁定开发组同时提供build和setuptools后端，`python -m build --no-isolation`经sdist构建wheel。
-sdist须带全源码、测试、工具、workflow、文档、锁文件与协作约定，
-不得夹带 `.review/`；构建前删除 `src/*.egg-info`，旧的文件清单会掩盖 `MANIFEST.in` 的变化。
-安装后在仓外以隔离模式导入包，分别运行普通与优化模式的检查。运行时依赖按锁文件hash安装，
-本项目wheel用`--no-deps`安装；消费前后比对产物hash，拒绝被改写的文件。
-临时 HTML、doctest 报告、分发包和安装验证环境优先使用 `SCRATCH`，否则使用系统临时目录，
+该命令依次检查：
+
+- Ruff lint、两空格格式、严格mypy，以及普通／优化模式的pytest。
+- 文档本地链接、严格HTML与doctest全量构建。API检查比对公开类、函数、方法、类型别名及带说明的常量
+  与实际HTML签名，拒绝被渲染成正文的指令。知识参考页从内置记录与配置定义生成；检查会拒绝字段、
+  口径表配对或稳定锚点不符，包括遗漏成员和指向未知记录。标准库类型链接使用离线inventory，不在构建时下载。
+- sdist内容与由它重建的wheel。锁定开发组提供build和setuptools后端，构建使用`python -m build --no-isolation`。
+  sdist须带全源码、测试、工具、workflow、文档、锁文件与协作约定，不得夹带`.review/`。
+  检查会在构建前删除`src/*.egg-info`，避免旧文件清单掩盖`MANIFEST.in`的变化。
+- 在仓外以隔离模式导入安装后的包，分别运行普通／优化消费。运行时依赖按锁文件hash安装，
+  本项目wheel用`--no-deps`安装；消费前后比对产物hash，拒绝被改写的文件。
+
+临时HTML、doctest报告、分发包和安装验证环境优先使用环境变量`SCRATCH`，否则使用系统临时目录，
 退出时删除。构建元数据和工具缓存可能保留在仓内已忽略的目录中。
 显式传入`--artifacts-dir`可将同一份已核产物保留到空目录，详见[发布指南](releasing.md)。
 
@@ -75,11 +77,11 @@ PyPI 0.1.0与当前源码会返回相同字符串；判断安装对象还须核�
 ## 依赖兼容策略
 
 当前正式支持的组合为`celestial-calendar==0.8.0`和`tzdata==2026.5`，包元数据也限定这组版本。
-实际pip安装中，显式同时要求celestial 0.9.0或tzdata 2026.4会因依赖冲突被拒绝；
+实际pip安装中，将ziwei与celestial 0.9.0或tzdata 2026.4显式放在同一安装命令中，会因依赖冲突被拒绝；
 环境中仅预装celestial 0.9.0时，再安装ziwei会将其降到0.8.0。
 因此应使用独立虚拟环境，不要让应用在同一环境中要求另一精确版本。
 
-celestial 0.7.0／0.9.0的探索以`--no-deps`强制安装，部分排盘和三算法范围检查通过，
+celestial 0.7.0／0.9.0的探索以`--no-deps`强制安装，选定排盘例及HKO表、天文计算、混合三算法的范围端点检查通过，
 但`pip check`均拒绝其元数据；这既不证明候选版本不可运行，也不构成正式兼容支持。
 此次所见三算法支持范围均未变化，平台要求仍以[安装要求](../README.md#安装要求)为准。
 
@@ -88,6 +90,11 @@ celestial 0.7.0／0.9.0的探索以`--no-deps`强制安装，部分排盘和三�
 历法与时区版本，不通过静默换算法取得兼容。允许范围若改变，依赖配置与锁文件同步修改，
 并在Python 3.11／3.14通过完整检查。策略与更新节奏分别由
 [#25](https://github.com/0xf3cd/ziwei/issues/25)和[#16](https://github.com/0xf3cd/ziwei/issues/16)追踪。
+
+## 维护API文档
+
+公开类型别名以`TypeAlias`声明；公开常量以`Final`声明，并用紧随赋值的字符串或紧邻赋值之前的`#:`注释说明。
+修改声明时同步维护[API参考](api.md)的生成指令；检查要求这些公开数据在实际HTML中都有签名。
 
 ## 准备PR
 

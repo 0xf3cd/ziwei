@@ -11,27 +11,34 @@
 [PyPI 0.1.0](https://pypi.org/project/ziwei/0.1.0/)与
 [v0.1.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.1.0)已公开。
 轻量标签`v0.1.0`指向源码`206723d794bbf9333062ab0f07beb0d9e4751b2e`，不附独立标签签名。
+非管理员创建拒绝、真实重复上传拒收和跨attempt失败恢复仍未演练，不能用成功首发代替这些证据。
+[#26](https://github.com/0xf3cd/ziwei/issues/26)保存发布验证记录并追踪未完成项；不为补证重传0.1.0，也不改用TestPyPI。
+
 [正式发布运行39854980639](https://github.com/0xf3cd/ziwei/actions/runs/39854980639)的attempt 1完成构建、
 七项跨平台消费及`pypi`环境批准，上传的是同一artifact-id中的原产物。
-从PyPI与Release取回的sdist／wheel与原件逐字节相同；PyPI两份PEP740证明已核对源码SHA、工作流、环境与attempt。
-错误仓库和文件字节篡改的证明验证负例均被拒绝，实际PyPI wheel也通过隔离的普通／优化消费。
+从PyPI与Release取回的sdist／wheel与原件逐字节相同；已核对PyPI两份PEP740证明中记录的源码SHA、工作流、环境与attempt。
 
 `pypi`环境已限制为`main`分支，要求维护者批准，允许本人批准自己的运行，禁止管理员绕过。
 非main分支和同名`main`标签的无上传探针均被拒绝。
 `v*`首次创建仅允许管理员角色；更新和删除规则无绕过，临时标签范围内的更新／删除负例均被拒绝。
-非管理员创建拒绝、真实重复上传拒收和跨attempt失败恢复仍未演练；成功首发不能代替这些证据。
-未完成项由[#26](https://github.com/0xf3cd/ziwei/issues/26)追踪，不为补证重传0.1.0，也不改用TestPyPI。
 
 开发Pages文档与PyPI发布分开。Pages使用`github-pages`环境，不属于`pypi`发布身份；
 部署文档不改变PyPI信任的仓库、工作流或环境。
 
+## 发布前准备
+
+候选版本合入main前，更新`pyproject.toml`版本号、README发布状态和安装命令，并核对构建后的包元数据与长描述。
+README会成为PyPI长描述，不能把“开发中的v0.2.0”等当前状态原样带进该版本的发行页。
+开发main文档与已发布版本文档仍须区分，不因准备发行而删掉必要的版本标注。
+
 ## 发布前配置核对
 
-顺序很重要：先保护GitHub的`pypi`环境，再登记允许使用该环境的PyPI发布者。
+本项目已有`pypi`配置。每次发布前回读下列现有设置；若需新建或修改，须先取得维护者批准。
+新建时先保护GitHub的`pypi`环境，再登记允许使用该环境的PyPI发布者。
 如果workflow引用不存在的environment，GitHub可能自动创建一个没有保护规则的同名环境。
 因此，不能先在PyPI信任一个仅有名字、尚无部署限制的environment。
 
-现有项目发布前先回读并核对以下配置；若需新建或修改，须先取得维护者批准：
+核对内容如下：
 
 1. GitHub的`pypi`环境设置维护者为required reviewer，
    Deployment branches选择Selected branches and tags，唯一规则为`name: main`、`type: branch`，禁止管理员绕过。
@@ -78,9 +85,12 @@ ziwei已完成首发，不应重新登记为pending publisher。新配置、拒�
 在PyPI发布工作流中，只有`publish-pypi`拥有`id-token: write`。不使用长期PyPI token、缓存或`skip-existing`，
 不在push／PR上自动上传。输入和job输出只经环境变量进入脚本。
 
+消费矩阵保留`fail-fast: false`，便于一个组合失败后继续收集其他组合的结果。
+它不是上传安全条件：即使改为提前取消其余组合，已有消费失败仍会阻止上传。
+
 action引用固定完整提交SHA，但这不等于所有传递依赖都由OCI digest固定。
 当前上传action用该SHA作为容器镜像tag；仍须信任上游维护者及镜像发布链。
-启用前要核对当时的action实现、记录该镜像tag的实际digest，并确认这项信任条件；
+每次正式上传前核对当时的action实现，将镜像tag的实际digest与拉取值记入本次发布验证记录，并确认这项信任条件；
 不把“已钉action”写成“所有容器字节都已锁定”。
 
 ## 失败后先保存证据
@@ -107,7 +117,8 @@ artifact名称不包含attempt，不能据同名把不同attempt的outputs与制
 尚未验证可用的跨attempt恢复步骤，因此本页不承诺重跑一定能恢复。
 重跑build或整条流程会重新构建，不属于沿用原产物的恢复路径。
 
-任一上传失败后，先核远端实际已有的文件及hash；不能只凭本地退出码认定“什么都没上传”。
+任一上传失败后，先到[PyPI文件页](https://pypi.org/project/ziwei/#files)核对远端实际已有的文件及hash；
+不能只凭本地退出码认定“什么都没上传”。
 
 正式上传完成后，核PyPI文件摘要与PEP740证明中的Source Repository Digest，
 确认它们对应这次运行的源码SHA。再另行批准按该固定SHA创建`v<版本>` tag和GitHub Release。
@@ -126,8 +137,8 @@ uv run --locked python tools/check.py --artifacts-dir dist
 本地保留入口拒绝非空目的地，不静默覆盖；发布工具另核保留目录的精确成员、身份、软链和摘要，
 缺文件、多文件、错误身份或hash不符时拒绝继续。
 
-Python发布工具核验bundle元数据、精确成员和制品内部身份；上传job中的Bash只核对待上传的两份文件及其摘要，
-不解析全部元数据。两层共同构成发布前置条件，不要求它们对所有缺陷有相同的接受集合。
+Python发布工具核验bundle元数据、精确成员、制品内部身份和实际字节；上传job中的Bash只核对待上传的两份文件及其摘要。
+元数据损坏等额外缺陷由Python拒绝，Bash不检查这些内容；两层都须成功，才能继续发布。
 
 本机测试覆盖身份早失败、workflow权限／依赖结构、产物篡改、真实发布Bash及上传前拒绝。
 它们不能证明某次服务端environment已生效、OIDC可用或PyPI实际接收了文件；

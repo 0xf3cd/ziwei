@@ -179,7 +179,7 @@ def check_calendar() -> None:
 
 
 def main(expected_version: str) -> None:
-  """检查身份、导入路径及原生历法库隔离。"""
+  """检查已安装ziwei的版本、导入路径及原生历法库隔离。"""
   metadata = distribution("ziwei")
   origin = Path(str(ziwei.__file__)).resolve()
   if not origin.is_relative_to(Path(sys.prefix).resolve()):

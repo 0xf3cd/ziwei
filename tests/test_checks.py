@@ -9,11 +9,13 @@ import sys
 import tarfile
 import tomllib
 from collections.abc import Sequence
+from doctest import DocTestParser
 from importlib.metadata import distribution
 from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
+from markdown_it import MarkdownIt
 from packaging.specifiers import SpecifierSet
 
 from tools import artifacts, check, consumption
@@ -37,6 +39,97 @@ SOURCE = (
   ".github/workflows/checks.yml",
   ".github/workflows/release.yml",
 )
+
+
+def _documented_chart(document: Path) -> object:
+  namespace: dict[str, object] = {}
+  for example in DocTestParser().get_examples(document.read_text(encoding="utf-8")):
+    exec(example.source, namespace)
+    if "chart" in namespace:
+      return namespace["chart"]
+  raise ValueError(f"No chart example in {document.name}")
+
+
+def _check_readme_chart_example(root: Path) -> None:
+  from ziwei.chart import ZiweiChart
+
+  readme = _documented_chart(root / "README.md")
+  guide = _documented_chart(root / "docs/chart.md")
+  assert isinstance(readme, ZiweiChart) and isinstance(guide, ZiweiChart)
+  assert readme == guide, "README and chart guide must execute the same chart input"
+
+
+@pytest.mark.usefixtures("unload_celestial")
+def test_readme_and_chart_guide_execute_the_same_input() -> None:
+  _check_readme_chart_example(check.ROOT)
+
+
+@pytest.mark.usefixtures("unload_celestial")
+def test_same_input_check_rejects_a_changed_readme_example(tmp_path: Path) -> None:
+  (tmp_path / "docs").mkdir()
+  for document in ("README.md", "docs/chart.md"):
+    shutil.copyfile(check.ROOT / document, tmp_path / document)
+  _check_readme_chart_example(tmp_path)
+  readme = tmp_path / "README.md"
+  original = readme.read_text(encoding="utf-8")
+  assert original.count("gender=Gender.女") == 1
+  readme.write_text(original.replace("gender=Gender.女", "gender=Gender.男"), encoding="utf-8")
+  with pytest.raises(AssertionError, match="same chart input"):
+    _check_readme_chart_example(tmp_path)
+
+
+def _check_development_document_links(root: Path) -> None:
+  metadata = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+  base = metadata["project"]["urls"]["Documentation"]
+  pages = {
+    "README.md": ("", "docs/chart.html"),
+    "docs/index.md": ("", "docs/api.html", "docs/knowledge-reference.html"),
+    "docs/api.md": ("docs/api.html",),
+    "docs/knowledge-reference.md": ("docs/knowledge-reference.html",),
+    "docs/contributing.md": ("",),
+  }
+  for document, targets in pages.items():
+    tokens = MarkdownIt().parse((root / document).read_text(encoding="utf-8"))
+    links = {
+      child.attrGet("href")
+      for token in tokens
+      for child in token.children or ()
+      if child.type == "link_open"
+    }
+    if not {base + target for target in targets} <= links:
+      raise ValueError("Missing development documentation link in " + document)
+
+
+def test_development_document_links_follow_package_metadata() -> None:
+  _check_development_document_links(check.ROOT)
+
+
+@pytest.mark.parametrize(
+  "document",
+  [
+    "pyproject.toml",
+    "README.md",
+    "docs/index.md",
+    "docs/api.md",
+    "docs/knowledge-reference.md",
+    "docs/contributing.md",
+  ],
+)
+def test_document_link_check_rejects_an_inconsistent_site_root(
+  tmp_path: Path, document: str
+) -> None:
+  shutil.copytree(check.ROOT / "docs", tmp_path / "docs")
+  for name in ("pyproject.toml", "README.md"):
+    shutil.copyfile(check.ROOT / name, tmp_path / name)
+  _check_development_document_links(tmp_path)
+  metadata = tomllib.loads((tmp_path / "pyproject.toml").read_text(encoding="utf-8"))
+  base = metadata["project"]["urls"]["Documentation"]
+  page = tmp_path / document
+  original = page.read_text(encoding="utf-8")
+  assert base in original
+  page.write_text(original.replace(base, "https://example.invalid/"), encoding="utf-8")
+  with pytest.raises(ValueError, match="Missing development documentation link"):
+    _check_development_document_links(tmp_path)
 
 
 @pytest.mark.parametrize("mode", [(), ("-O",)])

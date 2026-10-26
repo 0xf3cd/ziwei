@@ -329,6 +329,20 @@ def test_release_workflow_obeys_the_publication_contract() -> None:
   check_release_policy(load_workflow(RELEASE.read_text()))
 
 
+@pytest.mark.parametrize("fail_fast", ["false", "true", None])
+def test_release_policy_does_not_treat_fail_fast_as_an_upload_safety_condition(
+  fail_fast: str | None,
+) -> None:
+  data = load_workflow(RELEASE.read_text())
+  check_release_policy(data)
+  strategy = data["jobs"]["consume"]["strategy"]
+  if fail_fast is None:
+    strategy.pop("fail-fast")
+  else:
+    strategy["fail-fast"] = fail_fast
+  check_release_policy(data)
+
+
 @pytest.mark.parametrize(
   "defect", ["replace", "delete", "skip", "duplicate", "reorder", "job-skip"]
 )
