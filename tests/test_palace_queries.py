@@ -123,6 +123,31 @@ def test_hand_derived_empty_and_multiple_stars(chart_choices: ChartConfig) -> No
   assert (ming.lu, ming.quan, ming.ke, ming.ji) == (None, None, None, Star.太阳)
 
 
+def test_empty_shengong_is_not_minggong(chart_choices: ChartConfig) -> None:
+  """合成甲午正月初一未时：命未、身酉叠福德；辛未土五局，紫微午、天府戌。
+
+  两主星系均不落酉；正月辅辰弼戌，未时昌卯曲亥、空辰劫午，甲干魁丑钺未、
+  禄寅羊卯陀丑，午年未时火申铃戌、月马申，故酉空。期望由口诀手推，不取扫描结果。
+  """
+  result = create_chart(
+    LunarBirthRecord(
+      year=1954, month=1, day=1, is_leap_month=False, shichen=Dizhi.未, gender=Gender.女
+    ),
+    chart_choices,
+    sihua_variant=SihuaVariant.排命盘口诀转录,
+  )
+  ming = palace_view(result, PalaceName.命宫)
+  assert ming.palace.dizhi is Dizhi.未 and ming.is_shengong is False
+  shen = palace_view(result, PalaceName.福德)
+  assert shen.palace.dizhi is Dizhi.酉 and shen.is_shengong is True
+  assert shen.stars == ()
+  assert (shen.lu, shen.quan, shen.ke, shen.ji) == (None, None, None, None)
+  for palace in result.palaces:
+    view = palace_view(result, palace.name)
+    assert view == palace_view(result, palace.dizhi)
+    assert view.is_shengong is (palace.dizhi is Dizhi.酉)
+
+
 @pytest.mark.parametrize(
   "variant,expected",
   [
@@ -256,6 +281,14 @@ def test_relation_knowledge_has_stable_identity_and_explicit_limits() -> None:
   catalog = load_catalog()
   assert OPPOSITE_RULE_ID == "variant.palace.opposite"
   assert SANFANG_SIZHENG_RULE_ID == "variant.palace.sanfang-sizheng"
+  citations = {
+    "opposite": ("citation.ntnu.palace-opposite", "citation.andy.sanfang-sizheng-minggong"),
+    "sanfang-sizheng": (
+      "citation.ntnu.sanfang-sizheng",
+      "citation.andy.sanfang-sizheng-minggong",
+      "citation.andy.sanfang-sizheng-qiqie",
+    ),
+  }
   for suffix, function in (("opposite", "opposite_dizhi"), ("sanfang-sizheng", "sanfang_sizheng")):
     variant = catalog.get(f"variant.palace.{suffix}")
     assert isinstance(variant, RuleVariant)
@@ -264,6 +297,7 @@ def test_relation_knowledge_has_stable_identity_and_explicit_limits() -> None:
     entry = catalog.get(f"entry.palace.{suffix}")
     assert isinstance(entry, KnowledgeEntry)
     assert entry.variant_ids == (f"variant.palace.{suffix}",)
+    assert entry.citation_ids == citations[suffix]
     assert entry.display is DisplayEligibility.暂不默认展示
     assert entry.recheck and entry.tracking_url.endswith("/issues/39")
   for identifier in ("source.ntnu-palace-glossary", "source.andy-sanfang-sizheng"):

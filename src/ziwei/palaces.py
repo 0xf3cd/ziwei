@@ -30,7 +30,7 @@ SANFANG_SIZHENG_RULE_ID: Final = "variant.palace.sanfang-sizheng"
 def opposite_dizhi(dizhi: Dizhi) -> Dizhi:
   """返回对宫地支，即十二宫环上相隔六宫的位置。
 
-  NTNU个人空间《名詞解釋》与安迪《紫微斗數解盤：三方四正的應用》的对宫说明及命宫例互证；
+  NTNU个人空间《名詞解釋》与安迪《紫微斗數解盤：三方四正的應用》均支持此对宫关系；
   只据所见现代网页，不认证古籍底本。来源与短引见知识目录。
   """
   if not isinstance(dizhi, Dizhi):
@@ -42,7 +42,7 @@ def opposite_dizhi(dizhi: Dizhi) -> Dizhi:
 def sanfang_sizheng(dizhi: Dizhi) -> tuple[Dizhi, Dizhi, Dizhi, Dizhi]:
   """返回本宫、两个三合宫与对宫，不借星或解释吉凶。
 
-  顺序固定为本宫、沿子丑寅顺行偏移四宫、偏移八宫、对宫；这是项目API约定。
+  顺序固定为本宫、地支序偏移+4、偏移+8、对宫；地支序按子丑寅卯排列并循环，这是项目API约定。
   两份现代网页的命宫与夫妻宫例支持这四个成员，不规定此顺序，也不用于定义单独的“三方”称谓。
   """
   if not isinstance(dizhi, Dizhi):
