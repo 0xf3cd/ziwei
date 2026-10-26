@@ -2,41 +2,62 @@
 
 [项目入口](../README.md) · [解析层](resolver.md) · [API](api.md#完整命盘与显示)
 
-`create_chart()`接收原始出生记录和显式口径，先解析，再用同一份计算输入组合十二宫、身宫标记、五行局、28星、生年四化和十二限。
+本页跟随`main`开发源码，不是已发布PyPI 0.1.0的版本文档。
+
+`create_chart()`接收原始出生记录和显式口径，先解析，再用同一份计算输入组合十二宫、身宫标记、五行局、28星、生年四化和十二个大限。
 时辰与性别必须已知；三个口径须显式选择，四化表另由具名参数选择。请求无法完成时整次失败，
 不返回缺星或缺限的部分盘。各组件的规则和来源仍归[安星](stars.md)、[四化与大限](sihua-decades.md)。
 
 ## 排盘与显示
 
-下面使用匿名例甲：论坛转录《排命盘口诀》的1954年农历九月初七子时男命。
-原著与纸本底本未核，来源与覆盖限度见本页末节。
+下面与README使用同一个合成输入：2024年农历正月初一子时女命。
+三个口径分别指定闰月归属、子时换日与换年界线；天马采用默认的年支天马。
+示例在PyPI 0.1.0与开发源码中均已运行，以下是`render_text()`的完整输出，不是外部参考盘。
 
 ```{doctest}
 >>> from ziwei.birth import Gender, LunarBirthRecord
->>> from ziwei.config import ChartConfig, LeapMonthPolicy, DayRollover, YearBoundary, TianmaRule
->>> from ziwei.ganzhi import Dizhi
 >>> from ziwei.chart import create_chart
->>> from ziwei.sihua import SihuaVariant
+>>> from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
+>>> from ziwei.ganzhi import Dizhi
 >>> from ziwei.render import render_text
+>>> from ziwei.sihua import SihuaVariant
 >>> record = LunarBirthRecord(
-...   year=1954, month=9, day=7, is_leap_month=False, shichen=Dizhi.子, gender=Gender.男,
-...   source="匿名例甲：论坛转录《排命盘口诀》",
+...   year=2024, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.女,
 ... )
 >>> choices = ChartConfig(
 ...   leap_month_policy=LeapMonthPolicy.全月归本月,
 ...   day_rollover=DayRollover.早晚子时同日,
 ...   year_boundary=YearBoundary.农历正月初一,
-...   tianma_rule=TianmaRule.月支天马,
 ... )
 >>> chart = create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)
->>> chart.bureau.value, str(chart.palaces[0].ganzhi), chart.shengong.value
-('火六局', '甲戌', '戌')
->>> len(chart.palaces), len(chart.stars), len(chart.decades)
-(12, 28, 12)
->>> render_text(chart).splitlines()[0]
-'火六局 · 大限顺行 · 虚岁首尾包含'
->>> '命宫 甲戌 身宫' in render_text(chart)
-True
+>>> print(render_text(chart), end="")
+火六局 · 大限逆行 · 虚岁首尾包含
++------------------+------------------+------------------+------------------+
+| 田宅 己巳        | 官禄 庚午        | 奴仆 辛未        | 迁移 壬申        |
+| 武曲[科]         | 太阳[忌]         | 天府             | 天机             |
+| 破军[权]         | 大限 86-95虚岁   | 天钺             | 太阴             |
+| 大限 96-105虚岁  |                  | 大限 76-85虚岁   | 大限 66-75虚岁   |
++------------------+------------------+------------------+------------------+
+| 福德 戊辰        |                  |                  | 疾厄 癸酉        |
+| 天同             |                  |                  | 紫微             |
+| 左辅             |                  |                  | 贪狼             |
+| 文曲             |                  |                  | 大限 56-65虚岁   |
+| 大限 106-115虚岁 |                  |                  |                  |
++------------------+------------------+------------------+------------------+
+| 父母 丁卯        |                  |                  | 财帛 甲戌        |
+| 擎羊             |                  |                  | 巨门             |
+| 大限 116-125虚岁 |                  |                  | 右弼             |
+|                  |                  |                  | 文昌             |
+|                  |                  |                  | 铃星             |
+|                  |                  |                  | 大限 46-55虚岁   |
++------------------+------------------+------------------+------------------+
+| 命宫 丙寅 身宫   | 兄弟 丁丑        | 妻妾 丙子        | 子女 乙亥        |
+| 火星             | 廉贞[禄]         | 天梁             | 天相             |
+| 禄存             | 七杀             | 大限 26-35虚岁   | 地空             |
+| 天马             | 天魁             |                  | 地劫             |
+| 大限 6-15虚岁    | 陀罗             |                  | 大限 36-45虚岁   |
+|                  | 大限 16-25虚岁   |                  |                  |
++------------------+------------------+------------------+------------------+
 ```
 
 `ZiweiChart`冻结保存计算输入和各组件；传入的序列复制为元组。十二宫按宫名序保存，
@@ -44,7 +65,7 @@ True
 身宫是叠宫标记，不是第十三宫。公开构造器凭当前规则表和算术核对宫位、星位、四化与大限等组件关系，
 不读取历法和时区数据，也不重新执行历法或时区解析。
 
-直接构造与工厂入口都拒绝未知时辰或性别。`Palace`自身的类型与干支配对由它的构造器检查；
+直接构造`ZiweiChart`和调用`create_chart()`都拒绝未知时辰或性别。`Palace`自身的类型与干支配对由它的构造器检查；
 完整盘仍检查每个序列的成员类型，以及全部组件是否对应同一份计算输入。
 组件内容不符抛`ValueError`：十二宫、星位和大限报告数量差异或首个错项的零起始下标及期望／实际值；
 身宫、五行局和四化也报告对应组件及期望／实际值。错类型抛`TypeError`，不会统一包装成通用错误。
@@ -62,9 +83,10 @@ True
 星位、四化与大限保留各自的规则标识；规则的定义与来源见所属领域模块和知识目录。
 
 公历且选择立春或提供经度时，`calculation.resolved_time`保存此次取得的本地钟面、UTC、
-整数微秒偏移、实际fold，以及IANA数据包版本和发布版本。固定偏移没有IANA数据版本。
-其他路径为`None`，包括1954例所用的纯民用路径。民用时刻解析只支持1972年起的UTC；
-纯民用路径不取瞬间，因此不受这个时标边界限制。
+整数微秒偏移、实际fold，以及IANA数据包版本和发布版本。fold的选择与适用条件见[出生输入](birth.md)。
+固定偏移没有IANA数据版本。
+其他路径为`None`，包括本页农历合成例和1954参考例所用的纯民用路径。民用时刻解析只支持1972年起的UTC；
+纯民用路径只按记录的日期与钟面标签排盘，不取瞬间，因此不受这个时标边界限制；具体顺序见[解析层](resolver.md)。
 请求的fold留在原记录中，实际fold另存，两者不互相替代。
 纯民用路径不消歧，不检查钟点是否落在夏令时间隙或请求的fold是否适用于该钟点；原请求值原样保存。
 例如不存在的当地钟点也可按记录标签排盘，这不表示已确认钟点真实存在；此时没有实际fold或UTC可供读取。

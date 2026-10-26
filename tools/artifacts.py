@@ -32,6 +32,7 @@ SOURCE_PATTERNS = (
   "docs/**/*.md",
   "docs/**/*.py",
   "docs/**/*.inv",
+  "docs/**/*.css",
 )
 
 

@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/0xf3cd/ziwei/tree/main/docs"
+Documentation = "https://0xf3cd.github.io/ziwei/"
 Repository = "https://github.com/0xf3cd/ziwei"
 Issues = "https://github.com/0xf3cd/ziwei/issues"
 

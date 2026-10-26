@@ -2,12 +2,11 @@
 
 import re
 import shutil
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
+from tools import check
 from tools.check import check_api_reference
 
 
@@ -155,30 +154,11 @@ def test_documented_final_is_public_but_unmarked_assignments_are_not(
   check_api_reference(api_tree, api_tree)
 
 
-def _build_api(source: Path, output: Path) -> None:
-  result = subprocess.run(
-    [
-      sys.executable,
-      "-m",
-      "sphinx",
-      "-E",
-      "-a",
-      "-n",
-      "-W",
-      "--keep-going",
-      "-b",
-      "html",
-      "-c",
-      str(source / "docs"),
-      str(source),
-      str(output),
-    ],
-    cwd=Path(__file__).resolve().parents[1],
-    check=False,
-    text=True,
-    capture_output=True,
-  )
-  assert result.returncode == 0, result.stdout + result.stderr
+def _build_api(source: Path, output: Path) -> Path:
+  with pytest.MonkeyPatch.context() as patch:
+    patch.setattr(check, "ROOT", source)
+    check.sphinx_report(output)
+  return output / "html"
 
 
 @pytest.fixture(scope="module")
@@ -186,12 +166,79 @@ def rendered_api(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
   root = Path(__file__).resolve().parents[1]
   source = tmp_path_factory.mktemp("api-source")
   shutil.copytree(root / "docs", source / "docs")
+  shutil.copytree(root / "tools", source / "tools", ignore=shutil.ignore_patterns("__pycache__"))
   shutil.copyfile(root / "README.md", source / "README.md")
   shutil.copyfile(root / "LICENSE", source / "LICENSE")
-  output = tmp_path_factory.mktemp("api-html")
-  _build_api(source, output)
+  output = _build_api(source, tmp_path_factory.mktemp("api-build"))
   check_api_reference(output)
   return source, output
+
+
+def _check_module_headings(output: Path) -> None:
+  page = (output / "docs/api.html").read_text(encoding="utf-8")
+  headings = {
+    re.sub(r"<[^>]+>", "", heading).removesuffix("¶").strip()
+    for heading in re.findall(r"<h[1-6]\b[^>]*>(.*?)</h[1-6]>", page, flags=re.DOTALL)
+  }
+  missing = {
+    title
+    for title in ("时标合同", "真太阳时", "解析顺序", "失败边界")
+    if not any(heading == title or heading.startswith(title + "（") for heading in headings)
+  }
+  if missing:
+    raise ValueError("API HTML is missing module headings: " + ", ".join(sorted(missing)))
+
+
+def test_real_module_docstrings_render_as_headings(rendered_api: tuple[Path, Path]) -> None:
+  _, output = rendered_api
+  _check_module_headings(output)
+
+
+def test_real_html_loads_the_document_layout_stylesheet(rendered_api: tuple[Path, Path]) -> None:
+  source, output = rendered_api
+  for page in ("api", "knowledge-reference", "chart"):
+    html = (output / f"docs/{page}.html").read_text(encoding="utf-8")
+    assert re.search(r'<link\b[^>]*href="\.\./_static/layout\.css(?:\?[^"\s]*)?"', html)
+  assert (output / "_static/layout.css").read_bytes() == (
+    source / "docs/_static/layout.css"
+  ).read_bytes()
+
+
+@pytest.mark.parametrize("markdown_module", [None, "ziwei.calendar", "ziwei.resolver"])
+def test_module_heading_guard_distinguishes_rest_from_literal_markdown(
+  rendered_api: tuple[Path, Path], tmp_path: Path, markdown_module: str | None
+) -> None:
+  baseline, _ = rendered_api
+  source = tmp_path / "source"
+  shutil.copytree(baseline, source)
+  with (source / "docs/conf.py").open("a", encoding="utf-8") as config:
+    config.write(
+      f"\nmarkdown_module = {markdown_module!r}\n"
+      "def module_heading_probe(app, what, name, obj, options, lines):\n"
+      "  titles = {'ziwei.calendar': ('时标合同', '真太阳时'),\n"
+      "            'ziwei.resolver': ('解析顺序', '失败边界')}.get(name, ())\n"
+      "  text = '\\n'.join(lines) + '\\n'\n"
+      "  for index, title in enumerate(titles):\n"
+      "    rendered_title = f'{title}（{name}-{index}）'\n"
+      "    heading = '## ' + title if name == markdown_module else rendered_title + '\\n' + '-' * 64\n"
+      "    text, count = re.subn(r'(?m)^(?:## )?' + re.escape(title)\n"
+      "                          + r'(?:（[^\\n]*）)?\\n(?:[-=~^]+\\n)?', heading + '\\n', text)\n"
+      "    assert count == 1, (name, title, count)\n"
+      "  lines[:] = text.splitlines()\n"
+      "original_setup = setup\n"
+      "def setup(app):\n"
+      "  original_setup(app)\n"
+      "  app.connect('autodoc-process-docstring', module_heading_probe)\n"
+    )
+  output = _build_api(source, tmp_path / "build")
+  check_api_reference(output)
+  if markdown_module is None:
+    _check_module_headings(output)
+  else:
+    title = "时标合同" if markdown_module == "ziwei.calendar" else "解析顺序"
+    assert f"## {title}" in (output / "docs/api.html").read_text(encoding="utf-8")
+    with pytest.raises(ValueError, match=title):
+      _check_module_headings(output)
 
 
 @pytest.mark.parametrize(
@@ -221,7 +268,6 @@ def test_removing_real_api_declaration_is_rejected(
     )
   assert count == 1
   page.write_text(changed, encoding="utf-8")
-  output = tmp_path / "html"
-  _build_api(source, output)
+  output = _build_api(source, tmp_path / "build")
   with pytest.raises(ValueError, match=re.escape(target)):
     check_api_reference(output)

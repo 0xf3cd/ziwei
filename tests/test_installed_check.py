@@ -15,6 +15,7 @@ import ziwei
 from tools import installed_check
 from ziwei.birth import Gender, GregorianBirthRecord
 from ziwei.bureau import WuxingJu
+from ziwei.calendar import LunarAlgorithm
 from ziwei.decades import decade_periods
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
@@ -74,7 +75,12 @@ def test_installed_check_passes_for_consumer(
   consumer: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
   installed_check.main(version("ziwei"))
-  assert "Installed ziwei" in capsys.readouterr().out
+  output = capsys.readouterr().out
+  assert "Installed ziwei" in output
+  assert (
+    f"Installed calendar: ALGO3, celestial {version('celestial-calendar')}, lunar years 1600-2199"
+    in output
+  )
 
 
 def test_calendar_consumer_rejects_faulty_resolve(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -103,6 +109,33 @@ def test_calendar_consumer_rejects_wrong_calendar_pin(monkeypatch: pytest.Monkey
 
   monkeypatch.setattr(calendar_module, "celestial_version", lambda: "9.9.9")
   with pytest.raises(ValueError, match="declared pin"):
+    installed_check.check_calendar()
+
+
+@pytest.mark.parametrize(
+  "field, wrong",
+  [
+    ("lunar_algorithm", LunarAlgorithm.天文计算),
+    ("lunar_algorithm_version", "0.0.0"),
+    ("supported_lunar_year_range", (1, 9999)),
+  ],
+)
+def test_calendar_consumer_rejects_wrong_result_provenance(
+  monkeypatch: pytest.MonkeyPatch, field: str, wrong: object
+) -> None:
+  from ziwei import resolver
+  from ziwei.birth import CalculationInput
+
+  installed_check.check_calendar()
+  resolve = resolver.resolve
+
+  def faulty(*args: Any, **kwargs: Any) -> CalculationInput:
+    value = resolve(*args, **kwargs)
+    object.__setattr__(value, field, wrong)
+    return value
+
+  monkeypatch.setattr(resolver, "resolve", faulty)
+  with pytest.raises(ValueError, match="calendar provenance"):
     installed_check.check_calendar()
 
 

@@ -4,7 +4,8 @@
 所选农历算法、支持范围与 celestial 版本随解析结果保存；超出支持范围或闰月/日组合
 不存在时显式失败。
 
-## 时标合同
+时标合同（UT1 / UTC）
+----------------------
 
 celestial 的节气时刻是 UT1，民用输入是 UTC 或固定偏移；本模块只比较同一时标下的值。
 
@@ -15,10 +16,12 @@ celestial 的节气时刻是 UT1，民用输入是 UTC 或固定偏移；本模�
   ΔT 取 `delta_t` 的 DEFAULT 模型（ALGO5），在 TT 处估一次。
 - UTC转UT1与民用时刻解析均拒绝1972年以前的UTC瞬间；无需瞬间的纯民用排盘不受此下界限制。
 
-## 真太阳时
+真太阳时（apparent solar time）
+--------------------------------
 
-`apparent_solar_time` 以 UTC 民用时刻与东经经度换算当地真太阳钟；结果仍为 UTC 标
-民用时刻（保留 UT1-UTC 的亚秒差距，取时辰时通常不影响）。
+`apparent_solar` 调用 celestial 的 `apparent_solar_time`，以 UTC 民用时刻与东经经度换算
+当地真太阳钟，返回年月日与当日小数。此处直接传入 UTC 钟面值，不修正 UT1-UTC 的亚秒差距；
+取时辰时通常不影响。
 """
 
 from __future__ import annotations

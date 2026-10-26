@@ -9,11 +9,13 @@ import sys
 import tarfile
 import tomllib
 from collections.abc import Sequence
+from doctest import DocTestParser
 from importlib.metadata import distribution
 from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
+from markdown_it import MarkdownIt
 from packaging.specifiers import SpecifierSet
 
 from tools import artifacts, check, consumption
@@ -25,6 +27,7 @@ from tools.artifacts import (
 )
 from tools.check import check_documents, check_examples, document_errors
 from tools.consumption import run
+from tools.knowledge_reference import check_knowledge_reference
 
 PKG_INFO = "Name: ziwei\nVersion: 0.0.0\n"
 SOURCE = (
@@ -36,6 +39,97 @@ SOURCE = (
   ".github/workflows/checks.yml",
   ".github/workflows/release.yml",
 )
+
+
+def _documented_chart(document: Path) -> object:
+  namespace: dict[str, object] = {}
+  for example in DocTestParser().get_examples(document.read_text(encoding="utf-8")):
+    exec(example.source, namespace)
+    if "chart" in namespace:
+      return namespace["chart"]
+  raise ValueError(f"No chart example in {document.name}")
+
+
+def _check_readme_chart_example(root: Path) -> None:
+  from ziwei.chart import ZiweiChart
+
+  readme = _documented_chart(root / "README.md")
+  guide = _documented_chart(root / "docs/chart.md")
+  assert isinstance(readme, ZiweiChart) and isinstance(guide, ZiweiChart)
+  assert readme == guide, "README and chart guide must execute the same chart input"
+
+
+@pytest.mark.usefixtures("unload_celestial")
+def test_readme_and_chart_guide_execute_the_same_input() -> None:
+  _check_readme_chart_example(check.ROOT)
+
+
+@pytest.mark.usefixtures("unload_celestial")
+def test_same_input_check_rejects_a_changed_readme_example(tmp_path: Path) -> None:
+  (tmp_path / "docs").mkdir()
+  for document in ("README.md", "docs/chart.md"):
+    shutil.copyfile(check.ROOT / document, tmp_path / document)
+  _check_readme_chart_example(tmp_path)
+  readme = tmp_path / "README.md"
+  original = readme.read_text(encoding="utf-8")
+  assert original.count("gender=Gender.女") == 1
+  readme.write_text(original.replace("gender=Gender.女", "gender=Gender.男"), encoding="utf-8")
+  with pytest.raises(AssertionError, match="same chart input"):
+    _check_readme_chart_example(tmp_path)
+
+
+def _check_development_document_links(root: Path) -> None:
+  metadata = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+  base = metadata["project"]["urls"]["Documentation"]
+  pages = {
+    "README.md": ("", "docs/chart.html"),
+    "docs/index.md": ("", "docs/api.html", "docs/knowledge-reference.html"),
+    "docs/api.md": ("docs/api.html",),
+    "docs/knowledge-reference.md": ("docs/knowledge-reference.html",),
+    "docs/contributing.md": ("",),
+  }
+  for document, targets in pages.items():
+    tokens = MarkdownIt().parse((root / document).read_text(encoding="utf-8"))
+    links = {
+      child.attrGet("href")
+      for token in tokens
+      for child in token.children or ()
+      if child.type == "link_open"
+    }
+    if not {base + target for target in targets} <= links:
+      raise ValueError("Missing development documentation link in " + document)
+
+
+def test_development_document_links_follow_package_metadata() -> None:
+  _check_development_document_links(check.ROOT)
+
+
+@pytest.mark.parametrize(
+  "document",
+  [
+    "pyproject.toml",
+    "README.md",
+    "docs/index.md",
+    "docs/api.md",
+    "docs/knowledge-reference.md",
+    "docs/contributing.md",
+  ],
+)
+def test_document_link_check_rejects_an_inconsistent_site_root(
+  tmp_path: Path, document: str
+) -> None:
+  shutil.copytree(check.ROOT / "docs", tmp_path / "docs")
+  for name in ("pyproject.toml", "README.md"):
+    shutil.copyfile(check.ROOT / name, tmp_path / name)
+  _check_development_document_links(tmp_path)
+  metadata = tomllib.loads((tmp_path / "pyproject.toml").read_text(encoding="utf-8"))
+  base = metadata["project"]["urls"]["Documentation"]
+  page = tmp_path / document
+  original = page.read_text(encoding="utf-8")
+  assert base in original
+  page.write_text(original.replace(base, "https://example.invalid/"), encoding="utf-8")
+  with pytest.raises(ValueError, match="Missing development documentation link"):
+    _check_development_document_links(tmp_path)
 
 
 @pytest.mark.parametrize("mode", [(), ("-O",)])
@@ -206,6 +300,10 @@ def test_real_sphinx_entry_builds_both_outputs(
   assert report == (output / "doctest/output.txt").read_text(encoding="utf-8")
   assert "Document: index" in report and "1 test" in report
   assert "0 failures in tests" in report
+  assert (output / ".doctrees/html/environment.pickle").is_file()
+  assert (output / ".doctrees/doctest/environment.pickle").is_file()
+  assert not list((output / "html").rglob("*.doctree"))
+  assert not list((output / "html").rglob("environment.pickle"))
 
 
 @pytest.mark.parametrize(
@@ -262,37 +360,257 @@ def setup(app):
     assert not (output / "doctest").exists()
 
 
-@pytest.mark.parametrize(
-  "report",
-  [
-    "",
-    "Document: docs/contributing\n0 tests in 1 item.\n",
-    "Document: docs/architecture\n2 tests in 1 item.\n",
-  ],
-)
+@pytest.fixture
+def example_report() -> str:
+  return "".join(
+    f"Document: {document}\n2 tests in 1 item.\n"
+    for document in ("README", "docs/chart", "docs/contributing")
+  )
+
+
+@pytest.mark.parametrize("report", ["", "Document: docs/architecture\n2 tests in 1 item.\n"])
 def test_examples_cannot_be_empty(report: str) -> None:
-  with pytest.raises(ValueError, match="docs/contributing"):
+  with pytest.raises(ValueError, match="README"):
     check_examples(report)
 
 
 @pytest.mark.parametrize("word", ["item", "items"])
-def test_executed_examples(word: str) -> None:
-  check_examples(f"Document: docs/contributing\n2 tests in 1 {word}.\n")
+def test_executed_examples(example_report: str, word: str) -> None:
+  check_examples(example_report.replace("item.", f"{word}."))
 
 
-def test_document_word_in_doctest_group() -> None:
+def test_document_word_in_doctest_group(example_report: str) -> None:
   check_examples(
-    "Document: docs/contributing\n"
-    "1 item passed all tests:\n   2 tests in Document: group\n2 tests in 1 item.\n"
+    example_report.replace(
+      "2 tests in 1 item.\n",
+      "1 item passed all tests:\n   2 tests in Document: group\n2 tests in 1 item.\n",
+    )
   )
 
 
-def test_other_document_counts_do_not_satisfy_contributing() -> None:
-  report = (
-    "Document: docs/contributing\n0 tests in 1 item.\nDocument: docs/index\n3 tests in 1 item.\n"
-  )
-  with pytest.raises(ValueError, match="docs/contributing"):
+@pytest.mark.parametrize("document", ["README", "docs/chart", "docs/contributing"])
+@pytest.mark.parametrize("defect", ["missing", "zero"])
+def test_each_document_needs_its_own_executed_examples(
+  example_report: str, document: str, defect: str
+) -> None:
+  original = f"Document: {document}\n2 tests in 1 item.\n"
+  changed = "" if defect == "missing" else f"Document: {document}\n0 tests in 1 item.\n"
+  report = example_report.replace(original, changed)
+  report += "Document: docs/index\n3 tests in 1 item.\n"
+  with pytest.raises(ValueError, match=document):
     check_examples(report)
+
+
+@pytest.fixture
+def checked_docs_source(sphinx_source: Path) -> Path:
+  root = check.ROOT
+  shutil.copytree(
+    root / "tools", sphinx_source / "tools", ignore=shutil.ignore_patterns("__pycache__")
+  )
+  for name in ("conf.py", "python-stdlib.inv"):
+    shutil.copyfile(root / "docs" / name, sphinx_source / "docs" / name)
+  shutil.copytree(root / "docs/_static", sphinx_source / "docs/_static")
+  (sphinx_source / "index.rst").unlink()
+  (sphinx_source / "docs/index.rst").write_text(
+    "入口\n====\n\n.. toctree::\n\n   ../README\n   chart\n   contributing\n"
+    "   api\n   knowledge-reference\n",
+    encoding="utf-8",
+  )
+  (sphinx_source / "README.md").write_text(
+    "# 入口示例\n\n```{doctest}\n>>> 2 + 2\n4\n```\n", encoding="utf-8"
+  )
+  for name in ("chart", "contributing"):
+    (sphinx_source / "docs" / f"{name}.rst").write_text(
+      f"{name}\n{'=' * len(name)}\n\n.. doctest::\n\n   >>> 2 + 2\n   4\n",
+      encoding="utf-8",
+    )
+  source = sphinx_source / "src/ziwei"
+  source.mkdir(parents=True)
+  (source / "calendar.py").write_text("def celestial_version():\n  pass\n", encoding="utf-8")
+  (sphinx_source / "docs/api.rst").write_text(
+    "API\n===\n\n.. autofunction:: ziwei.calendar.celestial_version\n", encoding="utf-8"
+  )
+  (sphinx_source / "docs/knowledge-reference.md").write_text("# 知识参考\n", encoding="utf-8")
+  return sphinx_source
+
+
+def test_docs_command_exports_a_project_site(checked_docs_source: Path) -> None:
+  result = subprocess.run(
+    (sys.executable, "tools/check.py", "--docs-dir", "site"),
+    cwd=checked_docs_source,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 0, result.stdout + result.stderr
+  assert "Documentation checks passed." in result.stdout
+  site = checked_docs_source / "site"
+  landing = (site / "html/index.html").read_text(encoding="utf-8")
+  assert 'content="0; url=docs/index.html"' in landing
+  assert 'href="docs/index.html"' in landing
+  assert (site / "html/docs/index.html").is_file()
+  check.check_api_reference(site / "html", checked_docs_source)
+  check_knowledge_reference(site / "html")
+  check_examples((site / "doctest/output.txt").read_text(encoding="utf-8"))
+  assert (site / ".doctrees/html/environment.pickle").is_file()
+  assert not list((site / "html").rglob("*.pickle"))
+  assert not list((site / "html").rglob("*.doctree"))
+  assert not (site / "artifacts").exists()
+  assert not (site / "consumer").exists()
+  commands = [line for line in result.stdout.splitlines() if line.startswith("+ ")]
+  assert len(commands) == 2
+  assert all(" -m sphinx " in command for command in commands)
+
+
+@pytest.mark.parametrize("document, suffix", [("api", "rst"), ("knowledge-reference", "md")])
+def test_docs_command_cannot_validate_removed_pages_from_an_old_export(
+  checked_docs_source: Path, document: str, suffix: str
+) -> None:
+  index = checked_docs_source / "docs/index.rst"
+  index.write_text(index.read_text(encoding="utf-8") + "   retained\n", encoding="utf-8")
+  (checked_docs_source / "docs/retained.md").write_text("# 保留的指南\n", encoding="utf-8")
+  (checked_docs_source / "site").mkdir()
+  command = (sys.executable, "tools/check.py", "--docs-dir", "site")
+  baseline = subprocess.run(
+    command, cwd=checked_docs_source, capture_output=True, text=True, check=False
+  )
+  assert baseline.returncode == 0, baseline.stdout + baseline.stderr
+  site = checked_docs_source / "site"
+  target = site / "html/docs" / f"{document}.html"
+  assert target.is_file()
+  saved = {path.relative_to(site): path.read_bytes() for path in site.rglob("*") if path.is_file()}
+  (checked_docs_source / "docs" / f"{document}.{suffix}").unlink()
+  text = index.read_text(encoding="utf-8")
+  assert text.count(f"   {document}\n") == 1
+  index.write_text(text.replace(f"   {document}\n", ""), encoding="utf-8")
+
+  repeated = subprocess.run(
+    command, cwd=checked_docs_source, capture_output=True, text=True, check=False
+  )
+  fresh = subprocess.run(
+    (*command[:-1], "fresh-site"),
+    cwd=checked_docs_source,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert fresh.returncode == 1, fresh.stdout + fresh.stderr
+  assert fresh.stdout.count("build succeeded.") == 2
+  assert "FileNotFoundError" in fresh.stderr and f"{document}.html" in fresh.stderr
+  assert not (checked_docs_source / "fresh-site/html/docs" / f"{document}.html").exists()
+  assert repeated.returncode == 1, repeated.stdout + repeated.stderr
+  assert "Documentation output must be an empty directory" in repeated.stderr
+  assert not any(line.startswith("+ ") for line in repeated.stdout.splitlines())
+  assert saved == {
+    path.relative_to(site): path.read_bytes() for path in site.rglob("*") if path.is_file()
+  }
+
+
+@pytest.mark.parametrize("member", ["file", ".retained", "nested"])
+def test_docs_command_refuses_existing_output_without_changing_it(
+  checked_docs_source: Path, member: str
+) -> None:
+  site = checked_docs_source / "site"
+  if member == "file":
+    site.write_bytes(b"retained output")
+  else:
+    site.mkdir()
+    if member == "nested":
+      (site / member).mkdir()
+    else:
+      (site / member).write_bytes(b"retained output")
+  result = subprocess.run(
+    (sys.executable, "tools/check.py", "--docs-dir", "site"),
+    cwd=checked_docs_source,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 1, result.stdout + result.stderr
+  assert "Documentation output must be an empty directory" in result.stderr
+  assert not any(line.startswith("+ ") for line in result.stdout.splitlines())
+  if member == "file":
+    assert site.read_bytes() == b"retained output"
+  else:
+    assert {path.name for path in site.iterdir()} == {member}
+    if member == "nested":
+      assert not list((site / member).iterdir())
+    else:
+      assert (site / member).read_bytes() == b"retained output"
+
+
+@pytest.mark.parametrize(
+  "fault, message",
+  [
+    ("example", "No executed documentation examples in docs/chart"),
+    ("api", "API HTML is missing signatures: ziwei.calendar.celestial_version"),
+    ("knowledge", "Missing or duplicate knowledge target:"),
+    ("entry", "Missing documentation entry point: docs/index.html"),
+    ("html-warning", "Unknown directive type"),
+    ("doctest-failure", "1 failure in tests"),
+  ],
+)
+def test_docs_command_rejects_invalid_exports(
+  checked_docs_source: Path, fault: str, message: str
+) -> None:
+  if fault in ("example", "doctest-failure"):
+    page = checked_docs_source / "docs/chart.rst"
+    text = page.read_text(encoding="utf-8")
+    text = (
+      text.partition(".. doctest::")[0] if fault == "example" else text.replace("   4\n", "   5\n")
+    )
+    page.write_text(text, encoding="utf-8")
+  elif fault == "api":
+    (checked_docs_source / "docs/api.rst").write_text("API\n===\n", encoding="utf-8")
+  elif fault == "knowledge":
+    config = checked_docs_source / "docs/conf.py"
+    config.write_text(
+      config.read_text(encoding="utf-8").replace(
+        'if docname == "docs/knowledge-reference":', 'if docname == "unused":'
+      ),
+      encoding="utf-8",
+    )
+  elif fault == "entry":
+    (checked_docs_source / "docs/index.rst").rename(checked_docs_source / "docs/home.rst")
+    with (checked_docs_source / "docs/conf.py").open("a", encoding="utf-8") as stream:
+      stream.write('\nroot_doc = "docs/home"\n')
+  else:
+    with (checked_docs_source / "docs/api.rst").open("a", encoding="utf-8") as stream:
+      stream.write("\n.. unknown-production-directive::\n")
+  result = subprocess.run(
+    (sys.executable, "tools/check.py", "--docs-dir", "site"),
+    cwd=checked_docs_source,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 1, result.stdout + result.stderr
+  assert message in result.stdout + result.stderr
+  assert "Documentation checks passed." not in result.stdout
+  assert not (checked_docs_source / "site/html/index.html").exists()
+
+
+def test_docs_and_artifact_commands_are_mutually_exclusive(tmp_path: Path) -> None:
+  result = subprocess.run(
+    (
+      sys.executable,
+      str(check.ROOT / "tools/check.py"),
+      "--docs-dir",
+      str(tmp_path / "site"),
+      "--artifacts-dir",
+      str(tmp_path / "artifacts"),
+    ),
+    cwd=tmp_path,
+    capture_output=True,
+    text=True,
+    check=False,
+  )
+  assert result.returncode == 2
+  assert "not allowed with argument" in result.stderr
+  assert not (tmp_path / "site").exists()
+  assert not (tmp_path / "artifacts").exists()
+  with pytest.raises(ValueError, match="mutually exclusive"):
+    check.main(docs_dir=tmp_path / "site", artifacts_dir=tmp_path / "artifacts")
 
 
 def test_source_members_follow_the_tree(tmp_path: Path) -> None:
@@ -307,6 +625,7 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     "tests/unit/test_nested.py",
     "docs/conf.py",
     "docs/python-stdlib.inv",
+    "docs/_static/layout.css",
     "docs/index.md",
     "docs/guide/page.md",
     "docs/notes.txt",
@@ -323,6 +642,7 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     "src/ziwei/stars/main.py",
     "docs/guide/page.md",
     "docs/python-stdlib.inv",
+    "docs/_static/layout.css",
     "tests/test_a.py",
     "tests/unit/test_nested.py",
     ".github/workflows/checks.yml",
@@ -332,10 +652,13 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
   assert {"tools/helper.sh", "docs/notes.txt"}.isdisjoint(members)
 
 
-def test_real_source_members_include_the_workflow_consumed_by_tests() -> None:
-  assert {".github/workflows/checks.yml", ".github/workflows/release.yml"} <= set(
-    source_members(check.ROOT)
-  )
+def test_real_source_members_include_workflows_and_document_assets() -> None:
+  assert {
+    ".github/workflows/checks.yml",
+    ".github/workflows/release.yml",
+    ".github/workflows/docs.yml",
+    "docs/_static/layout.css",
+  } <= set(source_members(check.ROOT))
 
 
 def test_valid_sdist(tmp_path: Path) -> None:
@@ -662,13 +985,17 @@ def test_main_runs_every_gate_in_order(
 
   def fake_report(directory: Path) -> str:
     calls.append("sphinx_report")
+    (directory / "html/docs").mkdir(parents=True)
+    (directory / "html/docs/index.html").touch()
     return "report"
 
   monkeypatch.setattr(check, "run", fake_run)
-  monkeypatch.setattr(check, "check_documents", lambda: calls.append("check_documents"))
+  monkeypatch.setattr(check, "check_documents", lambda root: calls.append("check_documents"))
   monkeypatch.setattr(check, "sphinx_report", fake_report)
   monkeypatch.setattr(check, "check_examples", lambda report: calls.append(("examples", report)))
-  monkeypatch.setattr(check, "check_api_reference", lambda directory: calls.append("api_reference"))
+  monkeypatch.setattr(
+    check, "check_api_reference", lambda directory, root: calls.append("api_reference")
+  )
   monkeypatch.setattr(
     check, "check_knowledge_reference", lambda directory: calls.append("knowledge_reference")
   )
