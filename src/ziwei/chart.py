@@ -91,7 +91,8 @@ class ZiweiChart:
   """完整本命盘，按规则表与算术核对组件，不重做历法或时区解析。
 
   宫位按宫名序，星曜按Star枚举顺序，大限按起限先后（自命宫起，随顺逆）；序列复制为元组。
-  直接构造不重新核验calculation中的公历与农历对应、UT1或IANA偏移；从原始记录排盘使用create_chart。
+  直接构造不重做公农历、UT1或IANA偏移换算；会核对已存解析值与原始记录的内部一致性，
+  但不证明这些原值正确。从原始记录排盘使用create_chart。
   """
 
   calculation: CalculationInput
