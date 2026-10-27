@@ -281,7 +281,7 @@ def test_partial_calculation_cannot_form_complete_chart(civil_chart: ZiweiChart)
     replace(civil_chart, calculation=old)
 
 
-def test_create_calls_complete_guard(
+def test_create_checks_complete_before_components(
   chart_choices: ChartConfig, monkeypatch: pytest.MonkeyPatch
 ) -> None:
   from ziwei.birth import CalculationInput
@@ -289,7 +289,11 @@ def test_create_calls_complete_guard(
   def reject(self: CalculationInput) -> None:
     raise ValueError("guard reached")
 
+  def unexpected_frame(_: CalculationInput) -> Never:
+    raise AssertionError("组件计算不应先于完整性检查")
+
   monkeypatch.setattr(CalculationInput, "require_complete", reject)
+  monkeypatch.setattr(module, "_chart_frame", unexpected_frame)
   record = LunarBirthRecord(
     year=2024, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.男
   )
@@ -381,14 +385,12 @@ def test_chart_rejects_unrolled_civil_late_zi(chart_choices: ChartConfig) -> Non
     replace(valid, calculation=replace(valid.calculation, day_rolled=False))
 
 
-@pytest.mark.parametrize("change", ["nonfinite", "longitude", "lunar-zi", "instant", "type"])
+@pytest.mark.parametrize("change", ["longitude", "lunar-zi", "instant", "type"])
 def test_chart_rejects_inconsistent_calculation(
   lunar_chart: ZiweiChart, civil_chart: ZiweiChart, change: str
 ) -> None:
   value = lunar_chart.calculation
-  if change == "nonfinite":
-    value = replace(civil_chart.calculation, ut1_jd=float("nan"))
-  elif change == "longitude":
+  if change == "longitude":
     value = replace(value, record=replace(value.record, longitude_deg=100.0))
   elif change == "lunar-zi":
     value = replace(value, config=replace(value.config, day_rollover=DayRollover.晚子时归次日))
@@ -401,6 +403,16 @@ def test_chart_rejects_inconsistent_calculation(
   # 低层值不核完整盘关系，组合入口仍须拒绝矛盾。
   with pytest.raises(ValueError):
     replace(lunar_chart, calculation=value)
+
+
+@pytest.mark.parametrize("field", ["ut1_jd", "lichun_jd"])
+def test_chart_rejects_nonfinite_time_values(civil_chart: ZiweiChart, field: str) -> None:
+  if field == "ut1_jd":
+    value = replace(civil_chart.calculation, ut1_jd=float("nan"))
+  else:
+    value = replace(civil_chart.calculation, lichun_jd=float("nan"))
+  with pytest.raises(ValueError, match="UT1 日数须为有限值"):
+    replace(civil_chart, calculation=value)
 
 
 def test_same_string_palace_fields_are_not_domain_members(lunar_chart: ZiweiChart) -> None:

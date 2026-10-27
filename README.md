@@ -92,7 +92,7 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 - 命盘结果不可变，保留输入、口径、历法版本与派生结果；另提供文本与静态SVG盘面用于显示。
 
 首版交付记录见[v0.1.0 milestone](https://github.com/0xf3cd/ziwei/milestone/1)，
-当前改进由[v0.2.0 milestone](https://github.com/0xf3cd/ziwei/milestone/4)追踪。
+当前改进由[v0.3.0 milestone](https://github.com/0xf3cd/ziwei/milestone/5)追踪。
 
 ## 设计边界
 
