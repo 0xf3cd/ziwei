@@ -35,7 +35,7 @@ def choices() -> ChartConfig:
 
 def _positions(value: CalculationInput) -> dict[Star, Dizhi]:
   result = place_stars(value)
-  assert len(result) == 28
+  assert len(result) == 30
   assert tuple(item.star for item in result) == tuple(Star)
   return {item.star: item.dizhi for item in result}
 
@@ -71,9 +71,10 @@ def test_independent_1954_ninth_month_seventh_day_zi(
   )
   value = resolve(record, replace(choices, tianma_rule=TianmaRule.月支天马))
   expected = expected_1954
-  assert _positions(value) == expected
+  actual = _positions(value)
+  assert {star: actual[star] for star in expected} == expected
   assert len(set(expected.values())) < len(expected)  # 同宫不丢星。
-  assert _positions(replace(value, config=choices)) == expected  # 此例两种马相同，另例辨选择。
+  assert _positions(replace(value, config=choices)) == actual  # 此例两种马相同，另例辨选择。
 
 
 def test_default_year_horse_and_explicit_month_horse_are_recorded(choices: ChartConfig) -> None:
@@ -88,11 +89,14 @@ def test_default_year_horse_and_explicit_month_horse_are_recorded(choices: Chart
   value = resolve(record, choices)
   year = place_stars(value)  # 辰年取寅；正月寅支取申，非同三合组。
   month = place_stars(replace(value, config=replace(choices, tianma_rule=TianmaRule.月支天马)))
-  assert year[-1].star is month[-1].star is Star.天马
-  assert (year[-1].dizhi, month[-1].dizhi) == (Dizhi.寅, Dizhi.申)
-  assert year[-1].rule_id == "variant.tianma.year-branch"
-  assert month[-1].rule_id == "variant.tianma.month-branch"
-  assert year[:-1] == month[:-1]
+  year_ma = next(position for position in year if position.star is Star.天马)
+  month_ma = next(position for position in month if position.star is Star.天马)
+  assert (year_ma.dizhi, month_ma.dizhi) == (Dizhi.寅, Dizhi.申)
+  assert year_ma.rule_id == "variant.tianma.year-branch"
+  assert month_ma.rule_id == "variant.tianma.month-branch"
+  assert tuple(p for p in year if p.star is not Star.天马) == tuple(
+    p for p in month if p.star is not Star.天马
+  )
   assert choices.tianma_rule is TianmaRule.年支天马
   assert place_stars(value) == year  # 后续配置选择不改变已返回的值。
   assert value.gender is Gender.未知  # 安星不依赖性别。

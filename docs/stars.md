@@ -1,8 +1,9 @@
-# 28星安星
+# 30星安星
 
 [API参考](api.md#安星) · [出生输入](birth.md) · [知识查询](knowledge.md) · [项目入口](../README.md)
 
-`place_stars()`从解析后的`CalculationInput`安28星：十四主星、六吉、六煞、禄存与天马。
+`place_stars()`从解析后的`CalculationInput`安30星：十四主星、六吉、六煞、禄存、天马与红鸾天喜。
+红鸾／天喜为开发中的0.3.0功能，尚未发行；PyPI的0.2.0仍为28星。
 返回不可变元组，每项保存星曜`Star`、所在宫位的地支`dizhi`和实际使用的规则标识`rule_id`。
 每颗星只有一个位置，不同星可以落在同一宫。
 `place_stars()`不是完整命盘API，不含四化、大限或吉凶解释；
@@ -30,10 +31,9 @@
 ... )
 >>> value = resolve(record, config)
 >>> positions = place_stars(value)
->>> len(positions), positions[-1].star is Star.天马
-(28, True)
->>> positions[-1].dizhi.value, positions[-1].rule_id
-('寅', 'variant.tianma.year-branch')
+>>> horse = next(position for position in positions if position.star is Star.天马)
+>>> len(positions), horse.dizhi.value, horse.rule_id
+(30, '寅', 'variant.tianma.year-branch')
 >>> Star.天马.concept_id
 'concept.star.tianma'
 ```
@@ -52,9 +52,10 @@
 >>> from dataclasses import replace
 >>> monthly_input = replace(value, config=replace(config, tianma_rule=TianmaRule.月支天马))
 >>> monthly = place_stars(monthly_input)
->>> monthly[-1].dizhi.value, monthly[-1].rule_id
+>>> monthly_horse = next(position for position in monthly if position.star is Star.天马)
+>>> monthly_horse.dizhi.value, monthly_horse.rule_id
 ('申', 'variant.tianma.month-branch')
->>> positions[:-1] == monthly[:-1]
+>>> tuple(p for p in positions if p.star is not Star.天马) == tuple(p for p in monthly if p.star is not Star.天马)
 True
 ```
 
@@ -82,9 +83,24 @@ True
 - `place_hour_stars()`按时辰安文昌、文曲、地空、地劫。
 - `place_stem_stars()`按年干安天魁、天钺、禄存、擎羊、陀罗；天魁、天钺使用现代资料的表。
 - `place_fire_bell()`按年支与时辰安火星、铃星。
+- `place_hongluan_tianxi()`按已确定的生年支安红鸾、天喜，不需要生时或性别。
 
 `tianma_dizhi()`只按传入的地支查天马，返回地支位置，不返回星位记录。
 `place_stars()`负责选择传入年支还是农历月份对应的地支。各函数签名见[API](api.md#安星)。
+
+## 红鸾与天喜
+
+两星使用本命配置已经确定的生年支，不从公历年份另推，也不另设换年选项。
+红鸾在卯宫起子年，逆数至生年支，天喜在其对宫；可以只给已确定的年支单独查询：
+
+```{doctest}
+>>> from ziwei.stars import place_hongluan_tianxi
+>>> [(p.star.value, p.dizhi.value) for p in place_hongluan_tianxi(Dizhi.丑)]
+[('红鸾', '寅'), ('天喜', '申')]
+```
+
+该位置与《捷览》乙丑直接例一致，但例子没有完整出生年月日时或年界配置。
+直接例、口诀展开与合成完整盘的证明范围分开，见[安星材料的限度](knowledge.md#安星材料的限度)。
 
 ## 归月与失败边界
 

@@ -86,8 +86,10 @@ def test_external_1954_views(lunar_chart: ZiweiChart, expected_1954: dict[Star, 
     assert isinstance(view, PalaceView)
     assert view == palace_view(lunar_chart, palace.dizhi)
     assert view.palace is palace
-    assert tuple(position.star for position in view.stars) == tuple(
-      star for star in Star if expected_1954[star] is palace.dizhi
+    assert tuple(
+      position.star for position in view.stars if position.star in expected_1954
+    ) == tuple(
+      star for star in Star if star in expected_1954 and expected_1954[star] is palace.dizhi
     )
     assert view.stars == tuple(p for p in lunar_chart.stars if p.dizhi is palace.dizhi)
     for field, star in marks.items():
@@ -123,12 +125,8 @@ def test_hand_derived_empty_and_multiple_stars(chart_choices: ChartConfig) -> No
   assert (ming.lu, ming.quan, ming.ke, ming.ji) == (None, None, None, Star.太阳)
 
 
-def test_empty_shengong_is_not_minggong(chart_choices: ChartConfig) -> None:
-  """合成甲午正月初一未时：命未、身酉叠福德；辛未土五局，紫微午、天府戌。
-
-  两主星系均不落酉；正月辅辰弼戌，未时昌卯曲亥、空辰劫午，甲干魁丑钺未、
-  禄寅羊卯陀丑，午年未时火申铃戌、月马申，故酉空。期望由口诀手推，不取扫描结果。
-  """
+def test_hongluan_shengong_is_not_minggong(chart_choices: ChartConfig) -> None:
+  """合成甲午正月初一未时：命未、身酉叠福德；原28星不落酉，新增红鸾在酉。"""
   result = create_chart(
     LunarBirthRecord(
       year=1954, month=1, day=1, is_leap_month=False, shichen=Dizhi.未, gender=Gender.女
@@ -140,12 +138,29 @@ def test_empty_shengong_is_not_minggong(chart_choices: ChartConfig) -> None:
   assert ming.palace.dizhi is Dizhi.未 and ming.is_shengong is False
   shen = palace_view(result, PalaceName.福德)
   assert shen.palace.dizhi is Dizhi.酉 and shen.is_shengong is True
-  assert shen.stars == ()
+  assert tuple(p.star for p in shen.stars) == (Star.红鸾,)
   assert (shen.lu, shen.quan, shen.ke, shen.ji) == (None, None, None, None)
   for palace in result.palaces:
     view = palace_view(result, palace.name)
     assert view == palace_view(result, palace.dizhi)
     assert view.is_shengong is (palace.dizhi is Dizhi.酉)
+
+
+def test_empty_shengong_is_not_minggong(chart_choices: ChartConfig) -> None:
+  """合成甲子二月初二酉时：命午、身子叠迁移，用于查询空身宫，不作外部安星盘例。"""
+  result = create_chart(
+    LunarBirthRecord(
+      year=1984, month=2, day=2, is_leap_month=False, shichen=Dizhi.酉, gender=Gender.女
+    ),
+    chart_choices,
+    sihua_variant=SihuaVariant.排命盘口诀转录,
+  )
+  ming = palace_view(result, PalaceName.命宫)
+  shen = palace_view(result, PalaceName.迁移)
+  assert ming.palace.dizhi is Dizhi.午 and not ming.is_shengong
+  assert shen.palace.dizhi is Dizhi.子 and shen.is_shengong
+  assert shen.stars == ()
+  assert (shen.lu, shen.quan, shen.ke, shen.ji) == (None, None, None, None)
 
 
 @pytest.mark.parametrize(

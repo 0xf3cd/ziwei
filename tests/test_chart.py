@@ -56,7 +56,7 @@ def test_full_chart_algorithm_end_and_rollover(
   assert (value.lunar_year, value.month, value.day, value.is_leap_month) == (2199, 12, 30, False)
   assert value.shichen is Dizhi.子 and value.day_rolled is False
   assert value.apparent_solar is (longitude is not None)
-  assert len(same.palaces) == 12 and len(same.stars) == 28
+  assert len(same.palaces) == 12 and len(same.stars) == 30
   with pytest.raises(ValueError, match=r"2200-02-15.*混合支持范围"):
     create_chart(
       record,
@@ -72,7 +72,7 @@ def test_external_1954_full_chart(
   """http://www.zhongyi999.com.cn/thread-1744-1-1.html，举例1-13步；底本未核。
 
   1954九月初七子时男命，甲午、火六局、命身同戌。第22步正文列前九限，末三限按规则推得，表23图未核。
-  年马/月马此例相同，不用于证明切换。只验证已实现的28星，其他星曜不纳入。
+  年马/月马此例相同，不用于证明切换。外部观测只含28星，不据此验证新增的红鸾、天喜。
   """
   assert lunar_chart.bureau is WuxingJu.火六局
   assert lunar_chart.shengong is Dizhi.戌
@@ -92,7 +92,10 @@ def test_external_1954_full_chart(
     "丙子",
     "乙亥",
   ]
-  assert {p.star: p.dizhi for p in lunar_chart.stars} == expected_1954
+  positions = {p.star: p.dizhi for p in lunar_chart.stars}
+  assert len(lunar_chart.stars) == len(positions) == 30
+  assert set(positions) == set(Star)
+  assert {star: positions[star] for star in expected_1954} == expected_1954
   assert (
     lunar_chart.sihua.lu,
     lunar_chart.sihua.quan,
@@ -166,7 +169,7 @@ def test_hand_derived_synthetic_chart(chart_choices: ChartConfig) -> None:
   assert str(value.palaces[0].ganzhi) == "丙寅"
   assert value.shengong is Dizhi.寅 and value.bureau is WuxingJu.火六局
   assert "".join(p.dizhi.value for p in value.stars[:14]) == "酉申午巳辰丑未申酉戌亥子丑巳"
-  assert value.stars[-1].dizhi is Dizhi.寅
+  assert next(p for p in value.stars if p.star is Star.天马).dizhi is Dizhi.寅
   assert "".join(p.dizhi.value for p in value.decades) == "寅丑子亥戌酉申未午巳辰卯"
   assert value.decades[0].direction is Direction.逆行
 
@@ -247,7 +250,7 @@ def test_chart_is_frozen_and_copies_sequences(lunar_chart: ZiweiChart) -> None:
   stars = list(lunar_chart.stars)
   result = replace(lunar_chart, stars=stars)  # type: ignore[arg-type]
   stars.clear()
-  assert len(result.stars) == 28
+  assert len(result.stars) == 30
   with pytest.raises(FrozenInstanceError):
     result.shengong = Dizhi.寅  # type: ignore[misc]
 

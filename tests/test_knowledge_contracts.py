@@ -212,7 +212,7 @@ if choices.tianma_rule is not config.TianmaRule.月支天马:
   raise RuntimeError('changed default not selected')
 record = LunarBirthRecord(year=2024, month=1, day=7, is_leap_month=False,
     shichen=Dizhi.子, gender=Gender.未知)
-position = stars.place_stars(resolve(record, choices))[-1]
+position = next(p for p in stars.place_stars(resolve(record, choices)) if p.star is stars.Star.天马)
 if position.rule_id != 'variant.tianma.month-branch' or position.dizhi is not Dizhi.申:
   raise RuntimeError('default choice not consumed by placement')
 actual = {rule.id: rule.definition for rule in stars.STAR_RULES if rule.tianma_rule is not None}

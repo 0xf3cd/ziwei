@@ -71,6 +71,9 @@ def _star_rows() -> list[tuple[str, ...]]:
   for stem in Tiangan:
     for position in stars.place_stem_stars(stem):
       rows.append((position.rule_id, stem.value, position.star.value, position.dizhi.value))
+  for year in Dizhi:
+    for position in stars.place_hongluan_tianxi(year):
+      rows.append((position.rule_id, year.value, position.star.value, position.dizhi.value))
   for group in stars.SANHE_GROUPS:
     for hour in Dizhi:
       for position in stars.place_fire_bell(group[0], hour):

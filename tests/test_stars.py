@@ -213,6 +213,8 @@ def test_star_aliases_identity_json_and_no_global_tiankong() -> None:
     "地劫",
     "禄存",
     "天马",
+    "红鸾",
+    "天喜",
   )
   pinyin = (
     "ZIWEI",
@@ -243,12 +245,14 @@ def test_star_aliases_identity_json_and_no_global_tiankong() -> None:
     "DIJIE",
     "LUCUN",
     "TIANMA",
+    "HONGLUAN",
+    "TIANXI",
   )
   for name, member in zip(chinese, pinyin, strict=True):
     assert Star.__members__[name] is Star.__members__[member]
     assert Star.__members__[name].value == name
     assert Star.__members__[name].concept_id == "concept.star." + member.lower()
-  assert len(Star) == 28
+  assert len(Star) == 30
   assert "天空" not in Star.__members__
   assert json.loads(json.dumps(list(Star), ensure_ascii=False)) == list(chinese)
 
@@ -410,7 +414,7 @@ value = CalculationInput(record=record, lunar_year=2000, month=1, day=1, is_leap
   shichen=Dizhi.子, ganzhi_year=2000, config=config, lunar_algorithm=LunarAlgorithm.ALGO3,
   lunar_algorithm_version='0.8.0', apparent_solar=False, day_rolled=False,
   ut1_jd=None, lichun_jd=None)
-if len(place_stars(value)) != 28 or not load_catalog().find('紫微'):
+if len(place_stars(value)) != 30 or not load_catalog().find('紫微'):
   raise RuntimeError('pure placement or independent lookup did not run')
 cases = [lambda: ziwei_dizhi(WuxingJu.水二局, True),
    lambda: StarRule('id', 'name', ['紫微'], 'definition', 'implementation'),
@@ -419,7 +423,8 @@ cases = [lambda: ziwei_dizhi(WuxingJu.水二局, True),
   lambda: ziwei_dizhi(WuxingJu.水二局, 31), lambda: ziwei_dizhi('水二局', 1),
   lambda: place_month_stars(13), lambda: place_month_stars(True),
   lambda: place_hour_stars('子'), lambda: place_stem_stars('甲'),
-  lambda: place_fire_bell('辰', Dizhi.卯), lambda: place_fire_bell(Dizhi.辰, None),
+   lambda: place_fire_bell('辰', Dizhi.卯), lambda: place_fire_bell(Dizhi.辰, None),
+   lambda: place_hongluan_tianxi('子'),
   lambda: tianma_dizhi('子'), lambda: tianfu_dizhi('子'),
   lambda: place_stars(replace(value, shichen=None)), lambda: place_stars(None),
   lambda: replace(config, tianma_rule='年支天马'),
@@ -442,4 +447,4 @@ print('checked=' + str(len(cases)))
     check=False,
   )
   assert result.returncode == 0, result.stdout + result.stderr
-  assert "checked=19" in result.stdout
+  assert "checked=20" in result.stdout

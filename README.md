@@ -4,12 +4,12 @@ Python 紫微斗数排盘与知识库。历法与时间由
 [celestial-calendar](https://github.com/0xf3cd/celestial-calendar) 提供；本仓记录紫微斗数的安星规则、
 四化口径、流派变体与出处，并组织可复现的命盘结果。
 
-本页对应`ziwei 0.2.0`源码与用法。[在线文档](https://0xf3cd.github.io/ziwei/)随`main`更新，
+本页介绍当前源码；红鸾／天喜是开发中的0.3.0功能，尚未发行。[在线文档](https://0xf3cd.github.io/ziwei/)随`main`更新，
 不固定于某次发行。版本变化见[发行说明](https://0xf3cd.github.io/ziwei/docs/releases.html)，公开发行记录以
 [PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
-（公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、28星安星、具名生年四化与大限，
+（公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、30星安星、具名生年四化与大限，
 以及完整命盘组合、只读按宫查询与宫位关系、文本十二宫格、静态SVG盘面和独立知识目录。
 用法见[出生输入](https://0xf3cd.github.io/ziwei/docs/birth.html)、[历法与时间](https://0xf3cd.github.io/ziwei/docs/calendar.html)、
 [解析层](https://0xf3cd.github.io/ziwei/docs/resolver.html)、[命宫身宫与十二宫](https://0xf3cd.github.io/ziwei/docs/palaces.html)、
@@ -76,7 +76,7 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 火六局 · 大限逆行 · 虚岁首尾包含
 ```
 
-这里仅显示盘面摘要。用`print(text, end="")`查看十二宫、28星、四化与大限；
+这里仅显示盘面摘要。用`print(text, end="")`查看十二宫、30星、四化与大限；
 [同一输入的完整盘面](https://0xf3cd.github.io/ziwei/docs/chart.html)及其计算与验证边界见指南。
 未知时辰或性别可以保存在出生记录中，但完整命盘入口会拒绝，不代填。
 
@@ -87,7 +87,7 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 - 保存出生原始记录，显式处理时区与可选的真太阳时，保留解析后的农历年月日时与所用历法算法。
 - 闰月归属、子时换日、换年三个口径作为具名配置，不设静默默认。
 - 安命宫、身宫与十二宫宫干，定五行局，安紫微、天府两系十四主星。
-- 安六吉、六煞、禄存与天马；按所选具名四化表取生年四化。
+- 安六吉、六煞、禄存、天马与红鸾天喜；按所选具名四化表取生年四化。
 - 起大限：顺逆由年干阴阳与性别定，首限起始虚岁由五行局数定。
 - 命盘结果不可变，保留输入、口径、历法版本与派生结果；另提供文本与静态SVG盘面用于显示。
 

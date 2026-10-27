@@ -16,7 +16,7 @@ from tools import installed_check
 from ziwei.birth import Gender, GregorianBirthRecord
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import PalaceView, ZiweiChart, palace_view
+from ziwei.chart import PalaceView, ZiweiChart, create_chart, palace_view
 from ziwei.decades import decade_periods
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
@@ -264,13 +264,40 @@ def test_full_chart_consumer_rejects_faulty_palace_query(
     installed_check.check_chart()
 
 
+@pytest.mark.parametrize("defect", ["star", "position", "rule"])
+@pytest.mark.parametrize("star", [Star.红鸾, Star.天喜])
+def test_full_chart_consumer_rejects_faulty_hongluan_tianxi(
+  monkeypatch: pytest.MonkeyPatch, defect: str, star: Star
+) -> None:
+  def faulty(*args: Any, **kwargs: Any) -> ZiweiChart:
+    chart = create_chart(*args, **kwargs)
+    positions: list[Any] = []
+    for placement in chart.stars:
+      if placement.star is star:
+        positions.append(
+          SimpleNamespace(
+            star=Star.紫微 if defect == "star" else placement.star,
+            dizhi=Dizhi.子 if defect == "position" else placement.dizhi,
+            rule_id="variant.tianma.year-branch" if defect == "rule" else placement.rule_id,
+          )
+        )
+      else:
+        positions.append(placement)
+    object.__setattr__(chart, "stars", tuple(positions))
+    return chart
+
+  monkeypatch.setattr(installed_check, "create_chart", faulty)
+  with pytest.raises(ValueError, match="Installed hongluan/tianxi"):
+    installed_check.check_chart()
+
+
 def test_full_chart_consumer_rejects_faulty_rendering(monkeypatch: pytest.MonkeyPatch) -> None:
   monkeypatch.setattr(installed_check, "render_text", lambda chart: "命宫")
   with pytest.raises(ValueError, match="Installed text chart"):
     installed_check.check_chart()
 
 
-@pytest.mark.parametrize("defect", ["root", "palace", "star", "highlight", "content"])
+@pytest.mark.parametrize("defect", ["root", "palace", "star", "highlight", "content", "hongluan"])
 def test_full_chart_consumer_rejects_faulty_svg(
   monkeypatch: pytest.MonkeyPatch, defect: str
 ) -> None:
@@ -290,6 +317,10 @@ def test_full_chart_consumer_rejects_faulty_svg(
       cell.remove(next(node for node in cell if node.get("class") == "star"))
     elif defect == "highlight":
       next(cell for cell in cells if cell.get("class") == "palace selected").set("class", "palace")
+    elif defect == "hongluan":
+      for node in root.iter():
+        if node.get("class") == "star" and node.text == "红鸾":
+          node.text = "天喜"
     else:
       for node in root.iter():
         if node.get("class") == "ganzhi":
@@ -311,7 +342,10 @@ def test_installed_consumer_rejects_consistent_wrong_positions(
 
   def shifted(value: Any) -> Any:
     return tuple(
-      replace(p, dizhi=branches[(branches.index(p.dizhi) + 1) % 12]) for p in original(value)
+      replace(p, dizhi=branches[(branches.index(p.dizhi) + 1) % 12])
+      if p.star not in (Star.红鸾, Star.天喜)
+      else p
+      for p in original(value)
     )
 
   monkeypatch.setattr(chart_module, "place_stars", shifted)

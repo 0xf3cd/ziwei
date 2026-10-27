@@ -1,4 +1,4 @@
-"""十四主星、六吉六煞、禄存与天马的纯函数安星。
+"""十四主星、六吉六煞、禄存、天马与红鸾天喜的纯函数安星。
 
 《紫微斗數全書》卷二固定修订1963110给出五局逐日紫微宫格、天府对应及各系安星规则。
 另以王亭之《中州派紫微斗数初级讲义》与《紫微斗數精成》网页转录作对照。
@@ -21,14 +21,14 @@ from typing import TYPE_CHECKING, Final
 from ziwei.bureau import WuxingJu
 from ziwei.config import TianmaRule
 from ziwei.ganzhi import Dizhi, Tiangan
-from ziwei.palaces import _chart_frame, month_palace_index
+from ziwei.palaces import _chart_frame, month_palace_index, opposite_dizhi
 
 if TYPE_CHECKING:
   from ziwei.birth import CalculationInput
 
 
 class Star(StrEnum):
-  """28颗星的名称与中文别名；选择不同的安星规则，不会把同一颗星变成另一颗星。"""
+  """30颗星的名称与中文别名；选择不同的安星规则，不会把同一颗星变成另一颗星。"""
 
   _concept_id: str
 
@@ -68,6 +68,8 @@ class Star(StrEnum):
   DIJIE = "地劫", "concept.star.dijie"
   LUCUN = "禄存", "concept.star.lucun"
   TIANMA = "天马", "concept.star.tianma"
+  HONGLUAN = "红鸾", "concept.star.hongluan"
+  TIANXI = "天喜", "concept.star.tianxi"
   紫微 = ZIWEI
   天机 = TIANJI
   太阳 = TAIYANG
@@ -96,6 +98,8 @@ class Star(StrEnum):
   地劫 = DIJIE
   禄存 = LUCUN
   天马 = TIANMA
+  红鸾 = HONGLUAN
+  天喜 = TIANXI
 
   @property
   def concept_id(self) -> str:
@@ -298,6 +302,15 @@ _MONTH_MA = StarRule(
   conditions=("安星用的月份按所选闰月归属规则确定；这是项目组合，不代表采用原书的整套历法规则",),
   tianma_rule=TianmaRule.MONTH_BRANCH,
 )
+_HONGLUAN_TIANXI = StarRule(
+  "variant.star.hongluan-tianxi-year-branch",
+  "红鸾天喜按生年支",
+  (Star.红鸾, Star.天喜),
+  "卯宫起子年，逆数到生年支安红鸾，红鸾对宫安天喜。",
+  "ziwei.stars.place_hongluan_tianxi",
+  scope="紫微斗数本命安星；只定两星位置，不解释吉凶",
+  conditions=("年支须已按所选本命换年口径确定；两星不另设年界",),
+)
 STAR_RULES: Final[tuple[StarRule, ...]] = (
   _ZIWEI,
   _ZIWEI_SERIES,
@@ -312,6 +325,7 @@ STAR_RULES: Final[tuple[StarRule, ...]] = (
   _KONGJIE,
   _YEAR_MA,
   _MONTH_MA,
+  _HONGLUAN_TIANXI,
 )
 """计算、知识目录与参考页共用的规则记录；实现路径只存为字符串，不据此导入或调用函数。"""
 
@@ -442,8 +456,19 @@ def tianma_dizhi(branch: Dizhi) -> Dizhi:
   return _TIANMA_BY_GROUP[_group_index(branch)]
 
 
+def place_hongluan_tianxi(year_dizhi: Dizhi) -> tuple[StarPlacement, ...]:
+  """按已确定的生年支安本命红鸾、天喜；不重新判定换年，也不需要生时或性别。"""
+  if not isinstance(year_dizhi, Dizhi):
+    raise TypeError("生年支须为 Dizhi 成员")
+  hongluan = _move(Dizhi.卯, -tuple(Dizhi).index(year_dizhi))
+  return (
+    _placement(Star.红鸾, hongluan),
+    _placement(Star.天喜, opposite_dizhi(hongluan)),
+  )
+
+
 def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
-  """从解析结果安28星，按Star枚举顺序返回；要求时辰已知，允许性别未知。
+  """从解析结果安30星，按Star枚举顺序返回；要求时辰已知，允许性别未知。
 
   本入口不重做历法，也不调用完整命盘校验。命宫、左辅右弼和月马使用同一个安星月份，
   由effective_month按所选闰月归属规则确定。选择按前后半月分别归属时，用解析后的农历日
@@ -473,6 +498,7 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
     *place_stem_stars(year.tiangan),
     *place_fire_bell(year.dizhi, value.shichen),
     _placement(Star.天马, tianma_dizhi(ma_branch), value.config.tianma_rule),
+    *place_hongluan_tianxi(year.dizhi),
   )
   if len(positions) != len(Star) or {item.star for item in positions} != set(Star):
     raise ValueError("安星结果须覆盖全部星曜且每颗只出现一次")
