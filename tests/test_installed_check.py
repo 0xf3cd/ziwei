@@ -16,11 +16,13 @@ from tools import installed_check
 from ziwei.birth import Gender, GregorianBirthRecord
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
+from ziwei.chart import PalaceView, ZiweiChart, palace_view
 from ziwei.decades import decade_periods
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
+from ziwei.palaces import PalaceName
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
 
@@ -241,6 +243,25 @@ def test_input_consumer_rejects_missing_value_guards(
     message = "Installed effective_month accepted day 31"
   with pytest.raises(ValueError, match=message):
     installed_check.check_inputs()
+
+
+@pytest.mark.parametrize("defect", ["palace", "sihua", "stars"])
+def test_full_chart_consumer_rejects_faulty_palace_query(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  def faulty(chart: ZiweiChart, palace: PalaceName | Dizhi) -> PalaceView:
+    view = palace_view(chart, palace)
+    if defect == "palace":
+      return replace(view, palace=replace(view.palace, name=PalaceName.兄弟))
+    if defect == "sihua":
+      return replace(view, ke=None)
+    if palace is PalaceName.命宫:
+      return replace(view, stars=(), lu=None, quan=None, ke=None, ji=None)
+    return view
+
+  monkeypatch.setattr(installed_check, "palace_view", faulty)
+  with pytest.raises(ValueError, match="Installed palace query"):
+    installed_check.check_chart()
 
 
 def test_full_chart_consumer_rejects_faulty_rendering(monkeypatch: pytest.MonkeyPatch) -> None:

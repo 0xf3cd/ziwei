@@ -4,21 +4,22 @@ Python 紫微斗数排盘与知识库。历法与时间由
 [celestial-calendar](https://github.com/0xf3cd/celestial-calendar) 提供；本仓记录紫微斗数的安星规则、
 四化口径、流派变体与出处，并组织可复现的命盘结果。
 
-本页与[开发文档](https://0xf3cd.github.io/ziwei/)跟随`main`，用于开发中的v0.2.0，
-不是已发布PyPI版本的版本文档。源码版本号暂仍为`0.1.0`，仅凭版本字符串不能区分两者。
-[PyPI 0.1.0](https://pypi.org/project/ziwei/0.1.0/)已发布，对应
-[v0.1.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.1.0)。
-GitHub上的文档修订不会重写已上传0.1.0的长描述或Documentation URL；更新后的元数据随下一次发行生效。
+本页对应`ziwei 0.2.0`源码与用法。[在线文档](https://0xf3cd.github.io/ziwei/)随`main`更新，
+不固定于某次发行。版本变化见[发行说明](https://0xf3cd.github.io/ziwei/docs/releases.html)，公开发行记录以
+[PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
 （公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、28星安星、具名生年四化与大限，
 以及完整命盘组合、只读按宫查询与宫位关系、文本十二宫格、静态SVG盘面和独立知识目录。
-用法见[出生输入](docs/birth.md)、[历法与时间](docs/calendar.md)、[解析层](docs/resolver.md)、
-[命宫身宫与十二宫](docs/palaces.md)、[五行局](docs/bureau.md)、[安星](docs/stars.md)、
-[四化与大限](docs/sihua-decades.md)、[完整命盘与盘面](docs/chart.md)和[知识查询](docs/knowledge.md)，
-开发检查与协作约定见[参与开发](docs/contributing.md)，发布状态与失败处理见[发布指南](docs/releasing.md)。
+用法见[出生输入](https://0xf3cd.github.io/ziwei/docs/birth.html)、[历法与时间](https://0xf3cd.github.io/ziwei/docs/calendar.html)、
+[解析层](https://0xf3cd.github.io/ziwei/docs/resolver.html)、[命宫身宫与十二宫](https://0xf3cd.github.io/ziwei/docs/palaces.html)、
+[五行局](https://0xf3cd.github.io/ziwei/docs/bureau.html)、[安星](https://0xf3cd.github.io/ziwei/docs/stars.html)、
+[四化与大限](https://0xf3cd.github.io/ziwei/docs/sihua-decades.html)、[完整命盘与盘面](https://0xf3cd.github.io/ziwei/docs/chart.html)
+和[知识查询](https://0xf3cd.github.io/ziwei/docs/knowledge.html)。开发检查与协作约定见
+[参与开发](https://0xf3cd.github.io/ziwei/docs/contributing.html)，发布状态与失败处理见
+[发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 
-开发源码不再提供命盘JSON保存／恢复与旧盘重算接口，也不读取旧JSON命盘。
+0.2.0不再提供命盘JSON保存／恢复与旧盘重算接口，也不读取旧JSON命盘。
 这项变化不改动已发布的v0.1.0及其制品。
 
 ## 安装
@@ -26,11 +27,12 @@ GitHub上的文档修订不会重写已上传0.1.0的长描述或Documentation U
 先确认下方[安装要求](#安装要求)中的平台限制，再在已激活的独立虚拟环境中从正式PyPI安装：
 
 ```sh
-python -m pip install "ziwei==0.1.0"
+python -m pip install "ziwei==0.2.0"
 python -m pip check
 ```
 
-开发源码的安装与检查见[参与开发](docs/contributing.md#运行检查)，不要把从`main`安装的源码当作PyPI 0.1.0制品。
+源码安装与检查见[参与开发](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
+从`main`安装的源码不等同于PyPI发行制品；上传前的候选状态见[发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 
 ## 安装要求
 
@@ -46,11 +48,11 @@ celestial-calendar 0.8.0在PyPI只提供下列原生wheel，没有源码分发�
 Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖范围内，不能依靠pip自动回退源码构建。
 请使用独立虚拟环境；与不同精确版本的celestial-calendar或tzdata显式共装会冲突。
 安装ziwei时，pip也可能将环境中已有的较新celestial-calendar或tzdata降到上述精确版本。
-允许的依赖版本与复查条件见[依赖兼容策略](docs/contributing.md#依赖兼容策略)。
+允许的依赖版本与复查条件见[依赖兼容策略](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
 
 ## 最小排盘
 
-下面是合成的2024年农历正月初一子时女命，在PyPI 0.1.0和开发源码中均可运行。
+下面用合成的2024年农历正月初一子时女命演示最小排盘。
 “口径”指闰月归属、子时换日和换年界线这三项计算选择；本例逐项指定，并选择一张具名生年四化表。
 
 ```{doctest}
@@ -75,8 +77,7 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 ```
 
 这里仅显示盘面摘要。用`print(text, end="")`查看十二宫、28星、四化与大限；
-[同一输入的完整盘面](docs/chart.md#排盘与显示)及其计算与验证边界见指南
-（[在线版](https://0xf3cd.github.io/ziwei/docs/chart.html)）。
+[同一输入的完整盘面](https://0xf3cd.github.io/ziwei/docs/chart.html)及其计算与验证边界见指南。
 未知时辰或性别可以保存在出生记录中，但完整命盘入口会拒绝，不代填。
 
 ## 功能范围
@@ -95,9 +96,9 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 
 ## 设计边界
 
-- [仓库结构与计算边界](docs/architecture.md)
-- [知识组织与来源](docs/knowledge.md)
-- [参与开发](docs/contributing.md)
+- [仓库结构与计算边界](https://0xf3cd.github.io/ziwei/docs/architecture.html)
+- [知识组织与来源](https://0xf3cd.github.io/ziwei/docs/knowledge.html)
+- [参与开发](https://0xf3cd.github.io/ziwei/docs/contributing.html)
 
 也可独立查知识：无需出生资料或先排盘，就能查到星曜、宫位、四化等概念，
 以及安星规则的流派变体与出处。来源核验状态、适用前提与展示资格分别记录。
@@ -115,4 +116,4 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 
 ## 许可证
 
-[MIT](LICENSE)。
+[MIT](https://github.com/0xf3cd/ziwei/blob/main/LICENSE)。

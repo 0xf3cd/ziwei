@@ -2,7 +2,7 @@
 
 [出生输入用法](birth.md) · [项目入口](../README.md)
 
-本页跟随`main`开发源码，不是已发布PyPI 0.1.0的版本文档。
+在线文档随`main`更新，不固定于某次发行；查阅时请核对安装版本。
 [在线API正文](https://0xf3cd.github.io/ziwei/docs/api.html)包含生成后的签名与模块说明。
 直接浏览Markdown源码不会展开下方指令；离线全文请按[构建文档](contributing.md#构建文档)生成HTML。
 
@@ -173,7 +173,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 ## 完整命盘与显示
 
 [用法与参考盘例](chart.md)。从原始出生记录排盘，生成只读文本或静态SVG盘面，不提供命盘保存／恢复接口。
-`render_svg()`为v0.2.0开发中的新增入口，已发布的PyPI 0.1.0不包含它。
+`render_svg()`自v0.2.0起提供。
 
 ```{eval-rst}
 .. automodule:: ziwei.chart

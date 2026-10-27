@@ -18,7 +18,7 @@ from ziwei.birth import (
 )
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import create_chart
+from ziwei.chart import create_chart, palace_view
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan
@@ -272,6 +272,14 @@ def check_chart() -> None:
     for index, branch in enumerate("戌亥子丑寅卯辰巳午未申酉")
   ]:
     raise ValueError("Installed full chart differs from independent decade labels")
+  view = palace_view(chart, PalaceName.命宫)
+  if view.palace != chart.palaces[0] or view.stars != tuple(
+    position for position in chart.stars if position.dizhi is Dizhi.子
+  ):
+    raise ValueError("Installed palace query lost palace or stars")
+  ke_palace = next(position.dizhi for position in chart.stars if position.star is Star.右弼)
+  if palace_view(chart, ke_palace).ke is not Star.右弼:
+    raise ValueError("Installed palace query lost sihua")
   print("Installed full chart: calculated, rendered; independent positions and decades checked")
 
 
