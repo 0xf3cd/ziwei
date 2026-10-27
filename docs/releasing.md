@@ -2,11 +2,11 @@
 
 [项目入口](../README.md) · [参与开发](contributing.md) · [参考盘例与限度](chart.md#参考盘例与验收限度)
 
-项目名、PyPI发行名和Python导入名均为`ziwei`。本页跟随`main`开发源码，
-不是已发布PyPI 0.1.0的版本文档；下文区分已有发布记录与下一版本的操作。
+项目名、PyPI发行名和Python导入名均为`ziwei`。本页说明随`main`维护的发布流程，
+区分已有发布记录与下一候选版本的操作。
 发布流程只使用正式PyPI。代码准备、服务端配置、正式上传、tag与Release是分别需要确认的操作。
 
-## 已发布状态
+## 已有发布记录
 
 [PyPI 0.1.0](https://pypi.org/project/ziwei/0.1.0/)与
 [v0.1.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.1.0)已公开。
@@ -24,6 +24,19 @@
 
 开发Pages文档与PyPI发布分开。Pages使用`github-pages`环境，不属于`pypi`发布身份；
 部署文档不改变PyPI信任的仓库、工作流或环境。
+
+## 0.2.0发布准备
+
+本次准备将源码版本设为`0.2.0`，更新[发行说明](releases.md)和安装示例；不执行上传、创建tag或GitHub Release。
+包版本号不证明已经发布，实际发行记录以[PyPI](https://pypi.org/project/ziwei/)和
+[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
+
+README面向0.2.0的功能与用法。准备合入到实际上传之间，安装命令`ziwei==0.2.0`可能暂不可用；
+此时从源码安装见[参与开发](contributing.md#运行检查)。上传后的README长描述不再随main修改。
+
+[#26](https://github.com/0xf3cd/ziwei/issues/26)继续追踪上文未完成的三项真实演练。
+本准备不执行或豁免这些演练；是否作为本次正式上传的前置条件，须在发布批准前明确。
+未核实的跨attempt恢复仍按下文失败处理，不能以候选检查通过推定可重跑恢复。
 
 ## 发布前准备
 

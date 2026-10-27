@@ -2,7 +2,7 @@
 
 [查询指南](knowledge.md) · [API](api.md)
 
-本页跟随`main`开发源码，不是已发布PyPI 0.1.0的版本文档。
+在线文档随`main`更新，不固定于某次发行；查阅时请核对安装版本。
 [在线知识参考正文](https://0xf3cd.github.io/ziwei/docs/knowledge-reference.html)包含完整记录、参考表和稳定锚点。
 这些内容在Sphinx构建时生成，不保存在本Markdown文件中；离线全文请按[构建文档](contributing.md#构建文档)生成HTML。
 

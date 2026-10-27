@@ -857,6 +857,19 @@ def test_build_backend_is_explicitly_in_the_locked_development_group() -> None:
   assert set(metadata["build-system"]["requires"]) <= set(metadata["dependency-groups"]["dev"])
 
 
+def test_readme_installation_pins_the_project_version() -> None:
+  project = tomllib.loads((check.ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+  readme = (check.ROOT / "README.md").read_text(encoding="utf-8")
+  commands = [
+    line.strip()
+    for token in MarkdownIt("commonmark").parse(readme)
+    if token.type == "fence" and token.info == "sh"
+    for line in token.content.splitlines()
+    if line.strip().startswith("python -m pip install ")
+  ]
+  assert commands == [f'python -m pip install "{project["name"]}=={project["version"]}"']
+
+
 def test_current_installed_metadata_matches_the_project() -> None:
   project = tomllib.loads((check.ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
   installed = distribution("ziwei")

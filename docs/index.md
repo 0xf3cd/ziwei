@@ -1,8 +1,7 @@
 # 文档入口
 
-本套文档跟随`main`开发源码，在线入口为[开发文档站](https://0xf3cd.github.io/ziwei/)。
-它不是已发布[PyPI 0.1.0](https://pypi.org/project/ziwei/0.1.0/)的版本文档；
-源码版本号暂仍为`0.1.0`，已发布制品以[v0.1.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.1.0)为准。
+本套文档的[在线入口](https://0xf3cd.github.io/ziwei/)随`main`更新，不固定于某次发行。
+请核对安装版本；版本变化与历史发行入口见[发行说明](releases.md)。
 
 从[最小排盘](../README.md#最小排盘)开始，或直接查阅在线[API正文](https://0xf3cd.github.io/ziwei/docs/api.html)
 与[知识参考正文](https://0xf3cd.github.io/ziwei/docs/knowledge-reference.html)。
@@ -26,5 +25,6 @@ architecture
 knowledge
 knowledge-reference
 contributing
+releases
 releasing
 ```
