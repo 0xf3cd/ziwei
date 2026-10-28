@@ -219,13 +219,25 @@ def check_chart() -> None:
   chart = create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)
   if chart.palaces[0].dizhi is not Dizhi.子 or chart.bureau is not WuxingJu.金四局:
     raise ValueError("Installed full chart has wrong palace or bureau")
-  if len(chart.stars) != 28 or len(chart.palaces) != 12 or len(chart.decades) != 12:
+  if len(chart.stars) != 30 or len(chart.palaces) != 12 or len(chart.decades) != 12:
     raise ValueError("Installed full chart is incomplete")
+  expected_pair = ((Star.红鸾, Dizhi.亥), (Star.天喜, Dizhi.巳))
+  placements = {position.star: position for position in chart.stars}
+  for star, branch in expected_pair:
+    position = placements.get(star)
+    if (
+      position is None
+      or position.dizhi is not branch
+      or position.rule_id != "variant.star.hongluan-tianxi-year-branch"
+    ):
+      raise ValueError("Installed hongluan/tianxi placement or rule differs")
   resolved = chart.calculation.resolved_time
   if resolved is None or resolved.data is None or resolved.offset != timedelta(hours=9):
     raise ValueError("Installed full chart lost resolved timezone provenance")
   text = render_text(chart)
-  if not all(part in text for part in ("命宫", "甲子", "大限 4-13虚岁", "紫微", "右弼[科]")):
+  if not all(
+    part in text for part in ("命宫", "甲子", "大限 4-13虚岁", "紫微", "右弼[科]", "红鸾", "天喜")
+  ):
     raise ValueError("Installed text chart is incomplete")
   image = fromstring(render_svg(chart, selected_palace=PalaceName.命宫))
   namespace = "{http://www.w3.org/2000/svg}"
@@ -233,8 +245,15 @@ def check_chart() -> None:
     raise ValueError("Installed SVG chart has the wrong root")
   cells = [node for node in image.findall(namespace + "g") if "data-dizhi" in node.attrib]
   stars = [node for cell in cells for node in cell if node.get("class") == "star"]
-  if len(cells) != 12 or len(stars) != 28:
+  if len(cells) != 12 or len(stars) != 30:
     raise ValueError("Installed SVG chart is incomplete")
+  for star, branch in expected_pair:
+    if not any(
+      cell.attrib["data-dizhi"] == branch.name.lower()
+      and any(node.get("class") == "star" and node.text == star.value for node in cell)
+      for cell in cells
+    ):
+      raise ValueError("Installed SVG chart lost hongluan/tianxi placement")
   roles = {
     cell.attrib["data-dizhi"]: cell.attrib["class"].split()[1]
     for cell in cells

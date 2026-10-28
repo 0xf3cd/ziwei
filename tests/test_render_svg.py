@@ -77,7 +77,7 @@ def _texts(group: Element, class_name: str) -> list[str]:
     (1954, 9, 7, Dizhi.子, Gender.男),
     (1954, 10, 1, Dizhi.酉, Gender.男),
     (2024, 1, 1, Dizhi.午, Gender.女),
-    (1954, 1, 1, Dizhi.未, Gender.女),
+    (1984, 2, 2, Dizhi.酉, Gender.女),
     (2024, 1, 1, Dizhi.子, Gender.女),
   ],
   ids=["reference", "eight-stars", "empty", "empty-shengong", "shared-sihua"],
@@ -99,7 +99,7 @@ def test_svg_preserves_each_palace_and_stored_content(svg_chart: ZiweiChart) -> 
   root = _safe_tree(svg)
   cells = _palaces(root)
   assert len(cells) == 12
-  assert len([text for cell in cells.values() for text in _texts(cell, "star")]) == 28
+  assert len([text for cell in cells.values() for text in _texts(cell, "star")]) == 30
   changes = dict(
     zip(
       (svg_chart.sihua.lu, svg_chart.sihua.quan, svg_chart.sihua.ke, svg_chart.sihua.ji),
@@ -317,16 +317,16 @@ def test_svg_dense_and_empty_shengong_examples(chart_choices: ChartConfig) -> No
   assert "廉贞[禄]" in _texts(dense_cell, "star")
   empty = create_chart(
     LunarBirthRecord(
-      year=1954, month=1, day=1, is_leap_month=False, shichen=Dizhi.未, gender=Gender.女
+      year=1984, month=2, day=2, is_leap_month=False, shichen=Dizhi.酉, gender=Gender.女
     ),
     chart_choices,
     sihua_variant=SihuaVariant.排命盘口诀转录,
   )
   cells = _palaces(_safe_tree(render_svg(empty)))
-  assert _texts(cells["you"], "star") == []
-  assert _texts(cells["you"], "body") == ["身宫"]
-  assert _texts(cells["you"], "name") == ["福德"]
-  assert _texts(cells["wei"], "body") == []
+  assert _texts(cells["zi"], "star") == []
+  assert _texts(cells["zi"], "body") == ["身宫"]
+  assert _texts(cells["zi"], "name") == ["迁移"]
+  assert _texts(cells["wu"], "body") == []
 
 
 @pytest.mark.parametrize("variant", tuple(SihuaVariant))

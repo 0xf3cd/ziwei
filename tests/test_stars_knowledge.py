@@ -49,6 +49,7 @@ EXPECTED_RULE_STARS = {
   "variant.star.kongjie-hour": (stars.Star.地空, stars.Star.地劫),
   "variant.tianma.year-branch": (stars.Star.天马,),
   "variant.tianma.month-branch": (stars.Star.天马,),
+  "variant.star.hongluan-tianxi-year-branch": (stars.Star.红鸾, stars.Star.天喜),
 }
 
 
@@ -59,6 +60,7 @@ def _pure_star_positions() -> tuple[stars.StarPlacement, ...]:
     *stars.place_hour_stars(Dizhi.子),
     *stars.place_stem_stars(Tiangan.甲),
     *stars.place_fire_bell(Dizhi.辰, Dizhi.子),
+    *stars.place_hongluan_tianxi(Dizhi.辰),
   )
 
 
@@ -112,7 +114,7 @@ def test_rule_display_names_do_not_change_position_identities(
 
 def test_every_star_and_rule_is_queryable_without_birth() -> None:
   catalog = load_catalog()
-  assert len(catalog.list_concepts(kind=ConceptKind.星曜)) == 28
+  assert len(catalog.list_concepts(kind=ConceptKind.星曜)) == 30
   for star in stars.Star:
     concept = catalog.get(star.concept_id)
     assert isinstance(concept, Concept)
@@ -232,7 +234,7 @@ print('CONCEPTS_OK', len(Star))
   expected = (
     "MISSING_ID_REJECTED"
     if change == "missing-id"
-    else f"CONCEPTS_OK {29 if change == 'append' else 28}"
+    else f"CONCEPTS_OK {31 if change == 'append' else 30}"
   )
   assert result.stdout.strip() == expected
 
@@ -318,6 +320,7 @@ def test_modern_short_quotes_stay_below_budget_per_lineage() -> None:
       "source.zhongzhou-wangtingzhi",
       "source.zhongzhou-5shubook",
       "source.jingcheng-golla",
+      "source.jielan-tianji",
     ):
       lengths[source.lineage_id] = lengths.get(source.lineage_id, 0) + sum(
         len(citation.quote) for citation in catalog.references(source.id)

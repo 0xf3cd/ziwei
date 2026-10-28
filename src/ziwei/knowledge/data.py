@@ -25,7 +25,7 @@ from ziwei.palaces import OPPOSITE_RULE_ID, SANFANG_SIZHENG_RULE_ID, PalaceName
 from ziwei.sihua import SIHUA_TABLES, SihuaVariant
 from ziwei.stars import STAR_RULES, Star, StarRule
 
-CATALOG_VERSION: Final = "2026.10.26.1"
+CATALOG_VERSION: Final = "2026.10.27.1"
 """语料版本，与开发包版本分别记录。"""
 
 _BUREAU_NAMES = "、".join(ju.value for ju in WuxingJu)
@@ -36,7 +36,10 @@ CONCEPTS = (
     Concept(
       id=star.concept_id,
       name=star.value,
-      aliases=(star.name.title(), *(("天馬",) if star is Star.天马 else ())),
+      aliases=(
+        star.name.title(),
+        *(("天馬",) if star is Star.天马 else ("紅鸞",) if star is Star.红鸾 else ()),
+      ),
       kind=ConceptKind.星曜,
     )
     for star in Star
@@ -222,7 +225,9 @@ VARIANTS = (
       aliases=("年马", "年馬")
       if rule.tianma_rule is TianmaRule.YEAR_BRANCH
       else (("月马", "月馬") if rule.tianma_rule is TianmaRule.MONTH_BRANCH else ()),
-      tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
+      tracking_url="https://github.com/0xf3cd/ziwei/issues/54"
+      if Star.红鸾 in rule.stars
+      else "https://github.com/0xf3cd/ziwei/issues/4",
     )
     for rule in STAR_RULES
   ),
@@ -446,11 +451,26 @@ SOURCES = (
     layer=TextLayer.原文,
     lineage_id="lineage.quanshu-wikisource",
     provenance="维基文库所见录文；底本刊本未确认，不与其他全书转录自动合并。",
-    claims="支持所列主星宫格、两系、辅星、天马、四化、身命段与安大限诀的实际措辞和查法；火铃段只列年支四组与宫位，未明说子时起数或方向。",
+    claims="支持所列主星宫格、两系、辅星、天马、红鸾天喜、四化、身命段与安大限诀的实际措辞和查法；火铃段只列年支四组与宫位，未明说子时起数或方向。",
     limits="电子录文已核不等于底本校勘；不据此认证全书各版或一整个流派。",
     rights="古籍正文短引；电子转录来源署名保留，具体使用条件见来源页。",
     status=SourceStatus.已核,
     checked_on=date(2026, 10, 25),
+  ),
+  Source(
+    id="source.jielan-tianji",
+    title="紫微斗数捷览：安红鸾天喜星诀（天机电子录文）",
+    edition="2026-10-27取得的第29章HTML；SHA256 "
+    "5c5a922f716d6372eb9755e6031e19dcfe0af87ad334b663fcacf819234c0c16",
+    url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/29",
+    layer=TextLayer.原文,
+    lineage_id="lineage.jielan-tianji",
+    provenance="所列网页的古籍录文；章末另引《全书》，两处文本见证不作互不知晓的独立传承。",
+    claims="生年支安本命红鸾、对宫天喜，以及甲子、乙丑两条直接例。",
+    limits="只核所列网页，纸本版次、录文忠实度及历史作者归属未核；未载换年界线，也没有完整生辰盘例。",
+    rights="仅收古籍录文的必要两例与出处说明；网页转载许可未核，不转载全文。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 10, 27),
   ),
   Source(
     id="source.jingcheng-golla",
@@ -542,6 +562,24 @@ SOURCES = (
 )
 
 CITATIONS = (
+  Citation(
+    id="citation.quanshu.hongluan-tianxi",
+    source_id="source.quanshu-wikisource",
+    locator="卷二，安红鸾天喜诀前四句",
+    quote="卯上起子逆数之，数到当生太岁支，坐守此宫红鸾位，对宫天喜不差移，",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="本命安星段的生年支定位；不收后四句吉凶，不据此另定换年界线。",
+  ),
+  Citation(
+    id="citation.jielan.hongluan-tianxi-examples",
+    source_id="source.jielan-tianji",
+    locator="卷之一，第29章安红鸾天喜星诀，甲子及乙丑例；取页面JSON-LD的Article.description，保留所见空格",
+    quote="假如甲子年生人，即在 卯宫安红鸾，酉宫安天喜。如乙丑年生人，则逆行寅宫安红鸾，申宫安天喜，余仿此。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="两例只提供生年干支及两星位置，不提供完整生辰或年界配置；同章引《全书》，不作第二条独立传承。",
+  ),
   Citation(
     id="citation.ntnu.palace-opposite",
     source_id="source.ntnu-palace-glossary",
@@ -1179,6 +1217,12 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
       ),
       "此处只安按时辰确定位置的地空、地劫。《全书》称这颗星为天空，中州派讲义称为地空，论坛今人按语另说天空又名地空；称名各归所引材料。另有按年支安的天空，本版不安那颗星。",
     ),
+    "variant.star.hongluan-tianxi-year-branch": (
+      ("citation.quanshu.hongluan-tianxi", "citation.jielan.hongluan-tianxi-examples"),
+      "《全书》口诀与《捷览》甲子、乙丑例支持紫微斗数本命两星的生年支查法，"
+      "不与其他系统同名星混用。《捷览》同章另引《全书》，不据此认定两路独立传承；"
+      "纸本底本与换年明文未核，完整生辰外部盘例未取得。",
+    ),
   }
   selected = tuple(rule for rule in rules if rule.tianma_rule is None)
   ids = {rule.id for rule in selected}
@@ -1199,11 +1243,15 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
       recheck=(
         "取得《全书》电子录文的底本影像，逐格核木三局初五、初九同时见于辰寅两宫、金四局三十的记录；取得有版次信息的中州派讲义原书核掌诀和三个例解，不用手算结果校改原字。"
         if Star.紫微 in rule.stars
+        else "取得《全书》安红鸾天喜诀与《捷览》两例的具版次纸本影像，核录文与查法；另取完整生辰和明确配置的外部两星盘例。"
+        if Star.红鸾 in rule.stars
         else "取得所引电子录文底本与现代讲义具版次原书，核对应规则、查法与例解；同文转录不增独立来源数。"
       ),
       tracking_url=(
         _SOURCE_RESEARCH_URL
         if Star.火星 in rule.stars or Star.地空 in rule.stars
+        else "https://github.com/0xf3cd/ziwei/issues/54"
+        if Star.红鸾 in rule.stars
         else "https://github.com/0xf3cd/ziwei/issues/4"
       ),
     )
