@@ -172,6 +172,9 @@ TIANFU_OFFSETS: Final[tuple[tuple[Star, int], ...]] = (
   (Star.七杀, 6),
   (Star.破军, 10),
 )
+MAJOR_STARS: Final[tuple[Star, ...]] = tuple(star for star, _ in ZIWEI_OFFSETS + TIANFU_OFFSETS)
+"""紫微系六星与天府系八星，次序与主星安星结果相同。"""
+
 _MONTH_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
   (Star.左辅, Dizhi.辰, 1),
   (Star.右弼, Dizhi.戌, -1),

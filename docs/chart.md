@@ -77,6 +77,35 @@
 文本盘面不作吉凶解释。等宽终端按东亚宽字符两列对齐，比例字体或不同终端宽度规则可能影响对齐。
 盘面不输出地点、来源等任意文本，所以它们携带的控制字符不会成为终端指令。
 
+## 读取与显示亮度
+
+开发中的0.3.0提供一套[十四主星七级亮度表](brightness.md)。从已有盘读取，不给命盘增加字段，
+也不改变安星结果；表须显式选择：
+
+```{doctest}
+>>> from ziwei.brightness import BrightnessTable
+>>> from ziwei.chart import chart_brightness
+>>> table = BrightnessTable.全书卷二录文
+>>> readings = chart_brightness(chart, table=table)
+>>> len(readings), sum(item.level is not None for item in readings)
+(30, 14)
+>>> text = render_text(chart, brightness_table=table)
+>>> print(text.splitlines()[0])
+火六局 · 大限逆行 · 虚岁首尾包含 · 全书卷二固定录文
+>>> "廉贞[禄] (利益)" in text
+True
+>>> from ziwei.render import render_svg
+>>> bright_svg = render_svg(chart, brightness_table=table)
+>>> "全书卷二固定录文" in bright_svg
+True
+```
+
+读数顺序与`chart.stars`相同：14颗主星有等级，其余16颗星的`level`为`None`，表示不适用。
+按宫查询仍返回原来的星位，可逐条调用`star_brightness()`，不借入对宫星。
+文本首行与SVG中央标明表名；SVG把等级放在星名下一行，并增加行距，避免与四化标记叠字。
+两种显示省略`brightness_table`或传`None`时都不查询亮度，保留原有输出。
+错类型抛`TypeError`，不接受表名字符串或静默换表。
+
 ## 按宫读取
 
 v0.2.0新增`palace_view()`，从已有`ZiweiChart`读取一宫的结构化内容。

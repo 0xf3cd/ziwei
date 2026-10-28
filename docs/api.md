@@ -143,6 +143,20 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 .. autodata:: ziwei.stars.STAR_RULES
    :no-value:
    :annotation:
+
+.. autodata:: ziwei.stars.MAJOR_STARS
+   :no-value:
+```
+
+## 亮度
+
+[七级原名、查询与来源限度](brightness.md)。只读取已有星位，不初始化原生历法库。
+
+```{eval-rst}
+.. automodule:: ziwei.brightness
+   :members: BrightnessLevel, BrightnessTable, BrightnessReading, star_brightness
+   :undoc-members:
+   :member-order: bysource
 ```
 
 ## 生年四化与大限
@@ -177,7 +191,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.chart
-   :members: ZiweiChart, PalaceView, palace_view, create_chart
+   :members: ZiweiChart, PalaceView, palace_view, chart_brightness, create_chart
    :undoc-members:
    :member-order: bysource
 

@@ -7,7 +7,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from ziwei import config, decades, ganzhi, sihua, stars
+from ziwei import brightness, config, decades, ganzhi, sihua, stars
 from ziwei.birth import Gender
 from ziwei.bureau import WuxingJu
 from ziwei.ganzhi import Dizhi, Tiangan
@@ -22,6 +22,18 @@ def _sihua_rows() -> list[tuple[str, ...]]:
     for table in sihua.SIHUA_TABLES
     for stem, row in zip(Tiangan, table.rows, strict=True)
   ]
+
+
+def _brightness_rows() -> list[tuple[str, ...]]:
+  rows: list[tuple[str, ...]] = []
+  for table in brightness.BrightnessTable:
+    for star in stars.MAJOR_STARS:
+      for branch in Dizhi:
+        reading = brightness.star_brightness(star, branch, table=table)
+        if reading.level is None:
+          raise ValueError("主星亮度参考缺格")
+        rows.append((reading.table_id, table.value, star.value, branch.value, reading.level.value))
+  return rows
 
 
 def _decade_rows() -> list[tuple[str, ...]]:
@@ -158,6 +170,12 @@ def render_catalog(catalog: Catalog) -> str:
     parts.append("<tr>" + "".join(f"<td>{_value(value, ids)}</td>" for value in row) + "</tr>")
   parts.append("</table></section>")
   for identifier, title, headers, rows in (
+    (
+      "implemented-brightness",
+      "十四主星七级亮度表",
+      ("表标识", "具名表", "星曜", "地支", "原名等级"),
+      _brightness_rows(),
+    ),
     (
       "implemented-sihua",
       "完整生年四化表",
@@ -306,11 +324,12 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
   if missing := expected_stars - numeric_stars:
     raise ValueError(f"Star reference missing numeric coverage: {sorted(missing)}")
   for section, rows in (
+    ("implemented-brightness", _brightness_rows()),
     ("implemented-sihua", _sihua_rows()),
     ("implemented-decades", _decade_rows()),
   ):
     if parser.targets.get(section) != ["section"] or parser.rows.get(section) != [(), *rows]:
-      raise ValueError(f"Sihua/decade reference differs from definition: {section}")
+      raise ValueError(f"Rule reference differs from definition: {section}")
   ids = {record.id for record in catalog.records}
   for document in directory.rglob("*.html"):
     links = KnowledgeTargets()

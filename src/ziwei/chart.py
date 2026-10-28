@@ -6,6 +6,7 @@ from math import isfinite
 from typing import TypeVar, cast
 
 from ziwei.birth import BirthRecord, CalculationInput, LunarBirthRecord
+from ziwei.brightness import BrightnessReading, BrightnessTable, star_brightness
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
 from ziwei.config import ChartConfig, DayRollover, YearBoundary
@@ -198,6 +199,15 @@ def palace_view(chart: ZiweiChart, palace: PalaceName | Dizhi) -> PalaceView:
     ke=chart.sihua.ke if chart.sihua.ke in members else None,
     ji=chart.sihua.ji if chart.sihua.ji in members else None,
     is_shengong=selected.dizhi is chart.shengong,
+  )
+
+
+def chart_brightness(chart: ZiweiChart, *, table: BrightnessTable) -> tuple[BrightnessReading, ...]:
+  """从已有盘读取30星的亮度，保留星位顺序；非主星的level为None。"""
+  if not isinstance(chart, ZiweiChart):
+    raise TypeError("命盘亮度查询须使用 ZiweiChart")
+  return tuple(
+    star_brightness(position.star, position.dizhi, table=table) for position in chart.stars
   )
 
 

@@ -292,7 +292,7 @@ def catalog() -> Catalog:
 
 def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
   catalog = load_catalog()
-  assert catalog.version == "2026.10.27.1"
+  assert catalog.version == "2026.10.28.1"
   assert {item.kind for item in catalog.concepts} == set(ConceptKind)
   assert len({item.id for item in catalog.records}) == len(catalog.records)
   assert catalog.find("天馬") == catalog.find("tianma")

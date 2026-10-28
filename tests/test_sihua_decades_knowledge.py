@@ -64,7 +64,7 @@ def test_actual_html_rejects_new_reference_defects(
     before + f'<section id="{section if defect != "anchor" else "fake"}">' + after,
     encoding="utf-8",
   )
-  with pytest.raises(ValueError, match="Sihua/decade reference differs"):
+  with pytest.raises(ValueError, match="Rule reference differs"):
     check_knowledge_reference(tmp_path)
 
 

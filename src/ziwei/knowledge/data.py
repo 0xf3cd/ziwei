@@ -3,6 +3,7 @@
 from datetime import date
 from typing import Final
 
+from ziwei.brightness import BrightnessLevel, BrightnessTable
 from ziwei.bureau import WuxingJu
 from ziwei.config import DayRollover, LeapMonthPolicy, TianmaRule, YearBoundary
 from ziwei.decades import DECADE_DEFINITION, DECADE_RULE_ID
@@ -23,13 +24,18 @@ from ziwei.knowledge.model import (
 )
 from ziwei.palaces import OPPOSITE_RULE_ID, SANFANG_SIZHENG_RULE_ID, PalaceName
 from ziwei.sihua import SIHUA_TABLES, SihuaVariant
-from ziwei.stars import STAR_RULES, Star, StarRule
+from ziwei.stars import MAJOR_STARS, STAR_RULES, Star, StarRule
 
-CATALOG_VERSION: Final = "2026.10.27.1"
+CATALOG_VERSION: Final = "2026.10.28.1"
 """语料版本，与开发包版本分别记录。"""
 
 _BUREAU_NAMES = "、".join(ju.value for ju in WuxingJu)
 _SOURCE_RESEARCH_URL = "https://github.com/0xf3cd/ziwei/issues/43"
+_BRIGHTNESS_DEFINITION = (
+  "十四主星按地支查固定录文成表，保留"
+  + "、".join(level.value for level in BrightnessLevel)
+  + "七级原名；不评分、不解释吉凶。"
+)
 
 CONCEPTS = (
   *(
@@ -81,6 +87,13 @@ CONCEPTS = (
     related_ids=("concept.wuxingju",),
   ),
   Concept(id="concept.sihua.shengnian", name="生年四化", aliases=("四化",), kind=ConceptKind.四化),
+  Concept(
+    id="concept.brightness.major-star-levels",
+    name="十四主星七级亮度",
+    aliases=("亮度", "庙旺利陷"),
+    kind=ConceptKind.亮度,
+    related_ids=tuple(star.concept_id for star in MAJOR_STARS),
+  ),
   Concept(id="concept.wuxingju", name="五行局", kind=ConceptKind.五行局),
   Concept(
     id="concept.decades",
@@ -116,6 +129,19 @@ CONCEPTS = (
 )
 
 VARIANTS = (
+  RuleVariant(
+    id=BrightnessTable.全书卷二录文.table_id,
+    name=BrightnessTable.全书卷二录文.value,
+    definition=_BRIGHTNESS_DEFINITION,
+    scope="《紫微斗数全书》卷二oldid=1963110七级成表中的十四主星与十二地支",
+    concept_ids=(
+      "concept.brightness.major-star-levels",
+      *(star.concept_id for star in MAJOR_STARS),
+    ),
+    conditions=("本命星位已确定，显式选择该表", "非主星不适用，不用同书条目或其他表补改"),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/55",
+    implementation="ziwei.brightness.star_brightness",
+  ),
   RuleVariant(
     id=OPPOSITE_RULE_ID,
     name="十二宫对宫",
@@ -354,6 +380,22 @@ VARIANTS = (
 
 SOURCES = (
   Source(
+    id="source.wangtingzhi-bazilives-brightness",
+    title="紫微斗数深造讲义：星曜庙陷（bazilives重排页及fig-27图像）",
+    authors=("王亭之（网页归属）",),
+    edition="2026-10-28所见第29篇；fig-27.png SHA256 "
+    "565e581e6fc9cd2ca2045a10d140748db5b162e9efcfde2e104973ba3b9dd705",
+    url="https://bazilives.com/jingdian/ziwei-shenzao/29/",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.zhongzhou-wangtingzhi",
+    provenance="网页自述照录《中州派紫微斗数深造讲义》电子重排本，图像取自原书；未核印次与底本。",
+    claims="图像的紫微辰、太阳午、巨门丑三格与所选《全书》成表相异，仅作校异见证。",
+    limits="三格已目读，不据此认证全图或原书；图内闲、地等原字不扩写，也不映射进本项目七级。",
+    rights="只记必要三格事实与来源，不转载现代全文或完整图像。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 10, 28),
+  ),
+  Source(
     id="source.ntnu-palace-glossary",
     title="名詞解釋（NTNU个人空间网页）",
     edition="2026-10-26取得的9854字节Big5网页；SHA256 "
@@ -451,7 +493,7 @@ SOURCES = (
     layer=TextLayer.原文,
     lineage_id="lineage.quanshu-wikisource",
     provenance="维基文库所见录文；底本刊本未确认，不与其他全书转录自动合并。",
-    claims="支持所列主星宫格、两系、辅星、天马、红鸾天喜、四化、身命段与安大限诀的实际措辞和查法；火铃段只列年支四组与宫位，未明说子时起数或方向。",
+    claims="支持所列主星宫格、两系、辅星、天马、红鸾天喜、七级亮度成表、四化、身命段与安大限诀的实际措辞和查法；火铃段只列年支四组与宫位，未明说子时起数或方向。",
     limits="电子录文已核不等于底本校勘；不据此认证全书各版或一整个流派。",
     rights="古籍正文短引；电子转录来源署名保留，具体使用条件见来源页。",
     status=SourceStatus.已核,
@@ -562,6 +604,36 @@ SOURCES = (
 )
 
 CITATIONS = (
+  Citation(
+    id="citation.quanshu.brightness-table",
+    source_id="source.quanshu-wikisource",
+    locator="卷二，一 命宫之前的十二地支七级成表；表头原行",
+    quote="|   |庙       |旺       |得地     |利益     |平和     |不得地   |落陷     |",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="各地支行、等级列中的星曜缩写确定格值；只提取十四主星168格。辰行得地列原字为紫相昌曲，"
+    "本项目只取紫微、天相；原表的辅星格不执行。固定录文已核不等于底本已核。",
+  ),
+  Citation(
+    id="citation.quanshu.brightness-item-differences",
+    source_id="source.quanshu-wikisource",
+    locator="卷二，一 命宫之太阳条目，丑宫句",
+    quote="丑宫陷未宫得地与太阴同度，加吉星财官格。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则,),
+    limits="本短引为太阳条目；同段戌宫亦称陷，天府条目卯宫称入庙。"
+    "成表太阳丑、戌为不得地，天府卯为得地；差异保留，不用条目覆盖成表。",
+  ),
+  Citation(
+    id="citation.wangtingzhi.brightness-differences",
+    source_id="source.wangtingzhi-bazilives-brightness",
+    locator="第29篇fig-27.png：辰行紫微列、午行太阳列、丑行巨门列",
+    quote="陷",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="短引仅为图中紫微辰格原字；太阳午为庙、巨门丑为旺。"
+    "这是与所选成表相异的三格，不是另一执行表，也不为所选表增加独立背书。",
+  ),
   Citation(
     id="citation.quanshu.hongluan-tianxi",
     source_id="source.quanshu-wikisource",
@@ -1260,6 +1332,30 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
 
 
 ENTRIES = (
+  KnowledgeEntry(
+    id="entry.brightness.quanshu-juan2",
+    statement=_BRIGHTNESS_DEFINITION,
+    concept_ids=("concept.brightness.major-star-levels",),
+    variant_ids=(BrightnessTable.全书卷二录文.table_id,),
+    citation_ids=(
+      "citation.quanshu.brightness-table",
+      "citation.quanshu.brightness-item-differences",
+      "citation.wangtingzhi.brightness-differences",
+    ),
+    premises=(
+      "只选固定录文成表的十四主星168格，不选辅星格",
+      "按已有本命星位的地支查，不改安星位置",
+    ),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="固定电子录文已核，纸本底本未核；讲义图只作校异，不拼表。"
+    "太阳丑、戌及天府卯的同书内部差异未由底本裁定。独立转录证明项目转录忠实，不是第二条独立传承；"
+    "独立完整生辰盘例与专业软件样本未取得。",
+    recheck="取得有明确版次的《全书》卷二成表及太阳、天府条目影像，逐格核对；"
+    "若与固定录文冲突则暂停相关公开结果，不用其他表补写。另核讲义图原书版次及闲、地原字。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/55",
+  ),
   KnowledgeEntry(
     id="entry.palace.opposite",
     statement="对宫查询只返回与所选宫位相对的地支，不将该宫星曜移入本宫。",

@@ -21,6 +21,7 @@ class ConceptKind(StrEnum):
   STAR = "星曜"
   PALACE = "宫位"
   SIHUA = "四化"
+  BRIGHTNESS = "亮度"
   WUXINGJU = "五行局"
   LUCK_PERIOD = "运限"
   POLICY = "口径"
@@ -28,6 +29,7 @@ class ConceptKind(StrEnum):
   星曜 = STAR
   宫位 = PALACE
   四化 = SIHUA
+  亮度 = BRIGHTNESS
   五行局 = WUXINGJU
   运限 = LUCK_PERIOD
   口径 = POLICY
