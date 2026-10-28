@@ -23,6 +23,7 @@ from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
 from ziwei.palaces import PalaceName
+from ziwei.render import render_text
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
 
@@ -294,6 +295,17 @@ def test_full_chart_consumer_rejects_faulty_hongluan_tianxi(
 def test_full_chart_consumer_rejects_faulty_rendering(monkeypatch: pytest.MonkeyPatch) -> None:
   monkeypatch.setattr(installed_check, "render_text", lambda chart: "命宫")
   with pytest.raises(ValueError, match="Installed text chart"):
+    installed_check.check_chart()
+
+
+@pytest.mark.parametrize("star", [Star.红鸾, Star.天喜])
+def test_full_chart_consumer_rejects_missing_two_star_text(
+  monkeypatch: pytest.MonkeyPatch, star: Star
+) -> None:
+  monkeypatch.setattr(
+    installed_check, "render_text", lambda chart: render_text(chart).replace(star.value, "")
+  )
+  with pytest.raises(ValueError, match="Installed text chart is incomplete"):
     installed_check.check_chart()
 
 

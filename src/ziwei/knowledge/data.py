@@ -574,7 +574,7 @@ CITATIONS = (
   Citation(
     id="citation.jielan.hongluan-tianxi-examples",
     source_id="source.jielan-tianji",
-    locator="卷之一，第29章安红鸾天喜星诀，甲子及乙丑例；保留所见录文空格",
+    locator="卷之一，第29章安红鸾天喜星诀，甲子及乙丑例；取页面JSON-LD的Article.description，保留所见空格",
     quote="假如甲子年生人，即在 卯宫安红鸾，酉宫安天喜。如乙丑年生人，则逆行寅宫安红鸾，申宫安天喜，余仿此。",
     layer=TextLayer.原文,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),

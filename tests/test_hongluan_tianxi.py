@@ -13,7 +13,14 @@ from ziwei.chart import create_chart, palace_view
 from ziwei.config import ChartConfig, TianmaRule, YearBoundary
 from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan
 from ziwei.knowledge import load_catalog
-from ziwei.knowledge.model import Citation, KnowledgeEntry, RuleVariant, Source, SourceStatus
+from ziwei.knowledge.model import (
+  Citation,
+  KnowledgeEntry,
+  RuleVariant,
+  Source,
+  SourceStatus,
+  TextLayer,
+)
 from ziwei.render import render_svg, render_text
 from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star, place_hongluan_tianxi, place_stars
@@ -82,8 +89,15 @@ def test_frozen_jielan_direct_observations_and_adopted_expectations() -> None:
   source = catalog.get(JIELAN_SOURCE["source_id"])
   assert isinstance(source, Source) and source.status is SourceStatus.已核
   assert source.url == JIELAN_SOURCE["url"] and JIELAN_SOURCE["snapshot_sha256"] in source.edition
+  assert source.checked_on == date.fromisoformat(JIELAN_SOURCE["retrieved_at_utc"][:10])
+  assert source.lineage_id == "lineage.jielan-tianji" and source.layer is TextLayer.原文
+  assert "甲子、乙丑两条直接例" in source.claims
+  assert "未载换年界线" in source.limits and "没有完整生辰盘例" in source.limits
+  assert "不作互不知晓的独立传承" in source.provenance
   citation = catalog.get("citation.jielan.hongluan-tianxi-examples")
   assert isinstance(citation, Citation) and citation.quote == JIELAN_SOURCE["observed_text"]
+  assert JIELAN_SOURCE["locator"] in citation.locator
+  assert "Article.description" in citation.locator
   for year, external_observation, adopted_expected in JIELAN_CASES:
     assert external_observation == adopted_expected
     branch = Ganzhi.from_str(year).dizhi
@@ -91,11 +105,22 @@ def test_frozen_jielan_direct_observations_and_adopted_expectations() -> None:
     assert actual == adopted_expected
 
 
+def test_quanshu_hongluan_tianxi_quote_preserves_original_text() -> None:
+  citation = load_catalog().get("citation.quanshu.hongluan-tianxi")
+  assert isinstance(citation, Citation)
+  assert citation.source_id == "source.quanshu-wikisource"
+  assert citation.quote == "卯上起子逆数之，数到当生太岁支，坐守此宫红鸾位，对宫天喜不差移，"
+  assert citation.layer is TextLayer.原文
+  assert "安红鸾天喜诀前四句" in citation.locator
+  assert "不收后四句吉凶" in citation.limits and "不据此另定换年界线" in citation.limits
+
+
 def test_hongluan_tianxi_knowledge_keeps_source_and_year_boundary_limits() -> None:
   catalog = load_catalog()
   variant = catalog.get(RULE_ID)
   entry = catalog.get("entry.star.hongluan-tianxi-year-branch")
   assert isinstance(variant, RuleVariant) and isinstance(entry, KnowledgeEntry)
+  assert variant.definition == entry.statement == "卯宫起子年，逆数到生年支安红鸾，红鸾对宫安天喜。"
   assert variant.implementation == "ziwei.stars.place_hongluan_tianxi"
   assert variant.concept_ids == ("concept.star.hongluan", "concept.star.tianxi")
   assert variant.tracking_url == entry.tracking_url == "https://github.com/0xf3cd/ziwei/issues/54"
