@@ -86,9 +86,12 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.calendar
-   :members: LunarAlgorithm, celestial_version, supported_lunar_year_range, gregorian_to_lunar, lunar_to_gregorian, lunar_year_info, validate_lunar_date, utc_to_ut1_jd, lichun_jd, utc_civil, apparent_solar
+   :members: LunarAlgorithm, celestial_version, supported_lunar_year_range, gregorian_to_lunar, lunar_to_gregorian, lunar_year_info, validate_lunar_date, utc_to_ut1_jd, lichun_jd, lichun_date, utc_civil, apparent_solar
    :undoc-members:
    :member-order: bysource
+
+.. autodata:: ziwei.calendar.LICHUN_DATE_YEAR_RANGE
+   :no-value:
 ```
 
 ## 命宫身宫与十二宫
@@ -181,6 +184,20 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
    :no-value:
 
 .. autodata:: ziwei.decades.DECADE_DEFINITION
+   :no-value:
+```
+
+## 流年
+
+[纯纪年、日期年界与本命叠读](liunian.md)。纯纪年不初始化原生历法，日期查询显式选择独立年界。
+
+```{eval-rst}
+.. automodule:: ziwei.liunian
+   :members: LiunianBoundary, LiunianYear, liunian_minggong, liunian_on_date
+   :undoc-members:
+   :member-order: bysource
+
+.. autodata:: ziwei.liunian.LIUNIAN_MINGGONG_RULE_ID
    :no-value:
 ```
 

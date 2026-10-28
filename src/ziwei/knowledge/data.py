@@ -22,11 +22,12 @@ from ziwei.knowledge.model import (
   SourceStatus,
   TextLayer,
 )
+from ziwei.liunian import LIUNIAN_MINGGONG_RULE_ID, LiunianBoundary
 from ziwei.palaces import OPPOSITE_RULE_ID, SANFANG_SIZHENG_RULE_ID, PalaceName
 from ziwei.sihua import SIHUA_TABLES, SihuaVariant
 from ziwei.stars import MAJOR_STARS, STAR_RULES, Star, StarRule
 
-CATALOG_VERSION: Final = "2026.10.28.1"
+CATALOG_VERSION: Final = "2026.10.28.2"
 """语料版本，与开发包版本分别记录。"""
 
 _BUREAU_NAMES = "、".join(ju.value for ju in WuxingJu)
@@ -102,6 +103,19 @@ CONCEPTS = (
     related_ids=("concept.wuxingju", "concept.palace.minggong"),
   ),
   Concept(
+    id="concept.liunian",
+    name="流年命宫",
+    aliases=("流年", "流年命宮"),
+    kind=ConceptKind.运限,
+    related_ids=("concept.palace.minggong", "concept.policy.liunian-year-boundary"),
+  ),
+  Concept(
+    id="concept.policy.liunian-year-boundary",
+    name="流年日期换年",
+    kind=ConceptKind.口径,
+    related_ids=("concept.liunian", "concept.policy.year-boundary"),
+  ),
+  Concept(
     id="concept.policy.leap-month",
     name="闰月归属",
     aliases=("闰月", "閏月"),
@@ -129,6 +143,35 @@ CONCEPTS = (
 )
 
 VARIANTS = (
+  RuleVariant(
+    id=LIUNIAN_MINGGONG_RULE_ID,
+    name="流年年支命宫",
+    definition="目标流年地支落在同地支宫，作为流年命宫；本命宫名另外读取。",
+    scope="已确定纪年的第一层流年命宫定位",
+    concept_ids=("concept.liunian",),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/56",
+    implementation="ziwei.liunian.liunian_minggong",
+  ),
+  RuleVariant(
+    id=LiunianBoundary.正月初一日期.rule_id,
+    name=LiunianBoundary.正月初一日期.value,
+    definition="从所归农历年正月初一日期起，至下一农历年正月初一日期前，按该年纪年。",
+    scope="所选农历算法的公历日期标签，区间含起点、不含终点",
+    concept_ids=("concept.policy.liunian-year-boundary", "concept.liunian"),
+    conditions=("显式选择农历算法，使用其日期基准和支持范围",),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/56",
+    implementation="ziwei.liunian.liunian_on_date",
+  ),
+  RuleVariant(
+    id=LiunianBoundary.立春日期.rule_id,
+    name=LiunianBoundary.立春日期.value,
+    definition="从所归干支年立春所在的UTC+08日期起，至下一干支年立春日期前，按该年纪年。",
+    scope="具名软件兼容政策，按日期整日换年",
+    concept_ids=("concept.policy.liunian-year-boundary", "concept.liunian"),
+    conditions=("使用既有modelled-UTC换算，显式选择日期政策",),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/56",
+    implementation="ziwei.liunian.liunian_on_date",
+  ),
   RuleVariant(
     id=BrightnessTable.全书卷二录文.table_id,
     name=BrightnessTable.全书卷二录文.value,
@@ -380,6 +423,87 @@ VARIANTS = (
 
 SOURCES = (
   Source(
+    id="source.quanshu-juan3-wikisource",
+    title="紫微斗數全書/卷三（维基文库固定录文）",
+    edition="固定修订2268626，2026-10-28抓取；HTML SHA256 "
+    "62bd440cff3c042777b8125ec968e87845ffde9d90aeaf94db685ed7ad068c37",
+    url="https://zh.wikisource.org/w/index.php?title=紫微斗數全書/卷三&oldid=2268626",
+    layer=TextLayer.原文,
+    lineage_id="lineage.quanshu-wikisource",
+    provenance="固定电子录文；与本目录卷二同书谱系，纸本底本未核。",
+    claims="十二年支太岁到同支宫的段头原句。",
+    limits="同句并列小限与吉凶，本条只取太岁位置；所核段落未载流年换年的定义。",
+    rights="必要古籍短引，固定修订由维基文库提供；纸本版次未确认。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 10, 28),
+  ),
+  Source(
+    id="source.click108-liunian",
+    title="本命、流年命盤大不同？這篇教你分清楚",
+    authors=("Beatrice",),
+    edition="页面发布2023-10-02T10:30:00+08:00、修改2024-11-05T10:10:58+08:00；"
+    "2026-10-28快照SHA256 5be193bca806ce1cffda49aba05e81336634a373fc0c615c769ebd5862e30e10",
+    url="https://news.click108.com.tw/2023/10/ziwei/2855/",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.click108-liunian",
+    provenance="科技紫微網网页，作者取byline元数据；正文已含2025乙巳例，另有自家产品推广。",
+    claims="初一至除夕的流年定义、目标年支到同支宫及流年命宫称名。",
+    limits="只核抓取快照，不把页面发布日期当成未修订的正文年代，不认证所有流派。",
+    rights="只取两句必要短引与来源信息，不转载现代全文或推广段落。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 10, 28),
+  ),
+  Source(
+    id="source.iztro-liunian-date",
+    title="iztro流年取年支调用链（固定源码）",
+    authors=("SylarLong（iztro、lunar-lite）", "6tail（lunar-typescript）"),
+    edition="iztro2.6.3 commit42bec9f88591a4dd082133aab7650e40ee55eba9；"
+    "lunar-lite0.2.8 commit1d104fffa31609e9f112898cc57545827e8d57ae；"
+    "lunar-typescript1.8.6 commit0f3e95d15e31f1a7c7b93d624542649347328a20，"
+    "Lunar.ts SHA256 91217f0d1e12dab85fd6b785a0b3a96e45fbfabd04982df04a7ff48c3d9f2362",
+    url="https://github.com/SylarLong/iztro/blob/42bec9f88591a4dd082133aab7650e40ee55eba9/src/astro/FunctionalAstrolabe.ts",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.iztro-lunar-lite",
+    provenance="iztro经lunar-lite调用6tail的lunar-typescript；三个库是一条调用链，不按网址计作多条独立证据。",
+    claims="流年索引取目标年支；初一与立春选项分别取getYearZhi和getYearZhiByLiChun，后者比较日期。",
+    limits="只核固定代码的静态行为，未运行外部排盘器；软件选项不证明紫微古籍或流派应采用该年界。",
+    rights="三库均标MIT；仅保存必要代码短引与固定版本定位。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 10, 28),
+  ),
+  Source(
+    id="source.pmo-calendar-2022",
+    title="二〇二二年日历资料",
+    authors=("中国科学院紫金山天文台",),
+    edition="2020年7月编制，GB/T33661-2017；2026-10-28取得PDF，SHA256 "
+    "5a36f776512668ac2b555292ccaa28103bac445da525490dbacf2ce959931a4d",
+    url="http://www.pmo.cas.cn/xwdt2019/kpdt2019/202203/P020240201504886742716.pdf",
+    layer=TextLayer.原文,
+    lineage_id="lineage.pmo-calendar",
+    provenance="紫金山天文台官网公开PDF，第2页原排版与文字层分别核对。",
+    claims="2022正月初一2月1日、立春2月4日04:51的北京时间历书见证。",
+    limits="立春公布到分钟，本项目只用日级预期；历书不定义紫微采用哪种年界。",
+    rights="仅记日期事实、必要短引与出处，不转载整本历书。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 10, 28),
+  ),
+  Source(
+    id="source.pmo-calendar-2024",
+    title="二〇二四年日历资料",
+    authors=("中国科学院紫金山天文台",),
+    edition="2022年8月编制，GB/T33661-2017；2026-10-28取得PDF，SHA256 "
+    "e631e2112050f2ae767bde5ae5425366eae8e9de56e65e1cd80947c65369bc41",
+    url="http://www.pmo.cas.cn/xwdt2019/kpdt2019/202203/P020240201504888053250.pdf",
+    layer=TextLayer.原文,
+    lineage_id="lineage.pmo-calendar",
+    provenance="紫金山天文台官网公开PDF，第2页原排版与文字层分别核对。",
+    claims="2024立春2月4日16:27、正月初一2月10日的北京时间历书见证。",
+    limits="立春公布到分钟，本项目只用日级预期；与2022册同属PMO历书谱系，不增加独立票数。",
+    rights="仅记日期事实、必要短引与出处，不转载整本历书。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 10, 28),
+  ),
+  Source(
     id="source.wangtingzhi-bazilives-brightness",
     title="紫微斗数深造讲义：星曜庙陷（bazilives重排页及fig-27图像）",
     authors=("王亭之（网页归属）",),
@@ -604,6 +728,61 @@ SOURCES = (
 )
 
 CITATIONS = (
+  Citation(
+    id="citation.quanshu.liunian-position",
+    source_id="source.quanshu-juan3-wikisource",
+    locator="卷三，论立命行限宫歌，论太岁小限星辰庙陷遇十二宫中吉凶，子年段头",
+    quote="子年太岁并小限到子宫入庙化吉",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.系统归属, EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="同段其余十一支分别到同支宫；只取太岁位置，不执行原句中的小限或吉凶。",
+  ),
+  Citation(
+    id="citation.click108.liunian-position",
+    source_id="source.click108-liunian",
+    locator="流年是什麼段，2025乙巳例，首段中的直接例句",
+    quote="例如農曆2025年為乙巳年，地支為「巳」，那麼此年所有人的「流年」都會落在紫微命盤的「巳」宮。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="只给目标纪年和流年落支，不是完整出生资料盘例。",
+  ),
+  Citation(
+    id="citation.click108.liunian-new-year",
+    source_id="source.click108-liunian",
+    locator="流年是什麼段，第一句",
+    quote="流年是從每年的農曆正月初一開始算起，到除夕結束；隔年正月初一又是一個新的流年。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="该站的流年日期定义，不外推为本命换年或所有流派共识。",
+  ),
+  Citation(
+    id="citation.iztro.liunian-lichun-date",
+    source_id="source.iztro-liunian-date",
+    locator="lunar-typescript固定commit的src/lib/Lunar.ts，第165行，_computeYear的ByLiChun分支；"
+    "上层lunar-lite/src/ganzhi.ts第62-69行、iztro/src/astro/FunctionalAstrolabe.ts第45-52及83行",
+    quote="if (solarYmd < liChunYmd) {",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则,),
+    limits="ByLiChun比较日期，Exact另比较日期与钟点；仅作具名软件行为见证，不认证古籍年界。",
+  ),
+  Citation(
+    id="citation.pmo.liunian-2022",
+    source_id="source.pmo-calendar-2022",
+    locator="PDF第2页，二月历，立春行；同页2月1日格为正月初一",
+    quote="【立春】 4 日 4 时 51 分",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则,),
+    limits="历法日期与分钟精度见证；不是紫微应采用立春日期换年的定义。",
+  ),
+  Citation(
+    id="citation.pmo.liunian-2024",
+    source_id="source.pmo-calendar-2024",
+    locator="PDF第2页，二月历，立春行；同页2月10日格为正月初一",
+    quote="【立春】 4 日16时 27 分",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则,),
+    limits="历法日期与分钟精度见证，次序与2022相反；不提供紫微换年定义。",
+  ),
   Citation(
     id="citation.quanshu.brightness-table",
     source_id="source.quanshu-wikisource",
@@ -1332,6 +1511,57 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
 
 
 ENTRIES = (
+  KnowledgeEntry(
+    id="entry.liunian.year-branch",
+    statement="目标流年支到同地支宫，称为流年命宫；叠本命盘时本命宫名另外读取。",
+    concept_ids=("concept.liunian",),
+    variant_ids=(LIUNIAN_MINGGONG_RULE_ID,),
+    citation_ids=("citation.quanshu.liunian-position", "citation.click108.liunian-position"),
+    premises=("目标纪年已确定，或已经由独立的流年日期政策解析",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="固定录文与现代作者直接例支持窄定位；古籍底本未核，不借相邻小限或吉凶段扩展功能。",
+    recheck="取得具版次的卷三太岁到宫段影像，核原句；另取完整配置的专业软件原始流年盘。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/56",
+  ),
+  KnowledgeEntry(
+    id="entry.liunian.lunar-new-year",
+    statement="显式选择初一日期政策，所选农历算法正月初一至下一年初一前归同一流年。",
+    concept_ids=("concept.policy.liunian-year-boundary", "concept.liunian"),
+    variant_ids=(LiunianBoundary.正月初一日期.rule_id,),
+    citation_ids=(
+      "citation.click108.liunian-new-year",
+      "citation.pmo.liunian-2022",
+      "citation.pmo.liunian-2024",
+    ),
+    premises=("输入为所选算法基准的公历日期标签",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="现代网页定义与两年历书日期分别核验；历书只给日期，不证明所有流派的换年选择。",
+    recheck="取得另一具名著作的流年年界定义和初一两侧直接例，分别核历法标签与紫微口径。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/56",
+  ),
+  KnowledgeEntry(
+    id="entry.liunian.lichun-date",
+    statement="立春日期是按整日换年的具名软件兼容政策，与本命立春交接瞬间选项分开。",
+    concept_ids=("concept.policy.liunian-year-boundary", "concept.liunian"),
+    variant_ids=(LiunianBoundary.立春日期.rule_id,),
+    citation_ids=(
+      "citation.iztro.liunian-lichun-date",
+      "citation.pmo.liunian-2022",
+      "citation.pmo.liunian-2024",
+    ),
+    premises=("显式选择立春日期政策，使用modelled-UTC加8小时的日期",),
+    premise_status=PremiseStatus.已明确,
+    display=DisplayEligibility.暂不默认展示,
+    curation=CurationStatus.已整理,
+    limits="固定软件链只证日期级行为，PMO只证历法日期；本批未取得用于该政策的独立紫微定义。"
+    "不把软件可配置项改称古籍共识，专业软件原始盘仍未取得。",
+    recheck="取得具名作者明确用于紫微流年的立春日期定义及交节当天两侧例；先区分整日与瞬间。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/56",
+  ),
   KnowledgeEntry(
     id="entry.brightness.quanshu-juan2",
     statement=_BRIGHTNESS_DEFINITION,
