@@ -32,7 +32,7 @@ class BrightnessLevel(StrEnum):
 
 
 class BrightnessTable(StrEnum):
-  """具名表选择；固定电子录文不等于已核纸本，也不连带选择安星或历法规则。"""
+  """亮度查询的表选项。"""
 
   _table_id: str
 

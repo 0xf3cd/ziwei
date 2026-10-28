@@ -203,10 +203,7 @@ def palace_view(chart: ZiweiChart, palace: PalaceName | Dizhi) -> PalaceView:
 
 
 def chart_brightness(chart: ZiweiChart, *, table: BrightnessTable) -> tuple[BrightnessReading, ...]:
-  """从已有盘读取30星的亮度，保留星位顺序；非主星的level为None。
-
-  表须显式选择，不改盘、不重新解析出生记录，也不访问历法与时区资源。
-  """
+  """从已有盘读取30星的亮度，保留星位顺序；非主星的level为None。"""
   if not isinstance(chart, ZiweiChart):
     raise TypeError("命盘亮度查询须使用 ZiweiChart")
   return tuple(
