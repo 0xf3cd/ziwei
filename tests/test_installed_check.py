@@ -14,20 +14,71 @@ import pytest
 import ziwei
 from tools import installed_check
 from ziwei.birth import Gender, GregorianBirthRecord
+from ziwei.brightness import BrightnessLevel, BrightnessTable
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import PalaceView, ZiweiChart, create_chart, palace_view
+from ziwei.chart import PalaceView, ZiweiChart, chart_brightness, create_chart, palace_view
 from ziwei.decades import decade_periods
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
 from ziwei.palaces import PalaceName
-from ziwei.render import render_text
+from ziwei.render import render_svg, render_text
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
 
 pytestmark = pytest.mark.usefixtures("unload_celestial")
+
+
+@pytest.mark.parametrize("defect", ["value", "count", "position", "text", "svg", "source"])
+def test_brightness_consumer_rejects_wrong_values_displays_or_missing_source(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  if defect == "value":
+    monkeypatch.setattr(
+      installed_check,
+      "star_brightness",
+      lambda *args, **kwargs: SimpleNamespace(level=BrightnessLevel.庙),
+    )
+  elif defect in ("count", "position"):
+    original = chart_brightness
+
+    def readings(*args: Any, **kwargs: Any) -> Any:
+      values = original(*args, **kwargs)
+      if defect == "count":
+        return ()
+      return (*values[1:], values[0])
+
+    monkeypatch.setattr(installed_check, "chart_brightness", readings)
+  elif defect in ("text", "svg"):
+    original_display = render_text if defect == "text" else render_svg
+
+    def display(*args: Any, **kwargs: Any) -> str:
+      value = original_display(*args, **kwargs)
+      return (
+        value.replace(BrightnessTable.全书卷二录文.value, "")
+        if defect == "text"
+        else value.replace('class="brightness"', 'class="absent"')
+      )
+
+    monkeypatch.setattr(installed_check, "render_" + defect, display)
+  else:
+    original_references = Catalog.references
+
+    def references(self: Catalog, identifier: str) -> tuple[Citation, ...]:
+      return (
+        ()
+        if identifier.startswith("variant.brightness.")
+        else original_references(self, identifier)
+      )
+
+    monkeypatch.setattr(Catalog, "references", references)
+  with pytest.raises(ValueError, match="Installed brightness"):
+    if defect == "source":
+      installed_check.check_knowledge()
+    else:
+      installed_check.check_chart()
 
 
 @pytest.fixture

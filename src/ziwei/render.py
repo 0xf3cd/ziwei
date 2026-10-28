@@ -4,7 +4,8 @@ from typing import Final
 from unicodedata import east_asian_width
 from xml.etree.ElementTree import Element, SubElement, tostring
 
-from ziwei.chart import ZiweiChart, palace_view
+from ziwei.brightness import BrightnessTable
+from ziwei.chart import ZiweiChart, chart_brightness, palace_view
 from ziwei.ganzhi import Dizhi
 from ziwei.palaces import PalaceName, sanfang_sizheng
 
@@ -43,14 +44,22 @@ def _width(text: str) -> int:
   return sum(2 if east_asian_width(char) in ("W", "F") else 1 for char in text)
 
 
-def render_text(chart: ZiweiChart) -> str:
+def render_text(chart: ZiweiChart, *, brightness_table: BrightnessTable | None = None) -> str:
   """返回十二宫边框格（巳午未申在上，寅丑子亥在下），末尾换行。
 
   每宫显示宫名、宫干支、身宫标记、星曜与禄权科忌、大限虚岁。不输出地点、来源等任意文本，
   因此记录中的控制字符不会成为终端指令。对齐假定等宽终端，东亚宽字符占两列。
+  brightness_table为None时不查询亮度；显式选择表后，首行标明表名，主星后附原名等级。
   """
   if not isinstance(chart, ZiweiChart):
     raise TypeError("文本盘面须使用 ZiweiChart")
+  levels = (
+    {}
+    if brightness_table is None
+    else {
+      reading.star: reading.level for reading in chart_brightness(chart, table=brightness_table)
+    }
+  )
   changes = dict(
     zip(
       (chart.sihua.lu, chart.sihua.quan, chart.sihua.ke, chart.sihua.ji),
@@ -62,7 +71,9 @@ def render_text(chart: ZiweiChart) -> str:
   for palace in chart.palaces:
     decade = next(p for p in chart.decades if p.dizhi is palace.dizhi)
     stars = [
-      p.star.value + ("[" + changes[p.star] + "]" if p.star in changes else "")
+      p.star.value
+      + ("[" + changes[p.star] + "]" if p.star in changes else "")
+      + (" · " + level.value if (level := levels.get(p.star)) is not None else "")
       for p in chart.stars
       if p.dizhi is palace.dizhi
     ]
@@ -82,7 +93,8 @@ def render_text(chart: ZiweiChart) -> str:
     + chart.decades[0].direction.value
     + " · "
     + chart.decades[0].age_convention
-    + "首尾包含",
+    + "首尾包含"
+    + (" · " + brightness_table.value if brightness_table is not None else ""),
     border,
   ]
   for row in _PALACE_LAYOUT:
@@ -100,16 +112,29 @@ def _svg_text(parent: Element, value: str, *, x: int, y: int, class_name: str) -
   SubElement(parent, "text", {"x": str(x), "y": str(y), "class": class_name}).text = value
 
 
-def render_svg(chart: ZiweiChart, *, selected_palace: PalaceName | Dizhi | None = None) -> str:
+def render_svg(
+  chart: ZiweiChart,
+  *,
+  selected_palace: PalaceName | Dizhi | None = None,
+  brightness_table: BrightnessTable | None = None,
+) -> str:
   """返回自包含的静态SVG，显示已有十二宫、星曜、生年四化、身宫与大限。
 
   selected_palace接受宫名或地支枚举，突出本宫、两个三合宫和对宫；None不高亮。
   类型错误时抛TypeError，不接受字符串（如"命宫"或"子"）。显示不重算或修改命盘，也不输出出生记录中的
   生日、地点、来源等任意元数据。SVG不含脚本或外部资源；写入文件时须使用UTF-8。
   所有宫格等高，高度由星数最多的一宫决定；星曜按原盘顺序从左到右、从上到下排列。
+  brightness_table为None时不查询亮度；选择表后，等级另行显示，中央标明表名。
   """
   if not isinstance(chart, ZiweiChart):
     raise TypeError("SVG盘面须使用 ZiweiChart")
+  levels = (
+    {}
+    if brightness_table is None
+    else {
+      reading.star: reading.level for reading in chart_brightness(chart, table=brightness_table)
+    }
+  )
   selected = None if selected_palace is None else palace_view(chart, selected_palace)
   relations = (
     {}
@@ -127,7 +152,8 @@ def render_svg(chart: ZiweiChart, *, selected_palace: PalaceName | Dizhi | None 
   decades = {decade.dizhi: decade for decade in chart.decades}
   star_rows = max((len(view.stars) + 1) // 2 for view in views.values())
   cell_width = 256
-  cell_height = max(208, 120 + star_rows * 28)
+  row_height = 28 if brightness_table is None else 48
+  cell_height = max(208, 120 + star_rows * row_height)
   margin = 16
   width = 4 * cell_width + 2 * margin
   height = 4 * cell_height + 2 * margin
@@ -148,7 +174,11 @@ def render_svg(chart: ZiweiChart, *, selected_palace: PalaceName | Dizhi | None 
   SubElement(root, "desc").text = "只显示已有命盘，不重新排盘或解释吉凶。" + (
     "未选择高亮宫位。" if selected is None else "以文字和边框区分本宫、两个三合宫与对宫。"
   )
-  SubElement(root, "style").text = _SVG_STYLE
+  SubElement(root, "style").text = _SVG_STYLE + (
+    "\n.ziwei-chart .brightness,.ziwei-chart .brightness-table{font-size:13px;fill:#52645f}"
+    if brightness_table is not None
+    else ""
+  )
   SubElement(root, "rect", {"width": str(width), "height": str(height), "fill": "#f8f6f1"})
 
   for row_index, row in enumerate(_PALACE_LAYOUT):
@@ -186,9 +216,17 @@ def render_svg(chart: ZiweiChart, *, selected_palace: PalaceName | Dizhi | None 
           group,
           star.value + ("[" + changes[star] + "]" if star in changes else ""),
           x=16 + index % 2 * 112,
-          y=88 + index // 2 * 28,
+          y=88 + index // 2 * row_height,
           class_name="star",
         )
+        if (level := levels.get(star)) is not None:
+          _svg_text(
+            group,
+            level.value,
+            x=16 + index % 2 * 112,
+            y=108 + index // 2 * row_height,
+            class_name="brightness",
+          )
       SubElement(
         group,
         "line",
@@ -242,4 +280,6 @@ def render_svg(chart: ZiweiChart, *, selected_palace: PalaceName | Dizhi | None 
   )
   if selected is not None:
     _svg_text(summary, "本宫 · 三合两宫 · 对宫", x=0, y=286, class_name="legend")
+  if brightness_table is not None:
+    _svg_text(summary, brightness_table.value, x=0, y=326, class_name="brightness-table")
   return tostring(root, encoding="unicode") + "\n"

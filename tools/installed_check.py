@@ -16,9 +16,10 @@ from ziwei.birth import (
   LunarBirthRecord,
   TimePrecision,
 )
+from ziwei.brightness import BrightnessLevel, BrightnessTable, star_brightness
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import create_chart, palace_view
+from ziwei.chart import chart_brightness, create_chart, palace_view
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan
@@ -299,6 +300,22 @@ def check_chart() -> None:
   ke_palace = next(position.dizhi for position in chart.stars if position.star is Star.右弼)
   if palace_view(chart, ke_palace).ke is not Star.右弼:
     raise ValueError("Installed palace query lost sihua")
+  table = BrightnessTable.全书卷二录文
+  if star_brightness(Star.紫微, Dizhi.辰, table=table).level is not BrightnessLevel.得地:
+    raise ValueError("Installed brightness differs from the named table")
+  readings = chart_brightness(chart, table=table)
+  if len(readings) != 30 or sum(item.level is not None for item in readings) != 14:
+    raise ValueError("Installed brightness is incomplete")
+  if tuple((item.star, item.dizhi) for item in readings) != tuple(
+    (item.star, item.dizhi) for item in chart.stars
+  ):
+    raise ValueError("Installed brightness changed chart positions")
+  bright_text = render_text(chart, brightness_table=table)
+  bright_image = fromstring(render_svg(chart, brightness_table=table))
+  grades = bright_image.findall(f".//{namespace}text[@class='brightness']")
+  if table.value not in bright_text.splitlines()[0] or len(grades) != 14:
+    raise ValueError("Installed brightness displays are incomplete")
+  print("Installed brightness: named table queried; text and SVG consumed")
   print("Installed full chart: calculated, rendered; independent positions and decades checked")
 
 
@@ -316,6 +333,11 @@ def check_knowledge() -> None:
   references = catalog.references("entry.tianma.year-branch")
   if not references or references[0].quote != "论本生年支":
     raise ValueError("Installed knowledge citation differs from its source")
+  references = catalog.references(BrightnessTable.全书卷二录文.table_id)
+  if not references or not any(
+    item.source_id == "source.quanshu-wikisource" for item in references
+  ):
+    raise ValueError("Installed brightness knowledge lost its source")
 
 
 if __name__ == "__main__":

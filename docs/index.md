@@ -18,6 +18,7 @@ resolver
 palaces
 bureau
 stars
+brightness
 sihua-decades
 chart
 api

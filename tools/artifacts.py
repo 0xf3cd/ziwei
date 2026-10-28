@@ -29,6 +29,7 @@ SOURCE_PATTERNS = (
   "src/ziwei/**/*.py",
   "tools/*.py",
   "tests/**/*.py",
+  "tests/**/*.json",
   "docs/**/*.md",
   "docs/**/*.py",
   "docs/**/*.inv",
