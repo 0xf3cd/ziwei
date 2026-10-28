@@ -73,7 +73,7 @@ def render_text(chart: ZiweiChart, *, brightness_table: BrightnessTable | None =
     stars = [
       p.star.value
       + ("[" + changes[p.star] + "]" if p.star in changes else "")
-      + (" · " + level.value if (level := levels.get(p.star)) is not None else "")
+      + (" (" + level.value + ")" if (level := levels.get(p.star)) is not None else "")
       for p in chart.stars
       if p.dizhi is palace.dizhi
     ]

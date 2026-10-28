@@ -92,7 +92,7 @@
 >>> text = render_text(chart, brightness_table=table)
 >>> print(text.splitlines()[0])
 火六局 · 大限逆行 · 虚岁首尾包含 · 全书卷二固定录文
->>> "廉贞[禄] · 利益" in text
+>>> "廉贞[禄] (利益)" in text
 True
 >>> from ziwei.render import render_svg
 >>> bright_svg = render_svg(chart, brightness_table=table)

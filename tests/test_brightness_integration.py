@@ -11,6 +11,7 @@ from xml.etree.ElementTree import fromstring
 import pytest
 
 from tools.knowledge_reference import _brightness_rows, check_knowledge_reference, render_catalog
+from ziwei import brightness
 from ziwei.birth import Gender, LunarBirthRecord
 from ziwei.brightness import BrightnessLevel, BrightnessTable, star_brightness
 from ziwei.chart import ZiweiChart, chart_brightness, create_chart, palace_view
@@ -77,7 +78,7 @@ def test_both_displays_show_the_named_table_without_changing_star_labels(
   for reading in chart_brightness(brightness_chart, table=TABLE):
     if reading.level is not None:
       assert any(
-        reading.star.value in line and " · " + reading.level.value in line
+        reading.star.value in line and " (" + reading.level.value + ")" in line
         for line in text.splitlines()[1:]
       )
   original = render_svg(brightness_chart)
@@ -90,6 +91,21 @@ def test_both_displays_show_the_named_table_without_changing_star_labels(
   assert [node.text for node in root.findall(f".//{SVG}text[@class='star']")] == [
     node.text for node in fromstring(original).findall(f".//{SVG}text[@class='star']")
   ]
+
+
+@pytest.mark.parametrize("ambiguous_width", [1, 2])
+def test_brightness_text_grid_aligns_with_both_ambiguous_width_conventions(
+  brightness_chart: ZiweiChart, ambiguous_width: int
+) -> None:
+  lines = render_text(brightness_chart, brightness_table=TABLE).splitlines()[1:]
+  widths = {
+    sum(
+      2 if (kind := east_asian_width(char)) in ("W", "F") else ambiguous_width if kind == "A" else 1
+      for char in line
+    )
+    for line in lines
+  }
+  assert len(widths) == 1
 
 
 @pytest.mark.parametrize(
@@ -204,6 +220,19 @@ def test_generated_brightness_reference_rejects_lost_or_changed_cells(
   page.write_text(before + separator + section, encoding="utf-8")
   with pytest.raises(ValueError, match="implemented-brightness"):
     check_knowledge_reference(tmp_path)
+
+
+def test_brightness_reference_rejects_an_inapplicable_reading(
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  original_query = star_brightness
+
+  def inapplicable(star: Star, branch: Dizhi, *, table: BrightnessTable) -> Any:
+    return original_query(Star.红鸾, branch, table=table)
+
+  monkeypatch.setattr(brightness, "star_brightness", inapplicable)
+  with pytest.raises(ValueError, match="主星亮度参考缺格"):
+    _brightness_rows()
 
 
 @pytest.mark.parametrize("mode", [(), ("-O",)])

@@ -2,14 +2,18 @@
 
 import json
 from dataclasses import FrozenInstanceError, replace
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from tools.artifacts import source_members
+from ziwei import brightness
 from ziwei.brightness import BrightnessLevel, BrightnessReading, BrightnessTable, star_brightness
 from ziwei.ganzhi import Dizhi, Tiangan
+from ziwei.knowledge import load_catalog
+from ziwei.knowledge.model import Citation, Source
 from ziwei.stars import MAJOR_STARS, STAR_RULES, Star, StarPlacement
 
 REFERENCE = json.loads(
@@ -62,6 +66,29 @@ def test_literal_reference_is_a_complete_located_fourteen_by_twelve_subset() -> 
   )
 
 
+def test_transcribed_groups_are_bound_to_original_rows_and_header() -> None:
+  catalog = load_catalog()
+  citation = catalog.get("citation.quanshu.brightness-table")
+  source = catalog.get(REFERENCE["source_id"])
+  assert isinstance(citation, Citation) and isinstance(source, Source)
+  assert REFERENCE["header_quote"] == citation.quote
+  assert source.url == REFERENCE["source_url"] and source.lineage_id == REFERENCE["lineage_id"]
+  assert TABLE.table_id == REFERENCE["project_table_id"]
+  assert REFERENCE["comparison"]["aligned"] == ["星曜", "地支", "具名表"]
+  header = tuple(cell.strip() for cell in REFERENCE["header_quote"].split("|")[2:-1])
+  assert tuple(REFERENCE["levels"]) == header
+  for row in REFERENCE["rows"]:
+    original = [line.split("|") for line in row["original_lines"]]
+    assert len(original) == row["html_lines"][1] - row["html_lines"][0] + 1
+    assert all(len(line) == 10 for line in original)
+    assert [line[1].strip() for line in original if line[1].strip()] == [row["dizhi"]]
+    for column, group in enumerate(row["groups"], 2):
+      observed = "".join(
+        char for line in original for char in line[column] if char in REFERENCE["abbreviations"]
+      )
+      assert group == observed, (row["dizhi"], header[column - 2])
+
+
 @pytest.mark.parametrize("star,branch,expected,column,abbreviation", CELLS)
 def test_all_168_cells_match_independent_source_transcription(
   star: str, branch: str, expected: str, column: int, abbreviation: str
@@ -70,7 +97,7 @@ def test_all_168_cells_match_independent_source_transcription(
   assert reading.star is Star(star) and reading.dizhi is Dizhi(branch)
   assert reading.table is TABLE and reading.table_id == "variant.brightness.quanshu-juan2"
   assert reading.level is BrightnessLevel(expected)
-  assert REFERENCE["levels"][column - 1] == expected
+  assert REFERENCE["header_quote"].split("|")[column + 1].strip() == expected
   assert REFERENCE["abbreviations"][abbreviation] == star
 
 
@@ -85,6 +112,16 @@ def test_seven_original_names_aliases_and_major_star_identity() -> None:
     StarPlacement(Star.紫微, Dizhi.辰, TABLE.table_id)
   with pytest.raises(ValueError):
     BrightnessTable("不存在的亮度表")
+
+
+def test_new_enum_member_without_an_implemented_table_is_not_substituted(
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  FutureTable = StrEnum("FutureTable", {"全书卷二录文": "原表", "OTHER": "尚未实现的表"})
+  monkeypatch.setattr(brightness, "BrightnessTable", FutureTable)
+  unsupported: Any = FutureTable["OTHER"]
+  with pytest.raises(ValueError, match="尚未实现亮度表"):
+    star_brightness(Star.紫微, Dizhi.辰, table=unsupported)
 
 
 @pytest.mark.parametrize("star", tuple(star for star in Star if star not in MAJOR_STARS))
