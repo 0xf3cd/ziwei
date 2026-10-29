@@ -66,7 +66,9 @@ def test_pure_year_rejects_out_of_range(invalid: int) -> None:
 
 
 @pytest.mark.parametrize("row", REFERENCE["project_expectations"])
-@pytest.mark.parametrize("algorithm", tuple(LunarAlgorithm))
+@pytest.mark.parametrize(
+  "algorithm", [LunarAlgorithm[name] for name in REFERENCE["project_lunar_algorithms"]]
+)
 def test_independent_calendar_dates_and_two_policy_orders(
   row: list[Any], algorithm: LunarAlgorithm
 ) -> None:
@@ -189,6 +191,19 @@ def test_lichun_complete_range_endpoints() -> None:
       liunian_on_date(outside, boundary=LiunianBoundary.立春日期)
 
 
+@pytest.mark.parametrize("year", range(1972, 2200))
+def test_every_complete_lichun_year_keeps_its_interval(year: int) -> None:
+  start = calendar.lichun_date(year)
+  end = calendar.lichun_date(year + 1)
+  reading = liunian_on_date(start, boundary=LiunianBoundary.立春日期)
+  assert reading.ganzhi_year == year
+  assert (reading.start, reading.end) == (start, end)
+  assert liunian_on_date(end - timedelta(days=1), boundary=LiunianBoundary.立春日期) == reading
+  if year < 2199:
+    following = liunian_on_date(end, boundary=LiunianBoundary.立春日期)
+    assert following.ganzhi_year == year + 1 and following.start == end
+
+
 @pytest.mark.parametrize(
   "invalid", [datetime(2024, 2, 4), datetime(2024, 2, 4, tzinfo=UTC), "2024-02-04", None, True]
 )
@@ -280,6 +295,17 @@ def test_reading_is_frozen_and_metadata_is_derived(monkeypatch: pytest.MonkeyPat
   assert reading.supported_year_range == (1972, 2199)
   with pytest.raises(ValueError):
     liunian_on_date(date(2100, 2, 4), boundary=LiunianBoundary.立春日期)
+
+
+@pytest.mark.parametrize("algorithm", tuple(LunarAlgorithm))
+def test_lunar_reading_keeps_date_basis_and_requires_algorithm(algorithm: LunarAlgorithm) -> None:
+  reading = liunian_on_date(
+    date(2024, 2, 10), boundary=LiunianBoundary.正月初一日期, lunar_algorithm=algorithm
+  )
+  assert reading.date_basis == "所选农历算法日期标签"
+  assert reading.lunar_algorithm is algorithm
+  with pytest.raises(TypeError, match="须显式指定 LunarAlgorithm"):
+    replace(reading, lunar_algorithm=None)
 
 
 @pytest.mark.parametrize(

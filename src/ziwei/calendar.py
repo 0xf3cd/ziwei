@@ -53,7 +53,7 @@ _ALGORITHM_RANGE: Final[dict[LunarAlgorithm, tuple[int, int]]] = {
 """三种算法的农历年范围；与 celestial 的 supported_lunar_year_range 一致。"""
 
 LICHUN_DATE_YEAR_RANGE: Final = (1972, 2200)
-"""立春日期查询支持的公历年份，含端点。"""
+"""立春日期查询支持的公历年份，含端点；1972受UTC下界限制，2200是项目选定的末边界年份。"""
 
 _EAST_EIGHT: Final = timezone(timedelta(hours=8))
 

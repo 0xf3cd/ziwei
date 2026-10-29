@@ -457,8 +457,8 @@ SOURCES = (
     id="source.iztro-liunian-date",
     title="iztro流年取年支调用链（固定源码）",
     authors=("SylarLong（iztro、lunar-lite）", "6tail（lunar-typescript）"),
-    edition="iztro2.6.3 commit42bec9f88591a4dd082133aab7650e40ee55eba9；"
-    "lunar-lite0.2.8 commit1d104fffa31609e9f112898cc57545827e8d57ae；"
+    edition="iztro commit42bec9f88591a4dd082133aab7650e40ee55eba9（该提交package.json版本2.6.3）；"
+    "lunar-lite commit1d104fffa31609e9f112898cc57545827e8d57ae（该提交package.json版本0.2.8）；"
     "lunar-typescript1.8.6 commit0f3e95d15e31f1a7c7b93d624542649347328a20，"
     "Lunar.ts SHA256 91217f0d1e12dab85fd6b785a0b3a96e45fbfabd04982df04a7ff48c3d9f2362",
     url="https://github.com/SylarLong/iztro/blob/42bec9f88591a4dd082133aab7650e40ee55eba9/src/astro/FunctionalAstrolabe.ts",

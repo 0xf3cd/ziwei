@@ -63,10 +63,14 @@
   ],
   "software_chain": [
     {"repository": "SylarLong/iztro", "commit": "42bec9f88591a4dd082133aab7650e40ee55eba9", "version": "2.6.3",
+      "version_basis": "package.json at the fixed commit; not a release-tag mapping",
+      "version_url": "https://github.com/SylarLong/iztro/blob/42bec9f88591a4dd082133aab7650e40ee55eba9/package.json",
       "file_url": "https://raw.githubusercontent.com/SylarLong/iztro/42bec9f88591a4dd082133aab7650e40ee55eba9/src/astro/FunctionalAstrolabe.ts",
       "file_sha256": "584fd8d2d3ac76b3b8d7990ec6d26cac42eb5f1fcac9175326f29497d60d2d9c",
       "retrieved_at_utc": "2026-10-28T20:04:53.071696+00:00"},
     {"repository": "SylarLong/lunar-lite", "commit": "1d104fffa31609e9f112898cc57545827e8d57ae", "version": "0.2.8",
+      "version_basis": "package.json at the fixed commit; not a release-tag mapping",
+      "version_url": "https://github.com/SylarLong/lunar-lite/blob/1d104fffa31609e9f112898cc57545827e8d57ae/package.json",
       "file_url": "https://raw.githubusercontent.com/SylarLong/lunar-lite/1d104fffa31609e9f112898cc57545827e8d57ae/src/ganzhi.ts",
       "file_sha256": "f444bcc02a2723bc390fe9119fa8414fd957a4f2df4f25745761de369c7a5d7d",
       "retrieved_at_utc": "2026-10-28T20:04:53.039020+00:00"},
@@ -76,6 +80,33 @@
       "retrieved_at_utc": "2026-10-28T22:02:38Z"}
   ],
   "software_observation": "lunar-lite按normal选getYearZhi，否则getYearZhiByLiChun；底层ByLiChun比较solarYmd，Exact另比较solarYmdHms。调用链只计一路软件行为，不计独立传统。",
+  "lichun_date_witnesses": [
+    {
+      "publisher": "香港天文台",
+      "url": "https://www.hko.gov.hk/tc/gts/time/calendar/pdf/files/1972.pdf",
+      "retrieved_at_utc": "2026-10-29T02:02:13.049644+00:00",
+      "snapshot_sha256": "970b7aa533b1f0740004ad6ae8ecb8aad95454aadfa5230eef3fc3be2f81342b",
+      "locator": "第1页，二月行最右节气栏；页下注3说明夏令时仅4月16日至10月22日",
+      "date_basis": "香港标准时间UTC+08",
+      "date_basis_url": "https://www.hko.gov.hk/en/gts/time/basicterms-localtime.htm",
+      "published_precision": "date",
+      "observed": {"lichun_date": "1972-02-05"},
+      "adopted": {"lichun_date": "1972-02-05"}
+    },
+    {
+      "publisher": "香港天文台",
+      "url": "https://www.hko.gov.hk/tc/gts/time/calendar/pdf/files/2021.pdf",
+      "retrieved_at_utc": "2026-10-29T02:02:27.786874+00:00",
+      "snapshot_sha256": "eddb3a086a5483737685db35ee0cef894a81ef958be7aff177f168f4cabb640d",
+      "locator": "第1页，二月行最右节气栏",
+      "date_basis": "香港标准时间UTC+08",
+      "date_basis_url": "https://www.hko.gov.hk/en/gts/time/basicterms-localtime.htm",
+      "published_precision": "date",
+      "observed": {"lichun_date": "2021-02-03"},
+      "adopted": {"lichun_date": "2021-02-03"}
+    }
+  ],
+  "project_lunar_algorithms": ["ALGO1", "ALGO2", "ALGO3"],
   "project_expectations": [
     ["2021-12-31", 2021, 2021], ["2022-01-01", 2021, 2021],
     ["2022-01-31", 2021, 2021], ["2022-02-01", 2022, 2021],

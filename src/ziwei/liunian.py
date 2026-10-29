@@ -1,4 +1,8 @@
-"""按目标年支定位流年命宫，并分别按初一或立春日期确定纪年。"""
+"""按目标年支定位流年命宫，并分别按初一或立春日期确定纪年。
+
+出处见知识目录entry.liunian.*。日期计算与结果构造才导入历法适配，
+纯纪年和知识查询不加载历法适配。
+"""
 
 from __future__ import annotations
 
@@ -57,6 +61,7 @@ def _checked_algorithm(
 
 
 def _supported_year_range(algorithm: LunarAlgorithm | None) -> tuple[int, int]:
+  """完整纪年区间需要下一年的年界，因此最后一个年界年份减一。"""
   from ziwei.calendar import LICHUN_DATE_YEAR_RANGE, supported_lunar_year_range
 
   if algorithm is not None:
