@@ -36,6 +36,11 @@ REFERENCE = json.loads(
 )
 
 
+def test_reference_matrix_keeps_inputs_and_all_algorithm_choices() -> None:
+  assert REFERENCE["project_expectations"]
+  assert REFERENCE["project_lunar_algorithms"] == ["ALGO1", "ALGO2", "ALGO3"]
+
+
 @pytest.mark.parametrize(
   "year,expected", list(zip(range(2020, 2032), "子丑寅卯辰巳午未申酉戌亥", strict=True))
 )

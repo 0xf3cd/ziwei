@@ -10,6 +10,20 @@ import pytest
 
 from ziwei import calendar
 
+REFERENCE = json.loads(
+  Path(__file__)
+  .with_name("fixtures")
+  .joinpath("liunian-reference.json")
+  .read_text(encoding="utf-8")
+)
+
+
+def test_hko_witnesses_keep_the_two_independent_date_examples() -> None:
+  assert {item["adopted"]["lichun_date"] for item in REFERENCE["lichun_date_witnesses"]} == {
+    "1972-02-05",
+    "2021-02-03",
+  }
+
 
 @pytest.mark.parametrize(
   "year,expected",
@@ -41,12 +55,7 @@ def test_supported_dates_contain_the_modelled_ut1_moment(year: int) -> None:
 
 @pytest.mark.parametrize(
   "witness",
-  json.loads(
-    Path(__file__)
-    .with_name("fixtures")
-    .joinpath("liunian-reference.json")
-    .read_text(encoding="utf-8")
-  )["lichun_date_witnesses"],
+  REFERENCE["lichun_date_witnesses"],
 )
 def test_hko_date_level_witnesses(witness: dict[str, Any]) -> None:
   assert witness["observed"] == witness["adopted"]
