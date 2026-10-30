@@ -25,6 +25,7 @@ from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import KnowledgeEntry, PremiseStatus
+from ziwei.liunian import LiunianBoundary, liunian_minggong, liunian_on_date
 from ziwei.palaces import Palace, PalaceName, effective_month
 from ziwei.render import render_svg, render_text
 from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
@@ -197,8 +198,41 @@ def main(expected_version: str) -> None:
   ):
     raise ValueError("Import initialized the calendar adapter")
   check_calendar()
+  check_liunian()
   check_chart()
   print(f"Installed ziwei {metadata.version}; optimized={sys.flags.optimize}")
+
+
+def check_liunian() -> None:
+  """消费已安装的纯纪年和两种日期查询。"""
+  if liunian_minggong(2025) is not Dizhi.巳:
+    raise ValueError("Installed liunian year position differs")
+  lunar = liunian_on_date(
+    date(2024, 2, 4), boundary=LiunianBoundary.正月初一日期, lunar_algorithm=LunarAlgorithm.ALGO3
+  )
+  solar = liunian_on_date(date(2024, 2, 4), boundary=LiunianBoundary.立春日期)
+  if (lunar.ganzhi_year, solar.ganzhi_year) != (2023, 2024):
+    raise ValueError("Installed liunian year boundaries differ")
+  if (lunar.start, lunar.end, solar.start, solar.end) != (
+    date(2023, 1, 22),
+    date(2024, 2, 10),
+    date(2024, 2, 4),
+    date(2025, 2, 3),
+  ):
+    raise ValueError("Installed liunian intervals differ")
+  if (
+    lunar.boundary is not LiunianBoundary.正月初一日期
+    or solar.boundary is not LiunianBoundary.立春日期
+    or lunar.lunar_algorithm is not LunarAlgorithm.ALGO3
+    or solar.lunar_algorithm is not None
+    or lunar.celestial_version != distribution("celestial-calendar").version
+    or solar.celestial_version != lunar.celestial_version
+  ):
+    raise ValueError("Installed liunian metadata differs")
+  catalog = load_catalog()
+  if not all(catalog.references(reading.boundary.rule_id) for reading in (lunar, solar)):
+    raise ValueError("Installed liunian lost its sources")
+  print("Installed liunian: pure year and both date boundaries consumed")
 
 
 def check_chart() -> None:

@@ -1,0 +1,126 @@
+{
+  "position_sources": [
+    {
+      "source_id": "source.quanshu-juan3-wikisource",
+      "url": "https://zh.wikisource.org/w/index.php?title=紫微斗數全書/卷三&oldid=2268626",
+      "revision": "2268626",
+      "retrieved_at_utc": "2026-10-28T20:04:53.213833+00:00",
+      "snapshot_sha256": "62bd440cff3c042777b8125ec968e87845ffde9d90aeaf94db685ed7ad068c37",
+      "locator": "论立命行限宫歌，论太岁小限星辰庙陷遇十二宫中吉凶，十二支段头",
+      "quotes": [
+        "子年太岁并小限到子宫入庙化吉", "丑年太岁并小限到丑宫入庙化吉",
+        "寅年太岁并小限到寅宫入庙化吉", "卯年太岁并小限到卯宫入庙化吉",
+        "辰年太岁并小限到辰宫入庙化吉", "巳年太岁并小限到巳宫入庙化吉",
+        "午年太岁并小限到午宫入庙化吉", "未年太岁并小限到未宫入庙化吉",
+        "申年太岁并小限到申宫入庙化吉", "酉年太岁并小限到酉宫入庙化吉",
+        "戌年太岁并小限到戌宫入庙化吉", "亥年太岁并小限到亥宫入庙化吉"
+      ],
+      "limit": "电子录文底本未核；仅取太岁到宫的位置，不执行同句小限或吉凶。未载本条所需的换年定义。"
+    },
+    {
+      "source_id": "source.click108-liunian",
+      "url": "https://news.click108.com.tw/2023/10/ziwei/2855/",
+      "author": "Beatrice",
+      "published": "2023-10-02T10:30:00+08:00",
+      "modified": "2024-11-05T10:10:58+08:00",
+      "retrieved_at_utc": "2026-10-28T20:05:15.343546+00:00",
+      "snapshot_sha256": "5be193bca806ce1cffda49aba05e81336634a373fc0c615c769ebd5862e30e10",
+      "locator": "流年是什麼段，2025乙巳例与初一至除夕定义",
+      "quotes": [
+        "流年是從每年的農曆正月初一開始算起，到除夕結束；隔年正月初一又是一個新的流年。",
+        "例如農曆2025年為乙巳年，地支為「巳」，那麼此年所有人的「流年」都會落在紫微命盤的「巳」宮。"
+      ],
+      "observed": {"ganzhi_year": 2025, "ganzhi": "乙巳", "minggong": "巳"},
+      "adopted": {"ganzhi_year": 2025, "ganzhi": "乙巳", "minggong": "巳"},
+      "limit": "只对齐直接纪年和年支定位，未提供完整生辰或专业软件输出；不认证全部流派。"
+    }
+  ],
+  "calendar_sources": [
+    {
+      "source_id": "source.pmo-calendar-2022",
+      "url": "http://www.pmo.cas.cn/xwdt2019/kpdt2019/202203/P020240201504886742716.pdf",
+      "edition": "紫金山天文台，2020年7月编制，GB/T33661-2017",
+      "retrieved_at_utc": "2026-10-28T20:05:12.711783+00:00",
+      "snapshot_sha256": "5a36f776512668ac2b555292ccaa28103bac445da525490dbacf2ce959931a4d",
+      "page": 2,
+      "date_basis": "北京时间UTC+08",
+      "published_precision": "minute",
+      "observed": {"lunar_new_year": "2022-02-01", "lichun": "2022-02-04 04:51"},
+      "adopted_dates": {"lunar_new_year": "2022-02-01", "lichun_date": "2022-02-04"}
+    },
+    {
+      "source_id": "source.pmo-calendar-2024",
+      "url": "http://www.pmo.cas.cn/xwdt2019/kpdt2019/202203/P020240201504888053250.pdf",
+      "edition": "紫金山天文台，2022年8月编制，GB/T33661-2017",
+      "retrieved_at_utc": "2026-10-28T20:05:12.491435+00:00",
+      "snapshot_sha256": "e631e2112050f2ae767bde5ae5425366eae8e9de56e65e1cd80947c65369bc41",
+      "page": 2,
+      "date_basis": "北京时间UTC+08",
+      "published_precision": "minute",
+      "observed": {"lunar_new_year": "2024-02-10", "lichun": "2024-02-04 16:27"},
+      "adopted_dates": {"lunar_new_year": "2024-02-10", "lichun_date": "2024-02-04"}
+    }
+  ],
+  "software_chain": [
+    {"repository": "SylarLong/iztro", "commit": "42bec9f88591a4dd082133aab7650e40ee55eba9", "version": "2.6.3",
+      "version_basis": "package.json at the fixed commit; not a release-tag mapping",
+      "version_url": "https://github.com/SylarLong/iztro/blob/42bec9f88591a4dd082133aab7650e40ee55eba9/package.json",
+      "file_url": "https://raw.githubusercontent.com/SylarLong/iztro/42bec9f88591a4dd082133aab7650e40ee55eba9/src/astro/FunctionalAstrolabe.ts",
+      "file_sha256": "584fd8d2d3ac76b3b8d7990ec6d26cac42eb5f1fcac9175326f29497d60d2d9c",
+      "retrieved_at_utc": "2026-10-28T20:04:53.071696+00:00"},
+    {"repository": "SylarLong/lunar-lite", "commit": "1d104fffa31609e9f112898cc57545827e8d57ae", "version": "0.2.8",
+      "version_basis": "package.json at the fixed commit; not a release-tag mapping",
+      "version_url": "https://github.com/SylarLong/lunar-lite/blob/1d104fffa31609e9f112898cc57545827e8d57ae/package.json",
+      "file_url": "https://raw.githubusercontent.com/SylarLong/lunar-lite/1d104fffa31609e9f112898cc57545827e8d57ae/src/ganzhi.ts",
+      "file_sha256": "f444bcc02a2723bc390fe9119fa8414fd957a4f2df4f25745761de369c7a5d7d",
+      "retrieved_at_utc": "2026-10-28T20:04:53.039020+00:00"},
+    {"repository": "6tail/lunar-typescript", "commit": "0f3e95d15e31f1a7c7b93d624542649347328a20", "version": "1.8.6",
+      "file_url": "https://raw.githubusercontent.com/6tail/lunar-typescript/0f3e95d15e31f1a7c7b93d624542649347328a20/src/lib/Lunar.ts",
+      "file_sha256": "91217f0d1e12dab85fd6b785a0b3a96e45fbfabd04982df04a7ff48c3d9f2362",
+      "retrieved_at_utc": "2026-10-28T22:02:38Z"}
+  ],
+  "software_observation": "lunar-lite按normal选getYearZhi，否则getYearZhiByLiChun；底层ByLiChun比较solarYmd，Exact另比较solarYmdHms。调用链只计一路软件行为，不计独立传统。",
+  "lichun_date_witnesses": [
+    {
+      "publisher": "香港天文台",
+      "url": "https://www.hko.gov.hk/tc/gts/time/calendar/pdf/files/1972.pdf",
+      "retrieved_at_utc": "2026-10-29T02:02:13.049644+00:00",
+      "snapshot_sha256": "970b7aa533b1f0740004ad6ae8ecb8aad95454aadfa5230eef3fc3be2f81342b",
+      "locator": "第1页，二月行最右节气栏；页下注3说明夏令时仅4月16日至10月22日",
+      "date_basis": "香港标准时间UTC+08",
+      "date_basis_url": "https://www.hko.gov.hk/en/gts/time/basicterms-localtime.htm",
+      "published_precision": "date",
+      "observed": {"lichun_date": "1972-02-05"},
+      "adopted": {"lichun_date": "1972-02-05"}
+    },
+    {
+      "publisher": "香港天文台",
+      "url": "https://www.hko.gov.hk/tc/gts/time/calendar/pdf/files/2021.pdf",
+      "retrieved_at_utc": "2026-10-29T02:02:27.786874+00:00",
+      "snapshot_sha256": "eddb3a086a5483737685db35ee0cef894a81ef958be7aff177f168f4cabb640d",
+      "locator": "第1页，二月行最右节气栏",
+      "date_basis": "香港标准时间UTC+08",
+      "date_basis_url": "https://www.hko.gov.hk/en/gts/time/basicterms-localtime.htm",
+      "published_precision": "date",
+      "observed": {"lichun_date": "2021-02-03"},
+      "adopted": {"lichun_date": "2021-02-03"}
+    }
+  ],
+  "project_lunar_algorithms": ["ALGO1", "ALGO2", "ALGO3"],
+  "project_expectations": [
+    ["2021-12-31", 2021, 2021], ["2022-01-01", 2021, 2021],
+    ["2022-01-31", 2021, 2021], ["2022-02-01", 2022, 2021],
+    ["2022-02-03", 2022, 2021], ["2022-02-04", 2022, 2022],
+    ["2022-02-05", 2022, 2022], ["2024-02-03", 2023, 2023],
+    ["2024-02-04", 2023, 2024], ["2024-02-05", 2023, 2024],
+    ["2024-02-09", 2023, 2024], ["2024-02-10", 2024, 2024],
+    ["2024-02-11", 2024, 2024]
+  ],
+  "expectation_columns": ["公历日期标签", "初一政策所归纪年", "立春日期政策所归纪年"],
+  "comparison": {
+    "aligned": ["目标年支到同支宫", "2022与2024日级历法预期"],
+    "not_provided": ["完整生辰", "专业软件原始盘", "立春瞬间的紫微换年定义"],
+    "unknown": ["电子古籍底本", "未核材料采用的流派年界"],
+    "difference_classes": ["口径", "输入", "实现", "来源未决"]
+  }
+}

@@ -26,8 +26,9 @@ celestial 的节气时刻是 UT1，民用输入是 UTC 或固定偏移；本模�
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from enum import StrEnum
+from math import isfinite
 from typing import Any, Final
 
 from ziwei.timezone import _require_modern_utc
@@ -50,6 +51,11 @@ _ALGORITHM_RANGE: Final[dict[LunarAlgorithm, tuple[int, int]]] = {
   LunarAlgorithm.ALGO3: (1600, 2199),
 }
 """三种算法的农历年范围；与 celestial 的 supported_lunar_year_range 一致。"""
+
+LICHUN_DATE_YEAR_RANGE: Final = (1972, 2200)
+"""立春日期查询支持的公历年份，含端点；1972受UTC下界限制，2200是项目选定的末边界年份。"""
+
+_EAST_EIGHT: Final = timezone(timedelta(hours=8))
 
 
 def celestial_version() -> str:
@@ -283,6 +289,32 @@ def lichun_jd(year: int) -> float:
 
   moment = celestial.jieqi_moment(year, celestial.Jieqi.LICHUN)
   return celestial.ut1_to_jd(moment.moment_ut1)
+
+
+def _midnight_ut1(day: date) -> float:
+  return utc_to_ut1_jd(datetime(day.year, day.month, day.day, tzinfo=_EAST_EIGHT))
+
+
+def lichun_date(year: int) -> date:
+  """公历年内立春所在的UTC+08日期，按现有modelled-UT1/UTC合同换算。
+
+  支持年份见LICHUN_DATE_YEAR_RANGE。返回整日标签，使用utc_to_ut1_jd中的闰秒与ΔT模型。
+  """
+  if type(year) is not int:
+    raise TypeError("立春日期查询年份须为整数，不接受 bool")
+  first, last = LICHUN_DATE_YEAR_RANGE
+  if not first <= year <= last:
+    raise ValueError(f"立春日期查询年份须在{first}至{last}之间")
+  target = lichun_jd(year)
+  if not isfinite(target):
+    raise ValueError("立春UT1日数须为有限数")
+  y, month, day, _ = _jd_to_civil(target + 8 / 24)
+  selected = date(y, month, day)
+  while target < _midnight_ut1(selected):
+    selected -= timedelta(days=1)
+  while target >= _midnight_ut1(selected + timedelta(days=1)):
+    selected += timedelta(days=1)
+  return selected
 
 
 def utc_civil(utc: datetime) -> tuple[int, int, int, float]:

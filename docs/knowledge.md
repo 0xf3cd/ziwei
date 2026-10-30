@@ -59,6 +59,10 @@ True
 [晚子时归次日](knowledge-reference.md#entry.day-rollover.late-zi)登记项目已有选项，但不编造其外部出处。
 [换年](knowledge-reference.md#concept.policy.year-boundary)区分正月初一与立春：前者记录《精成》网页的春节生年句，
 后者只登记项目已有选项。历书能给立春时刻，不能证明术数应采用立春换年。
+流年的[日期年界](knowledge-reference.md#concept.policy.liunian-year-boundary)另建概念，
+不与本命瞬间选项混用：初一有现代作者定义，立春日期只作为固定软件行为支持的具名兼容政策。
+[定位规则](knowledge-reference.md#entry.liunian.year-branch)、[历书日期](knowledge-reference.md#source.pmo-calendar-2022)
+和软件链的支持层次分别记录；输入基准及范围见[流年指南](liunian.md)。
 待决条目保存具体复核动作（`recheck`）与跟进讨论入口（`tracking_url`）；issue关闭不表示争议已经解决。
 `RuleVariant.tracking_url`保留实现议题的历史链接；火铃异读、相关称名、归月范围与换年／子时出处等未决事项，由
 [来源研究](https://github.com/0xf3cd/ziwei/issues/43)跟进，不把实现交付当作文献结论。

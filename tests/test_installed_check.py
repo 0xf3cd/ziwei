@@ -23,12 +23,58 @@ from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
+from ziwei.liunian import liunian_on_date
 from ziwei.palaces import PalaceName
 from ziwei.render import render_svg, render_text
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
 
 pytestmark = pytest.mark.usefixtures("unload_celestial")
+
+
+@pytest.mark.parametrize("defect", ["position", "year", "interval", "metadata", "source"])
+def test_liunian_consumer_rejects_wrong_result(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  if defect == "position":
+    monkeypatch.setattr(installed_check, "liunian_minggong", lambda _: Dizhi.子)
+  elif defect == "source":
+    original = Catalog.references
+    monkeypatch.setattr(
+      Catalog,
+      "references",
+      lambda self, identifier: (
+        () if identifier.startswith("variant.liunian.") else original(self, identifier)
+      ),
+    )
+  else:
+
+    def faulty(*args: Any, **kwargs: Any) -> Any:
+      reading = liunian_on_date(*args, **kwargs)
+      result = SimpleNamespace(
+        **{
+          name: getattr(reading, name)
+          for name in (
+            "ganzhi_year",
+            "start",
+            "end",
+            "boundary",
+            "lunar_algorithm",
+            "celestial_version",
+          )
+        }
+      )
+      if defect == "year":
+        result.ganzhi_year += 1
+      elif defect == "interval":
+        result.end = result.start
+      else:
+        result.lunar_algorithm = None
+      return result
+
+    monkeypatch.setattr(installed_check, "liunian_on_date", faulty)
+  with pytest.raises(ValueError, match="Installed liunian"):
+    installed_check.check_liunian()
 
 
 @pytest.mark.parametrize("defect", ["value", "count", "position", "text", "svg", "source"])
@@ -131,6 +177,7 @@ def test_installed_check_passes_for_consumer(
   installed_check.main(version("ziwei"))
   output = capsys.readouterr().out
   assert "Installed ziwei" in output
+  assert "Installed liunian: pure year and both date boundaries consumed" in output
   assert (
     f"Installed calendar: ALGO3, celestial {version('celestial-calendar')}, lunar years 1600-2199"
     in output
