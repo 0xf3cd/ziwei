@@ -728,7 +728,7 @@ def test_dangling_citation_is_rejected_even_without_entries(catalog: Catalog) ->
     (lambda c: c.filter_entries(source_id="concept.synthetic"), ValueError),
     (lambda c: c.filter_entries(show_by_default=1), TypeError),
     (lambda c: c.filter_entries(show_by_default="可默认展示"), TypeError),
-    (lambda c: c.filter_entries(display="可默认展示"), TypeError),
+    (lambda c: c.filter_entries(display=None), TypeError),
     (lambda c: c.filter_entries(default_only=True), TypeError),
     (lambda c: c.filter_entries(default_only=False), TypeError),
     (lambda c: c.filter_sources(status="所列版本已核"), TypeError),
