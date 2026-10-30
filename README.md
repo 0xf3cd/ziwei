@@ -27,14 +27,13 @@ Python 紫微斗数排盘与知识库。历法与时间由
 ## 安装
 
 先确认下方[安装要求](#安装要求)中的平台限制，再在已激活的独立虚拟环境中从正式PyPI安装0.3.0。
-该版本尚未公开时，请先[从源码安装](https://0xf3cd.github.io/ziwei/docs/contributing.html#运行检查)。
+该版本尚未公开时，请先[从源码安装](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
 
 ```sh
 python -m pip install "ziwei==0.3.0"
 python -m pip check
 ```
 
-源码安装与检查见[参与开发](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
 从`main`安装的源码不等同于PyPI发行制品；上传前的候选状态见[发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 
 ## 安装要求
