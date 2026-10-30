@@ -4,7 +4,7 @@ Python 紫微斗数排盘与知识库。历法与时间由
 [celestial-calendar](https://github.com/0xf3cd/celestial-calendar) 提供；本仓记录紫微斗数的安星规则、
 四化口径、流派变体与出处，并组织可复现的命盘结果。
 
-本页介绍当前源码；红鸾／天喜、十四主星七级亮度和第一层流年是开发中的0.3.0功能，尚未发行。[在线文档](https://0xf3cd.github.io/ziwei/)随`main`更新，
+本页介绍0.3.0源码的功能与用法。[在线文档](https://0xf3cd.github.io/ziwei/)随`main`更新，
 不固定于某次发行。版本变化见[发行说明](https://0xf3cd.github.io/ziwei/docs/releases.html)，公开发行记录以
 [PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
@@ -26,10 +26,11 @@ Python 紫微斗数排盘与知识库。历法与时间由
 
 ## 安装
 
-先确认下方[安装要求](#安装要求)中的平台限制，再在已激活的独立虚拟环境中从正式PyPI安装：
+先确认下方[安装要求](#安装要求)中的平台限制，再在已激活的独立虚拟环境中从正式PyPI安装0.3.0。
+该版本尚未公开时，请先[从源码安装](https://0xf3cd.github.io/ziwei/docs/contributing.html#运行检查)。
 
 ```sh
-python -m pip install "ziwei==0.2.0"
+python -m pip install "ziwei==0.3.0"
 python -m pip check
 ```
 

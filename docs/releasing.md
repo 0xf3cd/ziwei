@@ -25,13 +25,17 @@
 开发Pages文档与PyPI发布分开。Pages使用`github-pages`环境，不属于`pypi`发布身份；
 部署文档不改变PyPI信任的仓库、工作流或环境。
 
-## 0.2.0发布准备
+[PyPI 0.2.0](https://pypi.org/project/ziwei/0.2.0/)与
+[v0.2.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.2.0)也已公开，
+版本标签固定指向源码`5cdcc93fa3fd725177cc8532a667b0764f901a96`。
 
-本次准备将源码版本设为`0.2.0`，更新[发行说明](releases.md)和安装示例；不执行上传、创建tag或GitHub Release。
+## 0.3.0发布准备
+
+本次准备将源码版本设为`0.3.0`，更新[发行说明](releases.md)和安装示例；不执行上传、创建tag或GitHub Release。
 包版本号不证明已经发布，实际发行记录以[PyPI](https://pypi.org/project/ziwei/)和
 [GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
-README面向0.2.0的功能与用法。准备合入到实际上传之间，安装命令`ziwei==0.2.0`可能暂不可用；
+README面向0.3.0的功能与用法。准备合入到实际上传之间，安装命令`ziwei==0.3.0`可能暂不可用；
 此时从源码安装见[参与开发](contributing.md#运行检查)。上传后的README长描述不再随main修改。
 
 [#26](https://github.com/0xf3cd/ziwei/issues/26)继续追踪上文未完成的三项真实演练。
@@ -42,7 +46,7 @@ README面向0.2.0的功能与用法。准备合入到实际上传之间，安装
 
 候选版本合入main前，更新`pyproject.toml`版本号、README发布状态和安装命令，并核对构建后的包元数据与长描述。
 同时核对其他文档中的当前版本说明、安装示例与贡献指南的版本doctest；旧版本的发布记录和链接保留原版本。
-README会成为PyPI长描述，不能把“开发中的v0.2.0”等当前状态原样带进该版本的发行页。
+README会成为PyPI长描述，不保留会在上传后过时的“开发中”说明。
 README和文档入口仍须说明面向开发main还是已发布版本，不能只靠包版本号区分。
 
 ## 发布前配置核对
