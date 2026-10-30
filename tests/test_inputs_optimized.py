@@ -143,7 +143,10 @@ cases = [
   lambda: Concept(id='not an id', name='x', kind=ConceptKind.星曜),
   lambda: replace(c, concepts=(*c.concepts, c.concepts[0])),
   lambda: replace(c, citations=(replace(c.citations[0], source_id='source.unknown'),)),
-  lambda: c.filter_entries(default_only=1),
+  lambda: c.filter_entries(show_by_default=1),
+  lambda: c.filter_entries(show_by_default=0),
+  lambda: replace(c.entries[0], show_by_default=1),
+  lambda: replace(c.entries[0], show_by_default=None),
   lambda: replace(c, variants=tuple(
     replace(item, option=DayRollover.晚子时归次日) if item.id == 'variant.leap-month.current' else item
     for item in c.variants)),
@@ -166,4 +169,4 @@ print('knowledge isolated and checked=' + str(len(cases)))
     check=False,
   )
   assert result.returncode == 0, result.stderr
-  assert "checked=7" in result.stdout
+  assert "checked=10" in result.stdout

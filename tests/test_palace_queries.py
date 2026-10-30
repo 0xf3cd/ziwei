@@ -18,7 +18,7 @@ from ziwei.chart import PalaceView, ZiweiChart, create_chart, palace_view
 from ziwei.config import ChartConfig
 from ziwei.ganzhi import Dizhi
 from ziwei.knowledge import load_catalog
-from ziwei.knowledge.model import DisplayEligibility, KnowledgeEntry, RuleVariant, Source, TextLayer
+from ziwei.knowledge.model import KnowledgeEntry, RuleVariant, Source, TextLayer
 from ziwei.palaces import (
   OPPOSITE_RULE_ID,
   SANFANG_SIZHENG_RULE_ID,
@@ -313,7 +313,7 @@ def test_relation_knowledge_has_stable_identity_and_explicit_limits() -> None:
     assert isinstance(entry, KnowledgeEntry)
     assert entry.variant_ids == (f"variant.palace.{suffix}",)
     assert entry.citation_ids == citations[suffix]
-    assert entry.display is DisplayEligibility.暂不默认展示
+    assert entry.show_by_default is False
     assert entry.recheck and entry.tracking_url.endswith("/issues/39")
   for identifier in ("source.ntnu-palace-glossary", "source.andy-sanfang-sizheng"):
     source = catalog.get(identifier)

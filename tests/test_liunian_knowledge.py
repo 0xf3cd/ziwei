@@ -10,7 +10,6 @@ from ziwei.knowledge.model import (
   Citation,
   Concept,
   CurationStatus,
-  DisplayEligibility,
   KnowledgeEntry,
   PremiseStatus,
   RuleVariant,
@@ -57,7 +56,7 @@ def test_rule_ids_link_to_separate_natal_and_liunian_concepts() -> None:
     "source.quanshu-juan3-wikisource",
     "source.click108-liunian",
   }
-  assert not catalog.filter_entries(default_only=True)
+  assert not catalog.filter_entries(show_by_default=True)
 
 
 def test_entries_keep_their_scope_status_and_witnesses() -> None:
@@ -95,8 +94,8 @@ def test_entries_keep_their_scope_status_and_witnesses() -> None:
     assert entry.concept_ids == concepts and entry.variant_ids == (variant,)
     assert set(entry.citation_ids) == citations
     assert entry.premise_status is PremiseStatus.已明确
-    assert entry.display is DisplayEligibility.暂不默认展示
-    assert entry.curation is CurationStatus.已整理 and entry.chart_match == "未评估"
+    assert entry.show_by_default is False
+    assert entry.curation is CurationStatus.已整理
     assert entry.premises and entry.limits and entry.recheck
     assert entry.tracking_url == "https://github.com/0xf3cd/ziwei/issues/56"
   software = catalog.get("citation.iztro.liunian-lichun-date")

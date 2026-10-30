@@ -13,7 +13,6 @@ from ziwei.ganzhi import Ganzhi, Wuxing, nayin
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import (
   CurationStatus,
-  DisplayEligibility,
   EvidenceAspect,
   PremiseStatus,
   SourceStatus,
@@ -92,10 +91,9 @@ def test_source_readings_remain_separate_from_executable_choices() -> None:
   forward = entries["entry.star.huoling-forward"]
   assert pending.premise_status is PremiseStatus.待定 and pending.variant_ids == ()
   assert "未具名" in pending.statement and "例解" in pending.recheck
-  assert pending.display is DisplayEligibility.暂不默认展示
+  assert pending.show_by_default is False
   assert forward.premise_status is PremiseStatus.已明确
   assert forward.curation is CurationStatus.已整理
-  assert forward.chart_match == "未评估"
   kongjie = entries["entry.star.kongjie-hour"]
   assert set(kongjie.citation_ids) == {
     "citation.quanshu.kongjie",
@@ -126,10 +124,10 @@ def test_lifedna_lists_three_leap_methods_without_endorsing_project_options() ->
     identifier = "citation.lifedna.opposes-" + suffix
     assert opinion.variant_ids == () and opinion.citation_ids == (identifier,)
     assert opinion.premise_status is PremiseStatus.已明确
-    assert opinion.display is DisplayEligibility.暂不默认展示
+    assert opinion.show_by_default is False
     for prefix in ("entry.", "variant."):
       assert identifier not in {item.id for item in catalog.references(prefix + target)}
-  assert catalog.filter_entries(default_only=True) == ()
+  assert catalog.filter_entries(show_by_default=True) == ()
 
 
 def test_project_reference_text_consumes_domain_values_in_an_isolated_process(

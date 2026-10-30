@@ -186,8 +186,14 @@ def verify_and_mark_upload(directory: Path, expected: release.Manifest, marker: 
 
 
 def run_publish_script(
-  script: str, directory: Path, expected: release.Manifest, marker: Path
+  script: str,
+  directory: Path,
+  expected: release.Manifest,
+  marker: Path,
+  *,
+  filenames: tuple[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
+  sdist_name, wheel_name = expected.filenames if filenames is None else filenames
   return subprocess.run(
     ["bash", "--noprofile", "--norc", "-xc", script + '\nprintf called > "$UPLOAD_MARKER"\n'],
     cwd=directory.parent,
@@ -196,8 +202,8 @@ def run_publish_script(
       "LC_ALL": "C",
       "DIST_DIR": str(directory),
       "RELEASE_VERSION": expected.version,
-      "SDIST_NAME": expected.filenames[0],
-      "WHEEL_NAME": expected.filenames[1],
+      "SDIST_NAME": sdist_name,
+      "WHEEL_NAME": wheel_name,
       "SDIST_SHA256": expected.sdist_sha256,
       "WHEEL_SHA256": expected.wheel_sha256,
       "UPLOAD_MARKER": str(marker),
@@ -287,6 +293,24 @@ def test_bundle_contracts_at_both_real_entrypoints(
           sdist=directory / "packages" / expected.filenames[0],
           wheel=directory / "packages" / expected.filenames[1],
         ), result.stderr
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Publish jobs execute this Bash on Linux")
+@pytest.mark.parametrize("index", [0, 1], ids=["sdist", "wheel"])
+def test_publish_script_rejects_untrusted_output_names(
+  bundle: tuple[Path, release.Manifest], publish_script: str, tmp_path: Path, index: int
+) -> None:
+  directory, expected = bundle
+  outside = tmp_path / ("outside.tar.gz" if index == 0 else "outside.whl")
+  outside.write_bytes((directory / "packages" / expected.filenames[index]).read_bytes())
+  filenames = list(expected.filenames)
+  filenames[index] = "../../" + outside.name
+  marker = tmp_path / "upload-called"
+  result = run_publish_script(
+    publish_script, directory, expected, marker, filenames=(filenames[0], filenames[1])
+  )
+  assert result.returncode == 1, result.stderr
+  assert not marker.exists()
 
 
 def test_hashes_are_compared_to_build_outputs_not_only_the_manifest(

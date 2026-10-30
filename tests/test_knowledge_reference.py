@@ -113,6 +113,7 @@ def test_unknown_reference_or_wrong_page_rejected(html: Path, href: str) -> None
     ("concept.sihua.shengnian", "kind"),
     ("concept.sihua.shengnian", "aliases"),
     ("entry.tianma.month-branch", "id"),
+    ("entry.tianma.month-branch", "show_by_default"),
   ],
 )
 def test_gate_rejects_missing_field_even_when_value_remains(
@@ -183,12 +184,18 @@ def test_policy_table_checks_the_enum_value_association(html: Path, defect: str)
     check_knowledge_reference(html)
 
 
-@pytest.mark.parametrize("value", [True, 1, object()])
+@pytest.mark.parametrize("value", [0, 1, object()])
 def test_unknown_field_types_are_not_silently_rendered_as_none(value: object) -> None:
   with pytest.raises(TypeError, match="Unsupported knowledge field type"):
     _value(value, set())
   with pytest.raises(TypeError, match="Unsupported knowledge field type"):
     _member_text(value)
+
+
+@pytest.mark.parametrize("value", [False, True])
+def test_boolean_fields_keep_their_values(value: bool) -> None:
+  assert _value(value, set()) == str(value)
+  assert _member_text(value) == str(value)
 
 
 @pytest.mark.parametrize(

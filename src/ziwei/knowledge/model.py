@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
-from typing import Literal, TypeVar
+from typing import TypeVar
 from urllib.parse import urlsplit
 
 from ziwei.config import PolicyOption
@@ -78,15 +78,6 @@ class PremiseStatus(StrEnum):
   UNRESOLVED = "前提待定"
   已明确 = COMPLETE
   待定 = UNRESOLVED
-
-
-class DisplayEligibility(StrEnum):
-  """由整理者显式指定，不由出处状态自动推导。"""
-
-  DEFAULT = "可默认展示"
-  WITHHELD = "暂不默认展示"
-  可默认展示 = DEFAULT
-  暂不默认展示 = WITHHELD
 
 
 class CurationStatus(StrEnum):
@@ -278,7 +269,7 @@ class Citation:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class KnowledgeEntry:
-  """整理者的有条件陈述；逐字引文放Citation。chart_match恒为未评估，不判断命盘。"""
+  """整理者的有条件陈述；逐字引文放Citation，show_by_default显式指定默认展示资格。"""
 
   id: str
   statement: str
@@ -287,14 +278,13 @@ class KnowledgeEntry:
   citation_ids: tuple[str, ...]
   premises: tuple[str, ...]
   premise_status: PremiseStatus
-  display: DisplayEligibility
+  show_by_default: bool
   curation: CurationStatus
   limits: str
   exceptions: tuple[str, ...] = ()
   alternatives: tuple[str, ...] = ()
   recheck: str = ""
   tracking_url: str = ""
-  chart_match: Literal["未评估"] = field(default="未评估", init=False)
 
   def __post_init__(self) -> None:
     _identifier(self.id, "entry")
@@ -302,10 +292,11 @@ class KnowledgeEntry:
     _text(self.limits, "限度")
     for value, expected in (
       (self.premise_status, PremiseStatus),
-      (self.display, DisplayEligibility),
       (self.curation, CurationStatus),
     ):
       _enum(value, expected)
+    if type(self.show_by_default) is not bool:
+      raise TypeError("show_by_default须为bool")
     for name, prefix in (
       ("concept_ids", "concept"),
       ("variant_ids", "variant"),
@@ -322,7 +313,7 @@ class KnowledgeEntry:
       raise TypeError("翻案条件与跟踪URL须为字符串")
     if self.tracking_url:
       _url(self.tracking_url)
-    if self.display is DisplayEligibility.DEFAULT:
+    if self.show_by_default:
       if (
         self.premise_status is not PremiseStatus.COMPLETE
         or self.curation is not CurationStatus.CURATED

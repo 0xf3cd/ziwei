@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Final
 
 from ziwei.ganzhi import Dizhi, Ganzhi, year_ganzhi
 
@@ -81,7 +81,6 @@ class LiunianYear:
   lunar_algorithm: LunarAlgorithm | None
   celestial_version: str
   supported_year_range: tuple[int, int] = field(init=False)
-  precision: Literal["date"] = field(init=False, default="date")
 
   def __post_init__(self) -> None:
     year_ganzhi(self.ganzhi_year)

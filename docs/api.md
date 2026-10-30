@@ -231,7 +231,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.knowledge.model
-   :members: ConceptKind, TextLayer, EvidenceAspect, SourceStatus, PremiseStatus, DisplayEligibility, CurationStatus, Concept, RuleVariant, Source, Citation, KnowledgeEntry
+   :members: ConceptKind, TextLayer, EvidenceAspect, SourceStatus, PremiseStatus, CurationStatus, Concept, RuleVariant, Source, Citation, KnowledgeEntry
    :undoc-members:
    :member-order: bysource
 ```
@@ -247,6 +247,4 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 .. autodata:: ziwei.knowledge.catalog.Record
    :no-value:
 
-.. autodata:: ziwei.knowledge.data.CATALOG_VERSION
-   :no-value:
 ```

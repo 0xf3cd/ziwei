@@ -11,7 +11,6 @@ from ziwei.knowledge.model import (
   Concept,
   ConceptKind,
   CurationStatus,
-  DisplayEligibility,
   EvidenceAspect,
   KnowledgeEntry,
   PremiseStatus,
@@ -42,7 +41,6 @@ class Catalog:
   查询不推断规则或命盘适用性。
   """
 
-  version: str
   concepts: tuple[Concept, ...]
   variants: tuple[RuleVariant, ...]
   sources: tuple[Source, ...]
@@ -50,7 +48,6 @@ class Catalog:
   entries: tuple[KnowledgeEntry, ...]
 
   def __post_init__(self) -> None:
-    _text(self.version, "语料版本")
     for name, expected in (
       ("concepts", Concept),
       ("variants", RuleVariant),
@@ -88,7 +85,7 @@ class Catalog:
       ):
         for target in group:
           self._require(target, expected)
-      if entry.display is DisplayEligibility.DEFAULT and (
+      if entry.show_by_default and (
         not entry.citation_ids
         or any(
           self._require(citation.source_id, Source).status is not SourceStatus.VERIFIED
@@ -179,22 +176,20 @@ class Catalog:
     variant_id: str | None = None,
     source_id: str | None = None,
     premise_status: PremiseStatus | None = None,
-    display: DisplayEligibility | None = None,
+    show_by_default: bool | None = None,
     curation: CurationStatus | None = None,
-    default_only: bool = False,
   ) -> tuple[KnowledgeEntry, ...]:
-    """所有过滤条件取交集；默认返回检索记录，default_only也不判命盘。"""
+    """过滤条件取交集；show_by_default为None时不按展示资格筛选，为True或False时只取对应条目。"""
     for value, expected in ((concept_id, Concept), (variant_id, RuleVariant), (source_id, Source)):
       if value is not None:
         self._require(value, expected)
     for value, expected_enum in (
       (premise_status, PremiseStatus),
-      (display, DisplayEligibility),
       (curation, CurationStatus),
     ):
       _filter_enum(value, expected_enum)
-    if not isinstance(default_only, bool):
-      raise TypeError("default_only须为bool")
+    if show_by_default is not None and type(show_by_default) is not bool:
+      raise TypeError("show_by_default须为bool或None")
     return tuple(
       item
       for item in self.entries
@@ -205,9 +200,8 @@ class Catalog:
         or any(citation.source_id == source_id for citation in self.references(item.id))
       )
       and (premise_status is None or item.premise_status is premise_status)
-      and (display is None or item.display is display)
+      and (show_by_default is None or item.show_by_default is show_by_default)
       and (curation is None or item.curation is curation)
-      and (not default_only or item.display is DisplayEligibility.DEFAULT)
     )
 
   def filter_sources(

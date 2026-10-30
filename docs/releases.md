@@ -5,6 +5,27 @@
 本页记录各版本源码的功能与兼容变化。是否已经公开发行，以
 [PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
+## 0.4.0（开发中）
+
+### 改进
+
+- 精简工具链自测中的重复文档构建与发布脚本用例；真实文档导出、发布身份和制品字节检查保留。
+
+### 兼容变化
+
+- 删除`ziwei.knowledge.data.CATALOG_VERSION`和`Catalog.version`，构造目录不再接收`version=`。
+  语料变化由源码提交与发行版本定位；来源版次、核验日期和快照摘要保留。
+- 删除`KnowledgeEntry.chart_match`；目录仍只提供独立知识查询，不判定某张命盘是否满足条目前提。
+- 删除`LiunianYear.precision`；区间端点仍为`date`，日期年界与输入要求不变。
+- 删除`DisplayEligibility`枚举，将`KnowledgeEntry.display`改为必填的`show_by_default: bool`。
+  原`可默认展示`对应`True`，`暂不默认展示`对应`False`；默认展示仍须前提明确、整理完成并引用已核来源。
+- `filter_entries()`删除`display=`与`default_only=`参数，改用`show_by_default=`：
+  `None`（默认）不按展示资格筛选，`True`只取可默认展示条目，`False`只取暂不默认展示条目。
+  原`default_only=True`改写为`show_by_default=True`；原`default_only=False`改写为不传该参数或传`None`，
+  不应改成`show_by_default=False`。字段与查询不接受整数或字符串代替布尔值。
+
+本次不改变排盘规则、数值、依赖版本或公开结果的构造校验。
+
 ## 0.3.0
 
 ### 新增与改进

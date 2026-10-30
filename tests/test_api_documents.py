@@ -204,70 +204,16 @@ def test_real_html_loads_the_document_layout_stylesheet(rendered_api: tuple[Path
   ).read_bytes()
 
 
-@pytest.mark.parametrize("markdown_module", [None, "ziwei.calendar", "ziwei.resolver"])
 def test_module_heading_guard_distinguishes_rest_from_literal_markdown(
-  rendered_api: tuple[Path, Path], tmp_path: Path, markdown_module: str | None
+  tmp_path: Path,
 ) -> None:
-  baseline, _ = rendered_api
-  source = tmp_path / "source"
-  shutil.copytree(baseline, source)
-  with (source / "docs/conf.py").open("a", encoding="utf-8") as config:
-    config.write(
-      f"\nmarkdown_module = {markdown_module!r}\n"
-      "def module_heading_probe(app, what, name, obj, options, lines):\n"
-      "  titles = {'ziwei.calendar': ('时标合同', '真太阳时'),\n"
-      "            'ziwei.resolver': ('解析顺序', '失败边界')}.get(name, ())\n"
-      "  text = '\\n'.join(lines) + '\\n'\n"
-      "  for index, title in enumerate(titles):\n"
-      "    rendered_title = f'{title}（{name}-{index}）'\n"
-      "    heading = '## ' + title if name == markdown_module else rendered_title + '\\n' + '-' * 64\n"
-      "    text, count = re.subn(r'(?m)^(?:## )?' + re.escape(title)\n"
-      "                          + r'(?:（[^\\n]*）)?\\n(?:[-=~^]+\\n)?', heading + '\\n', text)\n"
-      "    assert count == 1, (name, title, count)\n"
-      "  lines[:] = text.splitlines()\n"
-      "original_setup = setup\n"
-      "def setup(app):\n"
-      "  original_setup(app)\n"
-      "  app.connect('autodoc-process-docstring', module_heading_probe)\n"
-    )
-  output = _build_api(source, tmp_path / "build")
-  check_api_reference(output)
-  if markdown_module is None:
-    _check_module_headings(output)
-  else:
-    title = "时标合同" if markdown_module == "ziwei.calendar" else "解析顺序"
-    assert f"## {title}" in (output / "docs/api.html").read_text(encoding="utf-8")
+  titles = ("时标合同", "真太阳时", "解析顺序", "失败边界")
+  markup = "".join(f"<h2>{title}</h2>" for title in titles)
+  page = tmp_path / "docs/api.html"
+  page.parent.mkdir()
+  page.write_text(markup, encoding="utf-8")
+  _check_module_headings(tmp_path)
+  for title in titles:
+    page.write_text(markup.replace(f"<h2>{title}</h2>", f"<p>## {title}</p>"), encoding="utf-8")
     with pytest.raises(ValueError, match=title):
-      _check_module_headings(output)
-
-
-@pytest.mark.parametrize(
-  "target",
-  [
-    "ziwei.decades.DECADE_RULE_ID",
-    "ziwei.config.POLICY_ENUMS",
-    "ziwei.birth.BirthRecord",
-    "ziwei.birth.shichen_from_time",
-  ],
-)
-def test_removing_real_api_declaration_is_rejected(
-  rendered_api: tuple[Path, Path], tmp_path: Path, target: str
-) -> None:
-  baseline, _ = rendered_api
-  source = tmp_path / "source"
-  shutil.copytree(baseline, source)
-  page = source / "docs/api.md"
-  original = page.read_text(encoding="utf-8")
-  if target == "ziwei.birth.shichen_from_time":
-    changed, count = re.subn(r", shichen_from_time(?=\n)", "", original)
-  else:
-    changed, count = re.subn(
-      rf"(?m)^\.\. autodata:: {re.escape(target)}\n(?:   :[^\n]*\n)*",
-      "",
-      original,
-    )
-  assert count == 1
-  page.write_text(changed, encoding="utf-8")
-  output = _build_api(source, tmp_path / "build")
-  with pytest.raises(ValueError, match=re.escape(target)):
-    check_api_reference(output)
+      _check_module_headings(tmp_path)

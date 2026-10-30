@@ -1,6 +1,6 @@
 """知识记录、状态分离、引用与独立查询。合成夹具不作为规则来源。"""
 
-from dataclasses import FrozenInstanceError, replace
+from dataclasses import FrozenInstanceError, asdict, replace
 from datetime import date, datetime
 from typing import Any, cast
 
@@ -14,7 +14,6 @@ from ziwei.knowledge.model import (
   Concept,
   ConceptKind,
   CurationStatus,
-  DisplayEligibility,
   EvidenceAspect,
   KnowledgeEntry,
   PremiseStatus,
@@ -276,12 +275,11 @@ def catalog() -> Catalog:
     citation_ids=(citation.id,),
     premises=("合成前提",),
     premise_status=PremiseStatus.已明确,
-    display=DisplayEligibility.可默认展示,
+    show_by_default=True,
     curation=CurationStatus.已整理,
     limits="不用于命盘",
   )
   return Catalog(
-    version="synthetic.1",
     concepts=(concept, school),
     variants=(variant,),
     sources=(source,),
@@ -290,14 +288,13 @@ def catalog() -> Catalog:
   )
 
 
-def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
+def test_builtin_corpus_retains_sources_and_unresolved_premises() -> None:
   catalog = load_catalog()
-  assert catalog.version == "2026.10.28.2"
   assert {item.kind for item in catalog.concepts} == set(ConceptKind)
   assert len({item.id for item in catalog.records}) == len(catalog.records)
   assert catalog.find("天馬") == catalog.find("tianma")
   assert len(catalog.find("庚干四化")) == 3
-  assert catalog.filter_entries(default_only=True) == ()
+  assert catalog.filter_entries(show_by_default=True) == ()
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
   assert [item.id for item in pending] == [
     "entry.decades.quanshu-adjacent",
@@ -320,7 +317,6 @@ def test_builtin_corpus_retains_versions_and_unresolved_premises() -> None:
     ("月马", "月馬"),
   ):
     assert catalog.find(simplified) == catalog.find(traditional)
-  assert all(item.chart_match == "未评估" for item in catalog.entries)
   assert all(item.recheck and item.tracking_url for item in catalog.entries)
   assert {item.status for item in catalog.sources} == {SourceStatus.已核, SourceStatus.待核}
   citations = {item.id: item for item in catalog.citations}
@@ -366,8 +362,8 @@ def test_adjacent_decades_stays_pending_without_borrowing_current_implementation
   entry = catalog.get("entry.decades.quanshu-adjacent")
   assert isinstance(entry, KnowledgeEntry)
   assert entry.premise_status is PremiseStatus.待定
-  assert entry.display is DisplayEligibility.暂不默认展示
-  assert entry not in catalog.filter_entries(default_only=True)
+  assert entry.show_by_default is False
+  assert entry not in catalog.filter_entries(show_by_default=True)
   quote = catalog.references(entry.id)[0].quote
   assert quote == "阳男阴女从命前一宫起顺行 是父母宫。阴男阳女从命后一宫起逆行 是兄弟宫"
 
@@ -392,14 +388,13 @@ def test_queries_preserve_alias_ambiguity_and_intersection(catalog: Catalog) -> 
       variant_id="variant.synthetic",
       source_id="source.synthetic",
       premise_status=PremiseStatus.已明确,
-      display=DisplayEligibility.可默认展示,
+      show_by_default=True,
       curation=CurationStatus.已整理,
-      default_only=True,
     )
     == catalog.entries
   )
   assert catalog.filter_entries(concept_id="concept.school.synthetic") == catalog.entries
-  assert catalog.filter_entries(display=DisplayEligibility.暂不默认展示) == ()
+  assert catalog.filter_entries(show_by_default=False) == ()
   assert catalog.filter_entries(premise_status=PremiseStatus.待定) == ()
   assert catalog.filter_entries(curation=CurationStatus.待整理) == ()
   assert catalog.filter_sources() == catalog.sources
@@ -439,10 +434,10 @@ def test_references_deduplicate_in_catalog_order(catalog: Catalog) -> None:
   assert both.filter_entries(source_id="source.synthetic") == (first, second)
 
 
-def test_four_statuses_do_not_upgrade_each_other(catalog: Catalog) -> None:
+def test_source_and_premise_do_not_grant_default_display(catalog: Catalog) -> None:
   entry = replace(
     catalog.entries[0],
-    display=DisplayEligibility.暂不默认展示,
+    show_by_default=False,
     premise_status=PremiseStatus.待定,
     curation=CurationStatus.待整理,
     recheck="核合成例",
@@ -451,35 +446,48 @@ def test_four_statuses_do_not_upgrade_each_other(catalog: Catalog) -> None:
   )
   held = replace(catalog, entries=(entry,))
   assert held.sources[0].status is SourceStatus.已核
-  assert held.filter_entries(default_only=True) == ()
+  assert held.filter_entries(show_by_default=True) == ()
   understood = replace(
     held,
     entries=(replace(entry, premise_status=PremiseStatus.已明确, curation=CurationStatus.已整理),),
   )
-  assert understood.filter_entries(default_only=True) == ()
-  assert understood.entries[0].chart_match == "未评估"
-  assert catalog.filter_entries(default_only=True)[0].chart_match == "未评估"
-  with pytest.raises(TypeError):
-    KnowledgeEntry(
-      **{
-        **{
-          name: getattr(entry, name)
-          for name in (
-            "id",
-            "statement",
-            "concept_ids",
-            "variant_ids",
-            "citation_ids",
-            "premises",
-            "premise_status",
-            "display",
-            "curation",
-            "limits",
-          )
-        },
-        "chart_match": "满足",
-      }
-    )
+  assert understood.filter_entries(show_by_default=True) == ()
+  assert understood.entries[0].show_by_default is False
+  assert catalog.filter_entries(show_by_default=True) == catalog.entries
+
+
+def test_default_display_filter_distinguishes_both_values_and_no_filter(catalog: Catalog) -> None:
+  visible = catalog.entries[0]
+  withheld = replace(
+    visible,
+    id="entry.withheld",
+    show_by_default=False,
+    curation=CurationStatus.待整理,
+    recheck="补全合成材料",
+    tracking_url="https://example.org/recheck",
+  )
+  mixed = replace(catalog, entries=(visible, withheld))
+  assert mixed.filter_entries() == (visible, withheld)
+  assert mixed.filter_entries(show_by_default=None) == (visible, withheld)
+  assert mixed.filter_entries(show_by_default=True) == (visible,)
+  assert mixed.filter_entries(show_by_default=False) == (withheld,)
+  assert mixed.filter_entries(show_by_default=True, curation=CurationStatus.待整理) == ()
+  assert mixed.filter_entries(show_by_default=False, curation=CurationStatus.待整理) == (withheld,)
+
+
+@pytest.mark.parametrize("value", [0, 1, 0.0, 1.0, "", "True", ConceptKind.星曜, [], {}])
+def test_default_display_requires_bool_without_coercion(catalog: Catalog, value: Any) -> None:
+  with pytest.raises(TypeError, match="show_by_default"):
+    replace(catalog.entries[0], show_by_default=value)
+  with pytest.raises(TypeError, match="show_by_default"):
+    catalog.filter_entries(show_by_default=value)
+
+
+def test_entry_default_display_must_be_explicit(catalog: Catalog) -> None:
+  values = asdict(catalog.entries[0])
+  del values["show_by_default"]
+  with pytest.raises(TypeError, match="show_by_default"):
+    KnowledgeEntry(**values)
 
 
 def test_frozen_records_isolate_input_sequences(catalog: Catalog) -> None:
@@ -635,7 +643,7 @@ def test_invalid_variants(catalog: Catalog, field: str, value: Any, error: type[
     ("alternatives", ("只有一读",), ValueError),
     ("premise_status", PremiseStatus.待定, ValueError),
     ("curation", CurationStatus.待整理, ValueError),
-    ("display", "可默认展示", TypeError),
+    ("show_by_default", None, TypeError),
     ("recheck", [], TypeError),
     ("tracking_url", [], TypeError),
     ("tracking_url", "relative", ValueError),
@@ -648,11 +656,11 @@ def test_invalid_entries(catalog: Catalog, field: str, value: Any, error: type[E
 
 def test_withheld_entries_require_action_and_tracking(catalog: Catalog) -> None:
   with pytest.raises(ValueError, match="翻案条件"):
-    replace(catalog.entries[0], display=DisplayEligibility.暂不默认展示)
+    replace(catalog.entries[0], show_by_default=False)
   with pytest.raises(ValueError, match="URL"):
-    replace(catalog.entries[0], display=DisplayEligibility.暂不默认展示, recheck="查原段")
+    replace(catalog.entries[0], show_by_default=False, recheck="查原段")
   value = replace(catalog.entries[0], recheck="额外说明", tracking_url="https://example.org/track")
-  assert value.display is DisplayEligibility.可默认展示
+  assert value.show_by_default is True
 
 
 def test_duplicate_and_dangling_references_rejected(catalog: Catalog) -> None:
@@ -718,8 +726,8 @@ def test_dangling_citation_is_rejected_even_without_entries(catalog: Catalog) ->
     (lambda c: c.references("entry.unknown"), KeyError),
     (lambda c: c.filter_entries(source_id="source.unknown"), KeyError),
     (lambda c: c.filter_entries(source_id="concept.synthetic"), ValueError),
-    (lambda c: c.filter_entries(default_only=1), TypeError),
-    (lambda c: c.filter_entries(display="可默认展示"), TypeError),
+    (lambda c: c.filter_entries(show_by_default=1), TypeError),
+    (lambda c: c.filter_entries(show_by_default="可默认展示"), TypeError),
     (lambda c: c.filter_sources(status="所列版本已核"), TypeError),
     (lambda c: c.filter_sources(aspect="查法"), TypeError),
     (lambda c: c.filter_sources(lineage_id="不是标识"), ValueError),
@@ -757,16 +765,14 @@ def test_one_source_can_distinguish_original_text_and_commentary(catalog: Catalo
     replace(original, layer="注释")  # type: ignore[arg-type]
 
 
-def test_empty_catalog_is_valid_but_does_not_resolve(catalog: Catalog) -> None:
-  empty = Catalog(version="empty", concepts=(), variants=(), sources=(), citations=(), entries=())
+def test_empty_catalog_is_valid_but_does_not_resolve() -> None:
+  empty = Catalog(concepts=(), variants=(), sources=(), citations=(), entries=())
   assert empty.records == ()
   assert empty.find("查询") == ()
   assert empty.filter_entries() == ()
   assert empty.filter_sources() == ()
   assert empty.list_variants() == ()
   assert empty.list_concepts() == ()
-  with pytest.raises(ValueError):
-    replace(catalog, version="")
 
 
 def test_record_union_is_public() -> None:
@@ -891,8 +897,6 @@ def test_source_and_citation_text_layers_are_independent(catalog: Catalog) -> No
     (SourceStatus.UNVERIFIED, "待核"),
     (PremiseStatus.COMPLETE, "已明确"),
     (PremiseStatus.UNRESOLVED, "待定"),
-    (DisplayEligibility.DEFAULT, "可默认展示"),
-    (DisplayEligibility.WITHHELD, "暂不默认展示"),
     (CurationStatus.DRAFT, "待整理"),
     (CurationStatus.CURATED, "已整理"),
   ],
