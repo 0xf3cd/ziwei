@@ -63,13 +63,13 @@ uv run --locked python tools/check.py --docs-dir build/docs
 根入口使用相对链接，离线打开和部署到项目子路径都使用同一份输出。
 [开发文档站](https://0xf3cd.github.io/ziwei/)随`main`更新，不固定于某次发行。
 
-按上面的`uv sync`从本仓安装源码，本地分发名／版本为`ziwei`／`0.2.0`。
+按上面的`uv sync`从本仓安装源码，本地分发名／版本为`ziwei`／`0.3.0`。
 可检查安装的版本字符串：
 
 ```{doctest}
 >>> from importlib.metadata import version
 >>> version("ziwei")
-'0.2.0'
+'0.3.0'
 ```
 
 同一版本字符串不能证明安装来源或具体源码提交；核对安装对象时还须检查这两项。
