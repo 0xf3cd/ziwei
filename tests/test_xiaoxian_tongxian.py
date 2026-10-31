@@ -27,7 +27,10 @@ from ziwei.xiaoxian import XIAOXIAN_RULE_ID, Xiaoxian, xiaoxian_at_age
 from ziwei.yunxian import Yunxian, yunxian_at_age
 
 REFERENCE = json.loads(
-  Path(__file__).with_name("fixtures").joinpath("xiaoxian-tongxian-reference.json").read_text()
+  Path(__file__)
+  .with_name("fixtures")
+  .joinpath("xiaoxian-tongxian-reference.json")
+  .read_text(encoding="utf-8")
 )
 
 

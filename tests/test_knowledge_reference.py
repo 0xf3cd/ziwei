@@ -54,7 +54,7 @@ def test_yunxian_reference_rows_reject_actual_corruption(
   html: Path, section: str, defect: str
 ) -> None:
   page = html / "docs/knowledge-reference.html"
-  text = page.read_text()
+  text = page.read_text(encoding="utf-8")
   start = text.index(f'<section id="{section}">')
   end = text.index("</section>", start)
   part = text[start:end]
@@ -67,7 +67,7 @@ def test_yunxian_reference_rows_reject_actual_corruption(
     else row.replace("<td>", "<td>假值", 1)
   )
   part = part.replace(row, replacement, 1)
-  page.write_text(text[:start] + part + text[end:])
+  page.write_text(text[:start] + part + text[end:], encoding="utf-8")
   with pytest.raises(ValueError, match="Rule reference"):
     check_knowledge_reference(html)
 

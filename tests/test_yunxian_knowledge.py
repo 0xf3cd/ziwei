@@ -43,7 +43,10 @@ def test_implemented_ids_resolve_without_extending_natal_policy_options() -> Non
 
 def test_literal_pdf_quotes_and_conservative_lineage() -> None:
   reference = json.loads(
-    Path(__file__).with_name("fixtures").joinpath("xiaoxian-tongxian-reference.json").read_text()
+    Path(__file__)
+    .with_name("fixtures")
+    .joinpath("xiaoxian-tongxian-reference.json")
+    .read_text(encoding="utf-8")
   )
   catalog = load_catalog()
   source = catalog.get("source.jingcheng-pdf")
