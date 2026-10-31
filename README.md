@@ -10,14 +10,15 @@ Python 紫微斗数排盘与知识库。历法与时间由
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
 （公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、30星安星、具名生年四化与大限，
-以及完整命盘组合、十四主星七级亮度、第一层流年、只读按宫查询与宫位关系、文本十二宫格、静态SVG盘面和独立知识目录。
+以及完整命盘组合、十四主星七级亮度、第一层流年、小限与具名可配童限衔接、只读按宫查询与宫位关系、文本十二宫格、静态SVG盘面和独立知识目录。
 用法见[出生输入](https://0xf3cd.github.io/ziwei/docs/birth.html)、[历法与时间](https://0xf3cd.github.io/ziwei/docs/calendar.html)、
 [解析层](https://0xf3cd.github.io/ziwei/docs/resolver.html)、[命宫身宫与十二宫](https://0xf3cd.github.io/ziwei/docs/palaces.html)、
 [五行局](https://0xf3cd.github.io/ziwei/docs/bureau.html)、[安星](https://0xf3cd.github.io/ziwei/docs/stars.html)、
 [四化与大限](https://0xf3cd.github.io/ziwei/docs/sihua-decades.html)、[完整命盘与盘面](https://0xf3cd.github.io/ziwei/docs/chart.html)
 和[知识查询](https://0xf3cd.github.io/ziwei/docs/knowledge.html)。亮度的具名表、调用与来源限度见
 [亮度指南](https://0xf3cd.github.io/ziwei/docs/brightness.html)。独立纪年查询与两种日期年界见
-[流年指南](https://0xf3cd.github.io/ziwei/docs/liunian.html)。开发检查与协作约定见
+[流年指南](https://0xf3cd.github.io/ziwei/docs/liunian.html)。小限、童限的显式虚岁定位与无默认的衔接读法见
+[运限指南](https://0xf3cd.github.io/ziwei/docs/yunxian.html)。开发检查与协作约定见
 [参与开发](https://0xf3cd.github.io/ziwei/docs/contributing.html)，发布状态与失败处理见
 [发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 

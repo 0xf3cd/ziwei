@@ -100,7 +100,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.palaces
-   :members: PalaceName, Palace, opposite_dizhi, sanfang_sizheng, effective_month, month_palace_index, minggong_dizhi, shengong_dizhi, twelve_palaces, palace_ganzhi
+   :members: PalaceName, Palace, opposite_dizhi, sanfang_sizheng, effective_month, month_palace_index, minggong_dizhi, shengong_dizhi, palace_dizhi, twelve_palaces, palace_ganzhi
    :undoc-members:
    :member-order: bysource
 
@@ -199,6 +199,42 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 .. autodata:: ziwei.liunian.LIUNIAN_MINGGONG_RULE_ID
    :no-value:
+```
+
+## 小限、童限与运限并读
+
+[独立定位、显式边界及来源限度](yunxian.md)。两种童限边界是现代框架下的仓内解释，必填无默认。
+
+```{eval-rst}
+.. automodule:: ziwei.xiaoxian
+   :members: Xiaoxian, xiaoxian_at_age
+   :undoc-members:
+   :member-order: bysource
+
+.. autodata:: ziwei.xiaoxian.XIAOXIAN_RULE_ID
+   :no-value:
+
+.. autodata:: ziwei.xiaoxian.XIAOXIAN_DEFINITION
+   :no-value:
+
+.. autodata:: ziwei.xiaoxian.XIAOXIAN_STARTS
+   :no-value:
+
+.. automodule:: ziwei.tongxian
+   :members: TongxianBoundary, Tongxian, tongxian_palace, tongxian_at_age
+   :undoc-members:
+   :member-order: bysource
+
+.. autodata:: ziwei.tongxian.TONGXIAN_RULE_ID
+   :no-value:
+
+.. autodata:: ziwei.tongxian.TONGXIAN_PALACES
+   :no-value:
+
+.. automodule:: ziwei.yunxian
+   :members: Yunxian, yunxian_at_age
+   :undoc-members:
+   :member-order: bysource
 ```
 
 ## 完整命盘与显示
