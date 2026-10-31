@@ -149,6 +149,7 @@ def test_same_external_case_gregorian_entry(lunar_chart: ZiweiChart) -> None:
   assert result.stars == lunar_chart.stars
   assert result.palaces == lunar_chart.palaces
   assert result.decades == lunar_chart.decades
+  assert result != lunar_chart
   assert result.calculation.resolved_time is None
 
 

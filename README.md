@@ -4,8 +4,8 @@ Python 紫微斗数排盘与知识库。历法与时间由
 [celestial-calendar](https://github.com/0xf3cd/celestial-calendar) 提供；本仓记录紫微斗数的安星规则、
 四化口径、流派变体与出处，并组织可复现的命盘结果。
 
-本页介绍当前源码的功能与用法。[在线文档](https://0xf3cd.github.io/ziwei/)随`main`更新，
-不固定于某次发行。版本变化见[发行说明](https://0xf3cd.github.io/ziwei/docs/releases.html)，公开发行记录以
+本页介绍所在源码版本的功能与用法。GitHub上`main`分支的本页与[在线文档](https://0xf3cd.github.io/ziwei/)随开发更新，
+可能包含尚未发行的接口。版本变化见[发行说明](https://0xf3cd.github.io/ziwei/docs/releases.html)，公开发行记录以
 [PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
@@ -33,7 +33,8 @@ python -m pip install ziwei
 python -m pip check
 ```
 
-需要开发中的功能时，可[从源码安装](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
+发行版接口与`main`文档可能不同，请先核对[发行说明中的兼容变化](https://0xf3cd.github.io/ziwei/docs/releases.html)。
+需要使用开发中的接口时，可[从源码安装](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
 `main`源码不等同于PyPI发行制品；上传前的候选状态见[发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 
 ## 安装要求
@@ -56,8 +57,9 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 
 下面用合成的2024年农历正月初一子时女命演示最小排盘。
 “口径”指闰月归属、子时换日和换年界线这三项计算选择；本例逐项指定，并选择一张具名生年四化表。
-本例不是闰月，且2024年正月初一在立春之后，闰月归属与两种换年界线在这个生日上没有分歧；
-农历记录只给时辰、没有钟点，因此子时采用同日口径。实际出生涉及闰月、晚子时或两种年界之间时，须另行确定口径。
+本例不是闰月，闰月归属不影响结果。农历记录只给时辰、没有钟点和时区，因此按农历正月初一换年，子时采用同日口径。
+若要用立春换年，或区分早晚子时以执行晚子时归次日，须改用带钟点与时区的公历记录；
+其他出生资料的口径选择与输入要求见[解析层](https://0xf3cd.github.io/ziwei/docs/resolver.html)。
 
 ```{doctest}
 >>> from ziwei.birth import Gender, LunarBirthRecord

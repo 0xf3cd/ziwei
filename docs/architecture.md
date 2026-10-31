@@ -152,5 +152,5 @@ celestial-calendar 负责公历与农历互转、闰月与各月长、节气时�
 最后组合完整命盘，完成文本盘面、文档与安装包验收。
 
 首版交付记录见[v0.1.0 milestone](https://github.com/0xf3cd/ziwei/milestone/1)，
-当前改进由[v0.3.0 milestone](https://github.com/0xf3cd/ziwei/milestone/5)追踪。
+功能与改进进度见[项目议题](https://github.com/0xf3cd/ziwei/issues)。
 包结构随实际实现中出现的共用关系调整，不以通用后端或插件框架为前置。
