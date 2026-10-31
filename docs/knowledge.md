@@ -40,6 +40,8 @@ True
 格式非法（如`Nope`）抛`ValueError`，格式合法但不存在（如`entry.unknown`）抛`KeyError`。
 带记录种类要求的查询参数若指向另一种记录，也会抛`ValueError`，例如概念参数传入来源标识。
 `get()`本身不限制记录种类；查询不按名称替代标识，其他无效值也显式失败。
+`concept_id`、`school_id`、`variant_id`、`source_id`等参数接收稳定标识字符串，如`concept.star.wenchang`，
+不接收`Star.文昌`或概念对象；按状态或种类筛选的参数仍接收对应枚举成员。
 `show_by_default=None`（默认）不按展示资格筛选，`True`只取可默认展示条目，`False`只取暂不默认展示条目。
 该参数只接受`bool`或`None`，不把`0`、`1`或字符串转换成布尔值。
 概念过滤和引用查询包含条目直接关联的概念，以及关联变体所属的概念和流派；
@@ -67,6 +69,29 @@ True
 待决条目保存具体复核动作（`recheck`）与跟进讨论入口（`tracking_url`）；issue关闭不表示争议已经解决。
 `RuleVariant.tracking_url`保留实现议题的历史链接；火铃异读、相关称名、归月范围与换年／子时出处等未决事项，由
 [来源研究](https://github.com/0xf3cd/ziwei/issues/43)跟进，不把实现交付当作文献结论。
+
+### 按星名查安星规则
+
+先用`find()`找概念，再把概念的`id`传给`list_variants(concept_id=)`，就能查到该星的具名安星规则。
+下面分别查询文昌和文曲；这两个完整名称在当前目录中各只有一个匹配，因此可用单元素解包：
+
+```{doctest}
+>>> for name in ("文昌", "文曲"):
+...   concept, = catalog.find(name)
+...   rule, = catalog.list_variants(concept_id=concept.id)
+...   print(name, rule.id)
+文昌 variant.star.wenchang-wenqu-hour
+文曲 variant.star.wenchang-wenqu-hour
+>>> citations = catalog.references(rule.id)
+>>> citations[0].locator, citations[0].quote
+('安文昌文曲星诀/论本生时；子时、丑时例', '子时戌上起文昌')
+>>> catalog.get(citations[0].source_id).title
+'紫微斗數全書/卷二（维基文库电子录文）'
+```
+
+文昌与文曲在本目录中共用同一条规则。`references(rule.id)`返回支持该规则的引用元组，
+每条引用的`locator`给出所见来源中的定位，`quote`保存短引；用`source_id`再读取来源记录、版本和核验状态。
+一般查询仍需处理多个匹配或多个规则；电子录文已核与纸本底本已核的区别见下方[来源状态](#状态需要分开表达)。
 
 ## 记录与归属
 

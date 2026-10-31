@@ -99,7 +99,7 @@ def test_svg_preserves_each_palace_and_stored_content(svg_chart: ZiweiChart) -> 
   root = _safe_tree(svg)
   cells = _palaces(root)
   assert len(cells) == 12
-  assert len([text for cell in cells.values() for text in _texts(cell, "star")]) == 30
+  assert len([text for cell in cells.values() for text in _texts(cell, "star")]) == len(Star)
   changes = dict(
     zip(
       (svg_chart.sihua.lu, svg_chart.sihua.quan, svg_chart.sihua.ke, svg_chart.sihua.ji),

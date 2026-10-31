@@ -385,7 +385,7 @@ def tianfu_dizhi(ziwei: Dizhi) -> Dizhi:
 
 
 def place_major_stars(ju: WuxingJu, day: int) -> tuple[StarPlacement, ...]:
-  """按五行局与农历日安十四主星，不读取出生记录，也不调用历法换算。"""
+  """按五行局与农历日安十四主星。"""
   ziwei = ziwei_dizhi(ju, day)
   tianfu = tianfu_dizhi(ziwei)
   return (
@@ -460,7 +460,7 @@ def tianma_dizhi(branch: Dizhi) -> Dizhi:
 
 
 def place_hongluan_tianxi(year_dizhi: Dizhi) -> tuple[StarPlacement, ...]:
-  """按已确定的生年支安本命红鸾、天喜；不重新判定换年，也不需要生时或性别。"""
+  """按已确定的生年支安本命红鸾、天喜。"""
   if not isinstance(year_dizhi, Dizhi):
     raise TypeError("生年支须为 Dizhi 成员")
   hongluan = _move(Dizhi.卯, -tuple(Dizhi).index(year_dizhi))
@@ -473,7 +473,7 @@ def place_hongluan_tianxi(year_dizhi: Dizhi) -> tuple[StarPlacement, ...]:
 def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
   """从解析结果安30星，按Star枚举顺序返回；要求时辰已知，允许性别未知。
 
-  本入口不重做历法，也不调用完整命盘校验。命宫、左辅右弼和月马使用同一个安星月份，
+  命宫、左辅右弼和月马使用同一个安星月份，
   由effective_month按所选闰月归属规则确定。选择按前后半月分别归属时，用解析后的农历日
   判断：初一至十五按本月，十六日起按下月；不把前一个月的天数加到生日上。
   闰十二月需要按下月安星等无法处理的组合会抛错，不返回部分结果。

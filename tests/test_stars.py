@@ -414,7 +414,7 @@ value = CalculationInput(record=record, lunar_year=2000, month=1, day=1, is_leap
   shichen=Dizhi.子, ganzhi_year=2000, config=config, lunar_algorithm=LunarAlgorithm.ALGO3,
   lunar_algorithm_version='0.8.0', apparent_solar=False, day_rolled=False,
   ut1_jd=None, lichun_jd=None)
-if len(place_stars(value)) != 30 or not load_catalog().find('紫微'):
+if len(place_stars(value)) != len(Star) or not load_catalog().find('紫微'):
   raise RuntimeError('pure placement or independent lookup did not run')
 cases = [lambda: ziwei_dizhi(WuxingJu.水二局, True),
    lambda: StarRule('id', 'name', ['紫微'], 'definition', 'implementation'),

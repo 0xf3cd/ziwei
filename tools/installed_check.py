@@ -254,7 +254,7 @@ def check_chart() -> None:
   chart = create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)
   if chart.palaces[0].dizhi is not Dizhi.子 or chart.bureau is not WuxingJu.金四局:
     raise ValueError("Installed full chart has wrong palace or bureau")
-  if len(chart.stars) != 30 or len(chart.palaces) != 12 or len(chart.decades) != 12:
+  if len(chart.stars) != len(Star) or len(chart.palaces) != 12 or len(chart.decades) != 12:
     raise ValueError("Installed full chart is incomplete")
   expected_pair = ((Star.红鸾, Dizhi.亥), (Star.天喜, Dizhi.巳))
   placements = {position.star: position for position in chart.stars}
@@ -280,7 +280,7 @@ def check_chart() -> None:
     raise ValueError("Installed SVG chart has the wrong root")
   cells = [node for node in image.findall(namespace + "g") if "data-dizhi" in node.attrib]
   stars = [node for cell in cells for node in cell if node.get("class") == "star"]
-  if len(cells) != 12 or len(stars) != 30:
+  if len(cells) != 12 or len(stars) != len(Star):
     raise ValueError("Installed SVG chart is incomplete")
   for star, branch in expected_pair:
     if not any(
@@ -338,7 +338,7 @@ def check_chart() -> None:
   if star_brightness(Star.紫微, Dizhi.辰, table=table).level is not BrightnessLevel.得地:
     raise ValueError("Installed brightness differs from the named table")
   readings = chart_brightness(chart, table=table)
-  if len(readings) != 30 or sum(item.level is not None for item in readings) != 14:
+  if len(readings) != len(Star) or sum(item.level is not None for item in readings) != 14:
     raise ValueError("Installed brightness is incomplete")
   if tuple((item.star, item.dizhi) for item in readings) != tuple(
     (item.star, item.dizhi) for item in chart.stars
