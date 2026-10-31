@@ -168,6 +168,16 @@ def _stem_for(stems: tuple[Tiangan, ...], dizhi: Dizhi) -> Tiangan:
   return stems[(tuple(Dizhi).index(dizhi) - 2) % 12]
 
 
+def palace_dizhi(minggong: Dizhi, name: PalaceName) -> Dizhi:
+  """自命宫逆排十二宫，取指定本命宫名的地支；不需要宫干或年干。"""
+  if not isinstance(minggong, Dizhi):
+    raise TypeError("命宫须为 Dizhi 成员")
+  if not isinstance(name, PalaceName):
+    raise TypeError("宫名须为 PalaceName 成员")
+  branches = tuple(Dizhi)
+  return branches[(branches.index(minggong) - tuple(PalaceName).index(name)) % len(branches)]
+
+
 def twelve_palaces(minggong: Dizhi, year_tiangan: Tiangan) -> tuple[Palace, ...]:
   """十二宫，自命宫起逆排；宫干由五虎遁定寅宫干后顺十天干排布。
 
@@ -177,17 +187,12 @@ def twelve_palaces(minggong: Dizhi, year_tiangan: Tiangan) -> tuple[Palace, ...]
     raise TypeError("命宫须为 Dizhi 成员")
   if not isinstance(year_tiangan, Tiangan):
     raise TypeError("年干须为 Tiangan 成员")
-  dizhi = tuple(Dizhi)
   stems = palace_stems(year_tiangan)
-  start = dizhi.index(minggong)
-  return tuple(
-    Palace(
-      dizhi=dizhi[(start - offset) % 12],
-      tiangan=_stem_for(stems, dizhi[(start - offset) % 12]),
-      name=tuple(PalaceName)[offset],
-    )
-    for offset in range(12)
-  )
+  palaces = []
+  for name in PalaceName:
+    position = palace_dizhi(minggong, name)
+    palaces.append(Palace(dizhi=position, tiangan=_stem_for(stems, position), name=name))
+  return tuple(palaces)
 
 
 def palace_ganzhi(minggong: Dizhi, ganzhi_year: int) -> Ganzhi:

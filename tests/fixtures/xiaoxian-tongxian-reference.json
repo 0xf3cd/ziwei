@@ -1,0 +1,20 @@
+{
+  "role": "直接小限年龄例与口诀展开分开；没有完整外部童限交接边界例",
+  "pdf_url": "https://www.ziweicn.com/book/dade_jc.pdf",
+  "pdf_sha256": "cec405b5b6f253360dccfb40c939148cf3d7df6f195de6c91045fb051e9ee1cc",
+  "xiaoxian_page": 24,
+  "tongxian_page": 507,
+  "direct_xiaoxian_ages": [
+    ["寅", "男", 1, "辰"],
+    ["寅", "男", 2, "巳"],
+    ["寅", "男", 3, "午"],
+    ["寅", "女", 1, "辰"],
+    ["寅", "女", 2, "卯"],
+    ["寅", "女", 3, "寅"]
+  ],
+  "pdf_four_year_observation": {"printed": "亥", "adopted_as_golden": false},
+  "quote_xiaoxian": "不论阳阴，男顺女逆，从小限宫起一岁，一年行一宫。",
+  "quote_stop": "六岁后必已进入大限，进入大限后，则依大限而论，不必再看童限。",
+  "quote_parallel": "看童限，亦宜以命身为体为本，并宜参看流年和小限。",
+  "limits": "现代下载件版次未核；停止说法只算一路。直接年龄例独立于实现代码，但不独立于该书规则，也不是完整盘例。童限两种当岁读法为项目解释，其边界测试是合成用例。"
+}

@@ -28,8 +28,38 @@ from ziwei.palaces import PalaceName
 from ziwei.render import render_svg, render_text
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
+from ziwei.tongxian import TongxianBoundary, tongxian_at_age
 
 pytestmark = pytest.mark.usefixtures("unload_celestial")
+
+
+@pytest.mark.parametrize("defect", ["position", "boundary", "source"])
+def test_yunxian_consumer_rejects_wrong_positions_policies_and_missing_sources(
+  monkeypatch: pytest.MonkeyPatch, lunar_chart: ZiweiChart, defect: str
+) -> None:
+  if defect == "position":
+    monkeypatch.setattr(
+      installed_check, "xiaoxian_at_age", lambda *args: SimpleNamespace(dizhi=Dizhi.子)
+    )
+  elif defect == "boundary":
+    monkeypatch.setattr(
+      installed_check,
+      "tongxian_at_age",
+      lambda ming, ju, age, **kwargs: tongxian_at_age(
+        ming, ju, age, boundary=TongxianBoundary.起限当岁包含
+      ),
+    )
+  else:
+    original = Catalog.references
+    monkeypatch.setattr(
+      Catalog,
+      "references",
+      lambda self, identifier: (
+        () if identifier.startswith("variant.tongxian.") else original(self, identifier)
+      ),
+    )
+  with pytest.raises(ValueError, match="Installed yunxian"):
+    installed_check.check_yunxian(lunar_chart)
 
 
 @pytest.mark.parametrize("defect", ["position", "year", "interval", "metadata", "source"])
@@ -178,6 +208,7 @@ def test_installed_check_passes_for_consumer(
   output = capsys.readouterr().out
   assert "Installed ziwei" in output
   assert "Installed liunian: pure year and both date boundaries consumed" in output
+  assert "Installed yunxian: independent positions and both explicit boundaries consumed" in output
   assert (
     f"Installed calendar: ALGO3, celestial {version('celestial-calendar')}, lunar years 1600-2199"
     in output

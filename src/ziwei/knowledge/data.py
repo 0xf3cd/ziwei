@@ -24,6 +24,8 @@ from ziwei.liunian import LIUNIAN_MINGGONG_RULE_ID, LiunianBoundary
 from ziwei.palaces import OPPOSITE_RULE_ID, SANFANG_SIZHENG_RULE_ID, PalaceName
 from ziwei.sihua import SIHUA_TABLES, SihuaVariant
 from ziwei.stars import MAJOR_STARS, STAR_RULES, Star, StarRule
+from ziwei.tongxian import TONGXIAN_PALACES, TONGXIAN_RULE_ID, TongxianBoundary
+from ziwei.xiaoxian import XIAOXIAN_DEFINITION, XIAOXIAN_RULE_ID
 
 _BUREAU_NAMES = "、".join(ju.value for ju in WuxingJu)
 _SOURCE_RESEARCH_URL = "https://github.com/0xf3cd/ziwei/issues/43"
@@ -135,9 +137,60 @@ CONCEPTS = (
   Concept(
     id="concept.school.zhongzhou", name="中州派", aliases=("王亭之中州派",), kind=ConceptKind.流派
   ),
+  Concept(id="concept.xiaoxian", name="小限", kind=ConceptKind.运限),
+  Concept(
+    id="concept.tongxian", name="童限", aliases=("小儿童限", "童限六宫"), kind=ConceptKind.运限
+  ),
+  Concept(
+    id="concept.policy.tongxian-boundary",
+    name="童限与大限起运衔接",
+    kind=ConceptKind.口径,
+    related_ids=("concept.tongxian", "concept.decades", "concept.xiaoxian"),
+  ),
 )
 
 VARIANTS = (
+  RuleVariant(
+    id=XIAOXIAN_RULE_ID,
+    name="生年支起小限，男顺女逆",
+    definition=XIAOXIAN_DEFINITION,
+    scope="斗数小限的正整数虚岁定位，不是五星小限或八字小运。",
+    concept_ids=("concept.xiaoxian",),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/57",
+    implementation="ziwei.xiaoxian.xiaoxian_at_age",
+  ),
+  RuleVariant(
+    id=TONGXIAN_RULE_ID,
+    name="童限六宫定位",
+    definition="一至六岁依次取本命宫名："
+    + "、".join(name.value for name in TONGXIAN_PALACES)
+    + "。",
+    scope="只定义一至六岁的宫名，不定义童限终止年龄或七岁以后宫序。",
+    concept_ids=("concept.tongxian",),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/71",
+    implementation="ziwei.tongxian.tongxian_palace",
+  ),
+  *(
+    RuleVariant(
+      id=boundary.rule_id,
+      name="现代童限衔接：" + boundary.value,
+      definition=boundary.definition,
+      scope="《精成》现代停止框架的仓内当岁解释，不认证古籍或流派。",
+      concept_ids=("concept.policy.tongxian-boundary", "concept.tongxian"),
+      conditions=("显式选择此边界；不指定换岁日期",),
+      tracking_url="https://github.com/0xf3cd/ziwei/issues/71",
+      implementation="ziwei.tongxian.tongxian_at_age",
+    )
+    for boundary in TongxianBoundary
+  ),
+  RuleVariant(
+    id="variant.tongxian.jielan-unresolved",
+    name="《捷览》童限出后论成人小限（未决）",
+    definition="所存童限诀写“七八九岁无间隔”，并说童限出后论成人小限；完整宫位与出限条件未核定。",
+    scope="仅登记录文，不借现代大限起运年龄补成可执行古法。",
+    concept_ids=("concept.tongxian", "concept.xiaoxian"),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/71",
+  ),
   RuleVariant(
     id=LIUNIAN_MINGGONG_RULE_ID,
     name="流年年支命宫",
@@ -417,6 +470,35 @@ VARIANTS = (
 )
 
 SOURCES = (
+  Source(
+    id="source.jielan-yunxian-tianji",
+    title="紫微斗数捷览：小限、童限及三岁例（天机录文）",
+    edition="2026-10-31所存第52、53、135章电子录文；未校影印底本",
+    url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/53",
+    layer=TextLayer.原文,
+    lineage_id="lineage.jielan-tianji",
+    provenance="核所存网页文字；同站有编者校记，不认证本段属于原书正文还是注文。",
+    claims="小限一岁起算、男顺女逆；童限六宫、不问男女、提七八九岁及童限出后；三岁行亥的断语。",
+    limits="版次和影印未核。与全书口诀同族，传承独立性未核；三岁例未见命图，不作现代边界盘例。",
+    rights="仅必要古籍录文短引；网页转载许可未核，不转载全文。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 10, 31),
+  ),
+  Source(
+    id="source.jingcheng-pdf",
+    title="紫微斗数精成（PDF下载件）",
+    authors=("大德山人（下载件署名）",),
+    edition="SHA256 cec405b5b6f253360dccfb40c939148cf3d7df6f195de6c91045fb051e9ee1cc；物理页与印刷页均为24、32、33、507，版次未核",
+    url="https://www.ziweicn.com/book/dade_jc.pdf",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.jingcheng-golla",
+    provenance="直接核下载件页图和文字；与既有同名网页转录保守归组，载体版本关系尚未校定。",
+    claims="小限起一岁、男顺女逆；童限六宫、进入大限后不再看童限、期间参看小限。",
+    limits="只核列明下载件，不认证纸本版次或转载许可。现代停止说法只有一路；当岁包含性未明。第24页女命四岁亥宫与同页规则不符，第32至33页重复该例，仍写四岁亥宫，均不作正确期望。",
+    rights="仅收定位所需短引与仓内说明，不转载现代书文或页图。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 10, 31),
+  ),
   Source(
     id="source.quanshu-juan3-wikisource",
     title="紫微斗數全書/卷三（维基文库固定录文）",
@@ -723,6 +805,87 @@ SOURCES = (
 )
 
 CITATIONS = (
+  Citation(
+    id="citation.quanshu.xiaoxian",
+    source_id="source.quanshu-wikisource",
+    locator="卷二，安小限诀；oldid=1963110",
+    quote="寅午戌人起辰宫，申子辰人自戌宫，巳酉丑人起未宫，亥卯未人起丑宫。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则,),
+    limits="性别顺逆见同段标题；一岁起数由捷览与现代说明支持，底本未校。",
+  ),
+  Citation(
+    id="citation.jielan.xiaoxian",
+    source_id="source.jielan-yunxian-tianji",
+    locator="第52章定小限诀，解说段",
+    quote="以生年为主，假如寅午戌年生人，俱自辰宫起一岁，一年过一宫，男顺行，女逆行，余仿此。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="只核电子转录；原书正文与注文层次未校，不据此认证两书传承独立。",
+  ),
+  Citation(
+    id="citation.quanshu.tongxian",
+    source_id="source.quanshu-wikisource",
+    locator="卷二，安童限诀；oldid=1963110",
+    quote="一命二财三疾厄，四妻五福六官禄，余年一派顺流行，十五命宫看端的。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则,),
+    limits="前六宫映射可读，后半句不足以核定斗数的完整走法与出限条件；不搬用五星宫序。",
+  ),
+  Citation(
+    id="citation.jielan.tongxian",
+    source_id="source.jielan-yunxian-tianji",
+    locator="第53章定小儿童限诀，口诀及解说段",
+    quote="六岁官禄顺流行，七八九岁无间隔。凡小儿不问男女，俱在命宫为一岁，财帛宫属二岁，疾厄宫为三岁，余仿此。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="所存录文的男女同法明文；网页换行不表示原书排版，原书正文与注文层次及影印未校。",
+  ),
+  Citation(
+    id="citation.jielan.tongxian-exit",
+    source_id="source.jielan-yunxian-tianji",
+    locator="第53章，解说段末",
+    quote="及童限出后，方以大人小限论之。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.查法,),
+    limits="出童限时点未核，不能用现代局数起限年龄补定。",
+  ),
+  Citation(
+    id="citation.jielan.tongxian-age3",
+    source_id="source.jielan-yunxian-tianji",
+    locator="第135章附古今命图，三岁断语",
+    quote="况三岁童限行亥，遇天使，巳宫太岁金锁鸡飞关，杀冲限，故死于三岁。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.查法,),
+    limits="只作同书条件线索，命图未见；由天使同宫等解释反推的命宫与局数不当作完整盘例或现代边界证据。不编码凶断。",
+  ),
+  Citation(
+    id="citation.jingcheng.xiaoxian",
+    source_id="source.jingcheng-pdf",
+    locator="物理页码与印刷页码均为24，第26项起小限岁数",
+    quote="不论阳阴，男顺女逆，从小限宫起一岁，一年行一宫。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="同页女命四岁亥宫与该规则不符，第32至33页重复该例；一至三岁直接例可分别核，不能算整张盘或独立来源。",
+  ),
+  Citation(
+    id="citation.jingcheng.tongxian-stop",
+    source_id="source.jingcheng-pdf",
+    locator="物理页码与印刷页码均为507，第十一节小儿童限",
+    quote="六岁后必已进入大限，进入大限后，则依大限而论，不必再看童限。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="现代停止框架的单源说明，不能直接裁定起限当岁包含性。",
+  ),
+  Citation(
+    id="citation.jingcheng.tongxian-xiaoxian",
+    source_id="source.jingcheng-pdf",
+    locator="物理页码与印刷页码均为507，第十一节小儿童限",
+    quote="看童限，亦宜以命身为体为本，并宜参看流年和小限。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="支持该现代文本的小限并读，不把它推广为所有古法或流派的用法。",
+  ),
   Citation(
     id="citation.quanshu.liunian-position",
     source_id="source.quanshu-juan3-wikisource",
@@ -1506,6 +1669,75 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
 
 
 ENTRIES = (
+  KnowledgeEntry(
+    id="entry.xiaoxian.year-branch-gender",
+    statement=XIAOXIAN_DEFINITION,
+    concept_ids=("concept.xiaoxian",),
+    variant_ids=(XIAOXIAN_RULE_ID,),
+    citation_ids=(
+      "citation.quanshu.xiaoxian",
+      "citation.jielan.xiaoxian",
+      "citation.jingcheng.xiaoxian",
+    ),
+    premises=("生年支已按所选年界确定，性别已知，年龄为调用者给定的正整数虚岁",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="录文传承独立性未核；所核直接年龄例只覆盖辰起组，其余组用口诀展开检验，不冒充完整外部盘例。五星小限与八字小运是同名异物，不采用其起法。",
+    recheck="取得具版次原页及未起、丑起等组的明确生年支、性别和年龄直接例。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/57",
+  ),
+  KnowledgeEntry(
+    id="entry.tongxian.six-palaces",
+    statement="一至六岁按本命宫名定位，不将宫名当成固定地支，也不据映射表确定终止年龄。",
+    concept_ids=("concept.tongxian",),
+    variant_ids=(TONGXIAN_RULE_ID,),
+    citation_ids=("citation.quanshu.tongxian", "citation.jielan.tongxian"),
+    premises=("只查询六宫映射；实际是否采用由显式衔接读法另判",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="口诀同族的两处录文不计两路独立认证；男女同法只核到捷览转录，原书层次未校。不能将现代停止框架视作完整古法。",
+    recheck="核捷览与全书影印中的童限原页、男女说明及第135章命图。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/71",
+  ),
+  *(
+    KnowledgeEntry(
+      id=boundary.rule_id.replace("variant.", "entry.", 1),
+      statement=boundary.definition,
+      concept_ids=("concept.policy.tongxian-boundary", "concept.tongxian"),
+      variant_ids=(boundary.rule_id,),
+      citation_ids=("citation.jingcheng.tongxian-stop", "citation.jingcheng.tongxian-xiaoxian"),
+      premises=("采用精成现代停止框架，调用者显式选择此仓内当岁解释，不认证文献定论",),
+      premise_status=PremiseStatus.已明确,
+      show_by_default=False,
+      curation=CurationStatus.已整理,
+      limits="停止说法目前只有一路现代文本，当岁读法是仓内解释，不是原文明文。捷览录文提七八九岁、全书写十五命宫，本框架的年龄范围不同，不据未校底本认证历史冲突。",
+      recheck="取得独立于精成转载谱系的文本或完整例，明写水二局两岁是否仍用童限。",
+      tracking_url="https://github.com/0xf3cd/ziwei/issues/71",
+    )
+    for boundary in TongxianBoundary
+  ),
+  KnowledgeEntry(
+    id="entry.tongxian.classical-unresolved",
+    statement="所存童限诀写“七八九岁无间隔”或“十五命宫看端的”；可读作六岁后童限继续，但斗数完整后续宫位与出童限条件尚未核定，不拼入现代框架。",
+    concept_ids=("concept.tongxian", "concept.xiaoxian"),
+    variant_ids=("variant.tongxian.jielan-unresolved",),
+    citation_ids=(
+      "citation.quanshu.tongxian",
+      "citation.jielan.tongxian",
+      "citation.jielan.tongxian-exit",
+      "citation.jielan.tongxian-age3",
+    ),
+    premises=("拟复原所见录文的完整童限，而非采用现代停止框架",),
+    premise_status=PremiseStatus.待定,
+    show_by_default=False,
+    curation=CurationStatus.待整理,
+    alternatives=("六岁后按斗数宫序逐宫行进的读法待核", "十五岁句另有解释或底本异文待核"),
+    limits="三岁行亥只作同书条件线索，命图未见，不证明现代当岁边界。五星有相近口诀但宫序不同，单步推导自洽不证明历史同源或唯一解释；未知口径不提供可执行枚举。",
+    recheck="取得捷览影印童限原页、三岁例命图与全书十五岁句的影像，查完整宫序及出限条件。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/71",
+  ),
   KnowledgeEntry(
     id="entry.liunian.year-branch",
     statement="目标流年支到同地支宫，称为流年命宫；叠本命盘时本命宫名另外读取。",

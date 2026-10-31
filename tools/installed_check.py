@@ -19,7 +19,7 @@ from ziwei.birth import (
 from ziwei.brightness import BrightnessLevel, BrightnessTable, star_brightness
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import chart_brightness, create_chart, palace_view
+from ziwei.chart import ZiweiChart, chart_brightness, create_chart, palace_view
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan
@@ -31,6 +31,9 @@ from ziwei.render import render_svg, render_text
 from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
 from ziwei.stars import Star
 from ziwei.timezone import AmbiguousTimeError, IanaTimezone, NonexistentTimeError
+from ziwei.tongxian import TongxianBoundary, tongxian_at_age
+from ziwei.xiaoxian import xiaoxian_at_age
+from ziwei.yunxian import yunxian_at_age
 
 
 def check_inputs() -> None:
@@ -235,6 +238,36 @@ def check_liunian() -> None:
   print("Installed liunian: pure year and both date boundaries consumed")
 
 
+def check_yunxian(chart: ZiweiChart) -> None:
+  """消费安装包的独立定位、两边界及已有盘并读，核来源可达。"""
+  small = xiaoxian_at_age(Dizhi.寅, Gender.女, 3)
+  if small.dizhi is not Dizhi.寅:
+    raise ValueError("Installed yunxian xiaoxian position differs")
+  through = tongxian_at_age(Dizhi.辰, WuxingJu.木三局, 3, boundary=TongxianBoundary.起限当岁包含)
+  before = tongxian_at_age(Dizhi.辰, WuxingJu.木三局, 3, boundary=TongxianBoundary.起限当岁不含)
+  if through.dizhi is not Dizhi.亥 or before.dizhi is not None:
+    raise ValueError("Installed yunxian ignored the selected boundary")
+  readings = [
+    yunxian_at_age(chart, chart.bureau.number, tongxian_boundary=boundary)
+    for boundary in TongxianBoundary
+  ]
+  if (
+    readings[0].xiaoxian != readings[1].xiaoxian
+    or readings[0].decade is not chart.decades[0]
+    or readings[1].decade is not chart.decades[0]
+    or readings[0].tongxian.dizhi is not None
+    or readings[1].tongxian.dizhi is None
+  ):
+    raise ValueError("Installed yunxian composition differs")
+  catalog = load_catalog()
+  if not all(
+    catalog.references(identifier)
+    for identifier in (small.rule_id, through.rule_id, *(b.rule_id for b in TongxianBoundary))
+  ):
+    raise ValueError("Installed yunxian lost its sources")
+  print("Installed yunxian: independent positions and both explicit boundaries consumed")
+
+
 def check_chart() -> None:
   """用安装包排整盘和显示；普通与-O由同一个入口执行。"""
   record = GregorianBirthRecord(
@@ -252,6 +285,7 @@ def check_chart() -> None:
     year_boundary=YearBoundary.立春,
   )
   chart = create_chart(record, choices, sihua_variant=SihuaVariant.排命盘口诀转录)
+  check_yunxian(chart)
   if chart.palaces[0].dizhi is not Dizhi.子 or chart.bureau is not WuxingJu.金四局:
     raise ValueError("Installed full chart has wrong palace or bureau")
   if len(chart.stars) != len(Star) or len(chart.palaces) != 12 or len(chart.decades) != 12:

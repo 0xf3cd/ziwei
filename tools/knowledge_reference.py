@@ -7,7 +7,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from ziwei import brightness, config, decades, ganzhi, sihua, stars
+from ziwei import brightness, config, decades, ganzhi, sihua, stars, tongxian, xiaoxian
 from ziwei.birth import Gender
 from ziwei.bureau import WuxingJu
 from ziwei.ganzhi import Dizhi, Tiangan
@@ -108,6 +108,41 @@ def _star_rows() -> list[tuple[str, ...]]:
   return rows
 
 
+def _xiaoxian_rows() -> list[tuple[str, ...]]:
+  return [
+    ("".join(branch.value for branch in group), start.value, xiaoxian.XIAOXIAN_RULE_ID)
+    for group, start in xiaoxian.XIAOXIAN_STARTS
+  ]
+
+
+def _tongxian_rows() -> list[tuple[str, ...]]:
+  return [
+    (str(age), name.value, tongxian.TONGXIAN_RULE_ID)
+    for age, name in enumerate(tongxian.TONGXIAN_PALACES, 1)
+  ]
+
+
+def _tongxian_boundary_rows() -> list[tuple[str, ...]]:
+  rows: list[tuple[str, ...]] = []
+  for boundary in tongxian.TongxianBoundary:
+    for ju in WuxingJu:
+      readings = (
+        tongxian.tongxian_at_age(Dizhi.寅, ju, age, boundary=boundary)
+        for age in range(1, len(tongxian.TONGXIAN_PALACES) + 1)
+      )
+      active = tuple(reading for reading in readings if reading.palace_name is not None)
+      rows.append(
+        (
+          boundary.value,
+          ju.value,
+          f"1-{active[-1].age}",
+          "并存" if active[-1].age == ju.number else "不保留童限",
+          boundary.rule_id,
+        )
+      )
+  return rows
+
+
 def _value(value: object, ids: set[str]) -> str:
   if isinstance(value, bool):
     return str(value)
@@ -189,6 +224,24 @@ def render_catalog(catalog: Catalog) -> str:
       "大限示例（命宫寅，首尾包含）",
       ("年干", "性别", "五行局", "方向", "首限", "次限", "年龄计法", "规则"),
       _decade_rows(),
+    ),
+    (
+      "implemented-xiaoxian",
+      "小限一岁起宫（男顺女逆）",
+      ("生年支组", "起宫", "规则"),
+      _xiaoxian_rows(),
+    ),
+    (
+      "implemented-tongxian",
+      "童限六宫定位（不定义停止年龄）",
+      ("虚岁", "本命宫名", "规则"),
+      _tongxian_rows(),
+    ),
+    (
+      "implemented-tongxian-boundaries",
+      "现代衔接的仓内读法（无默认，小限始终并读）",
+      ("边界解释", "五行局", "童限虚岁范围", "起限当岁与首大限", "规则"),
+      _tongxian_boundary_rows(),
     ),
   ):
     parts.append(f'<section id="{identifier}"><h2>{title}</h2><table>')
@@ -331,6 +384,9 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
     ("implemented-brightness", _brightness_rows()),
     ("implemented-sihua", _sihua_rows()),
     ("implemented-decades", _decade_rows()),
+    ("implemented-xiaoxian", _xiaoxian_rows()),
+    ("implemented-tongxian", _tongxian_rows()),
+    ("implemented-tongxian-boundaries", _tongxian_boundary_rows()),
   ):
     if parser.targets.get(section) != ["section"] or parser.rows.get(section) != [(), *rows]:
       raise ValueError(f"Rule reference differs from definition: {section}")
