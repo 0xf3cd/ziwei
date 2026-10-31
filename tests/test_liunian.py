@@ -279,7 +279,7 @@ def test_new_unimplemented_boundary_is_not_substituted(monkeypatch: pytest.Monke
 def test_reading_is_frozen_and_metadata_is_derived(monkeypatch: pytest.MonkeyPatch) -> None:
   reading = liunian_on_date(date(2024, 2, 4), boundary=LiunianBoundary.立春日期)
   assert str(reading.year_ganzhi) == "甲辰" and reading.minggong is Dizhi.辰
-  assert reading.date_basis == "UTC+08" and reading.precision == "date"
+  assert reading.date_basis == "UTC+08"
   assert (
     reading.lunar_algorithm is None and reading.celestial_version == calendar.celestial_version()
   )

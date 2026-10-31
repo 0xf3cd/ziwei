@@ -356,10 +356,14 @@ def check_chart() -> None:
 def check_knowledge() -> None:
   """消费安装包中的语料、别名、前提与原文引用，不只检查导入成功。"""
   catalog = load_catalog()
-  if not catalog.version or not catalog.find("天馬") or len(catalog.find("庚干四化")) != 3:
+  if not catalog.find("天馬") or len(catalog.find("庚干四化")) != 3:
     raise ValueError("Installed knowledge corpus or aliases are incomplete")
+  for choice in (False, True):
+    expected = tuple(item for item in catalog.entries if item.show_by_default is choice)
+    if catalog.filter_entries(show_by_default=choice) != expected:
+      raise ValueError("Installed knowledge default display filter differs from its entries")
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
-  if not pending or any(item.chart_match != "未评估" for item in pending):
+  if not pending:
     raise ValueError("Installed knowledge lost unresolved premises")
   leap = catalog.get("entry.leap-month.month-stars-scope")
   if not isinstance(leap, KnowledgeEntry) or len(leap.alternatives) != 2:

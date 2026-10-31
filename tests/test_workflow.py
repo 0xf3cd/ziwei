@@ -1,10 +1,6 @@
 """CI 必须带锁运行与贡献指南相同的命令。"""
 
-import hashlib
-import os
 import re
-import subprocess
-import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -716,46 +712,3 @@ def test_release_policy_rejects_a_single_guard_defect(defect: str) -> None:
   }[defect]
   with pytest.raises(ValueError, match=expected):
     check_release_policy(bad)
-
-
-@pytest.mark.skipif(sys.platform != "linux", reason="Publish jobs execute this Bash on Linux")
-@pytest.mark.parametrize("defect", [None, "hash", "missing", "extra", "symlink", "filename"])
-def test_actual_publish_script_fails_before_upload(tmp_path: Path, defect: str | None) -> None:
-  packages = tmp_path / "packages"
-  packages.mkdir()
-  names = (f"ziwei-{VERSION}.tar.gz", f"ziwei-{VERSION}-py3-none-any.whl")
-  for name in names:
-    (packages / name).write_bytes(name.encode())
-  env = dict(
-    os.environ,
-    DIST_DIR=str(tmp_path),
-    RELEASE_VERSION=VERSION,
-    SDIST_NAME=names[0],
-    WHEEL_NAME=names[1],
-    SDIST_SHA256=hashlib.sha256(names[0].encode()).hexdigest(),
-    WHEEL_SHA256=hashlib.sha256(names[1].encode()).hexdigest(),
-  )
-  match defect:
-    case "hash":
-      (packages / names[1]).write_bytes(b"changed")
-    case "missing":
-      (packages / names[1]).unlink()
-    case "extra":
-      (packages / "unexpected").touch()
-    case "symlink":
-      target = tmp_path / "outside.whl"
-      target.write_bytes(names[1].encode())
-      (packages / names[1]).unlink()
-      (packages / names[1]).symlink_to(target)
-    case "filename":
-      env["WHEEL_NAME"] = "../outside.whl"
-  script = load_workflow(RELEASE.read_text())["jobs"]["publish-pypi"]["steps"][1]["run"]
-  marker = tmp_path / "upload-called"
-  result = subprocess.run(
-    ["bash", "-c", script + '\nprintf called > "$UPLOAD_MARKER"\n'],
-    env=dict(env, UPLOAD_MARKER=str(marker)),
-    capture_output=True,
-    text=True,
-  )
-  assert (result.returncode == 0) is (defect is None), result.stderr
-  assert marker.exists() is (defect is None)

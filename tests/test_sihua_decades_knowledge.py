@@ -37,7 +37,7 @@ def test_rule_sources_and_existing_fragment_ids_are_separate() -> None:
   }
   old = catalog.get("variant.sihua.geng-jiuqian-zhongzhou")
   assert isinstance(old, RuleVariant) and old.implementation is None
-  assert catalog.filter_entries(default_only=True) == ()
+  assert catalog.filter_entries(show_by_default=True) == ()
   for name in ("source.zhongyi999-paimingpan", "source.zhongzhou-5shubook"):
     source = catalog.get(name)
     assert isinstance(source, Source) and source.status is SourceStatus.待核

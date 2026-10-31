@@ -13,7 +13,7 @@
 
 ```{doctest}
 >>> from ziwei.knowledge import load_catalog
->>> from ziwei.knowledge.model import PremiseStatus, DisplayEligibility, SourceStatus
+>>> from ziwei.knowledge.model import PremiseStatus, SourceStatus
 >>> catalog = load_catalog()
 >>> catalog.find("天馬")[0].id
 'concept.star.tianma'
@@ -23,14 +23,14 @@
 >>> leap = catalog.get("entry.leap-month.month-stars-scope")
 >>> leap.alternatives
 ('闰月例只约束命宫与身宫', '闰月例同时约束其他月系星')
->>> leap.chart_match
-'未评估'
+>>> leap.show_by_default
+False
 >>> reference = catalog.references("entry.tianma.year-branch")[0]
 >>> reference.quote
 '论本生年支'
 >>> catalog.get(reference.source_id).status is SourceStatus.已核
 True
->>> catalog.filter_entries(default_only=True)
+>>> catalog.filter_entries(show_by_default=True)
 ()
 ```
 
@@ -40,17 +40,18 @@ True
 格式非法（如`Nope`）抛`ValueError`，格式合法但不存在（如`entry.unknown`）抛`KeyError`。
 带记录种类要求的查询参数若指向另一种记录，也会抛`ValueError`，例如概念参数传入来源标识。
 `get()`本身不限制记录种类；查询不按名称替代标识，其他无效值也显式失败。
+`show_by_default=None`（默认）不按展示资格筛选，`True`只取可默认展示条目，`False`只取暂不默认展示条目。
+该参数只接受`bool`或`None`，不把`0`、`1`或字符串转换成布尔值。
 概念过滤和引用查询包含条目直接关联的概念，以及关联变体所属的概念和流派；
 不递归展开概念之间的相关链接。
 记录和目录会把输入序列复制成元组；修改调用方原列表不会改动已经构造的目录。
 
-默认展示指`filter_entries(default_only=True)`筛出的条目，条件见[状态说明](#状态需要分开表达)。
+默认展示指`filter_entries(show_by_default=True)`筛出的条目，条件见[状态说明](#状态需要分开表达)。
 当前内置条目均不进入默认展示：有的只核到电子录文或转录页，有的前提尚待裁定，有的只有一路独立出处。
 规则可以执行不等于对应条目可以默认展示；`filter_entries()`默认检索全部条目，
 所以仍能比较分歧与查看待决材料。
 亮度表及校异通过[具名表条目](knowledge-reference.md#entry.brightness.quanshu-juan2)关联原引与来源，
 其中固定录文已核、底本未核、讲义图原书待核分别记录；完整范围见[亮度指南](brightness.md)。
-即使调用方构造了符合默认展示条件的条目，`chart_match`仍恒为未评估；目录不接收或判定命盘。
 
 例如，[月支天马](knowledge-reference.md#entry.tianma.month-branch)按所见网页的农历生月口径登记；
 [闰月例能否用于同书其他安星段落](knowledge-reference.md#entry.leap-month.month-stars-scope)仍保留两种读法。
@@ -132,8 +133,7 @@ True
 |---|---|---|
 | 所列出处核实了吗？ | `Source.status` | `SourceStatus`：所列版本已核或版本待核 |
 | 条目前提已表达清楚了吗？ | `KnowledgeEntry.premise_status` | `PremiseStatus`：已明确或待定 |
-| 条目可以默认展示吗？ | `KnowledgeEntry.display` | `DisplayEligibility`：须显式指定 |
-| 某张命盘满足前提吗？ | `KnowledgeEntry.chart_match` | `Literal["未评估"]`：目录不判命盘 |
+| 条目可以默认展示吗？ | `KnowledgeEntry.show_by_default` | `bool`：须显式指定 |
 
 整理进度另由`KnowledgeEntry.curation`记录。类型说明见[记录类型与状态API](api.md#记录类型与状态)。
 `Source.lineage_id`是同路转录材料的归组标识；按它过滤不等于计算独立来源数。

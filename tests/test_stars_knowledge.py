@@ -132,7 +132,7 @@ def test_every_star_and_rule_is_queryable_without_birth() -> None:
     assert catalog.references(rule.id)
   assert len(POLICY_ENUMS) == 3
   assert all(not isinstance(TianmaRule.年支天马, enumeration) for enumeration in POLICY_ENUMS)
-  assert catalog.filter_entries(default_only=True) == ()
+  assert catalog.filter_entries(show_by_default=True) == ()
 
 
 def test_rule_meaning_does_not_include_configuration_defaults() -> None:

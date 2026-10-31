@@ -21,7 +21,6 @@ from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import (
   Citation,
   ConceptKind,
-  DisplayEligibility,
   KnowledgeEntry,
   RuleVariant,
   Source,
@@ -171,8 +170,8 @@ def test_knowledge_links_table_original_words_and_source_limits() -> None:
   )
   assert set(variant.concept_ids) == {concept[0].id, *(star.concept_id for star in MAJOR_STARS)}
   entry = catalog.get("entry.brightness.quanshu-juan2")
-  assert isinstance(entry, KnowledgeEntry) and entry.display is DisplayEligibility.暂不默认展示
-  assert entry.chart_match == "未评估" and "底本未核" in entry.limits
+  assert isinstance(entry, KnowledgeEntry) and entry.show_by_default is False
+  assert "底本未核" in entry.limits
   assert "暂停相关公开结果" in entry.recheck
   references = catalog.references(TABLE.table_id)
   assert {item.id for item in references} == set(entry.citation_ids)

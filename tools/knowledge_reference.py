@@ -109,6 +109,8 @@ def _star_rows() -> list[tuple[str, ...]]:
 
 
 def _value(value: object, ids: set[str]) -> str:
+  if isinstance(value, bool):
+    return str(value)
   if isinstance(value, str):
     text = escape(value)
     if value in ids:
@@ -126,7 +128,7 @@ def _value(value: object, ids: set[str]) -> str:
 def render_catalog(catalog: Catalog) -> str:
   """生成具有稳定记录锚点的HTML；原引文只作HTML转义。"""
   ids = {record.id for record in catalog.records}
-  parts = [f"<p>语料版本：{escape(catalog.version)}</p>"]
+  parts: list[str] = []
   for title, records in (
     ("概念", catalog.concepts),
     ("变体", catalog.variants),
@@ -264,6 +266,8 @@ class KnowledgeTargets(HTMLParser):
 
 
 def _member_text(value: object) -> str:
+  if isinstance(value, bool):
+    return str(value)
   if isinstance(value, str):
     return value
   if isinstance(value, date):

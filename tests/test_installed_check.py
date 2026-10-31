@@ -22,7 +22,7 @@ from ziwei.decades import decade_periods
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
-from ziwei.knowledge.model import Citation, Concept, PremiseStatus, RuleVariant
+from ziwei.knowledge.model import Citation, Concept, KnowledgeEntry, PremiseStatus, RuleVariant
 from ziwei.liunian import liunian_on_date
 from ziwei.palaces import PalaceName
 from ziwei.render import render_svg, render_text
@@ -488,15 +488,13 @@ def test_input_consumer_rejects_faulty_results(kind: str, monkeypatch: pytest.Mo
     installed_check.check_inputs()
 
 
-@pytest.mark.parametrize("kind", ["aliases", "pending", "alternatives", "quote", "chart_match"])
+@pytest.mark.parametrize("kind", ["aliases", "pending", "alternatives", "quote"])
 def test_knowledge_consumer_rejects_missing_or_changed_corpus(
   kind: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
   catalog = load_catalog()
   if kind == "aliases":
-    catalog = Catalog(
-      version="empty", concepts=(), variants=(), sources=(), citations=(), entries=()
-    )
+    catalog = Catalog(concepts=(), variants=(), sources=(), citations=(), entries=())
   elif kind in ("pending", "alternatives"):
     catalog = replace(
       catalog,
@@ -507,10 +505,6 @@ def test_knowledge_consumer_rejects_missing_or_changed_corpus(
         for item in catalog.entries
       ),
     )
-  elif kind == "chart_match":
-    catalog = replace(catalog, entries=tuple(replace(item) for item in catalog.entries))
-    pending = catalog.filter_entries(premise_status=PremiseStatus.待定)[0]
-    object.__setattr__(pending, "chart_match", "已匹配")
   else:
     catalog = replace(
       catalog,
@@ -521,6 +515,22 @@ def test_knowledge_consumer_rejects_missing_or_changed_corpus(
     )
   monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
   with pytest.raises(ValueError, match="knowledge"):
+    installed_check.check_knowledge()
+
+
+@pytest.mark.parametrize("choice", [False, True])
+def test_knowledge_consumer_rejects_wrong_display_filter(
+  choice: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  original = Catalog.filter_entries
+
+  def filter_entries(self: Catalog, **criteria: Any) -> tuple[KnowledgeEntry, ...]:
+    if criteria.get("show_by_default") is choice:
+      return self.entries if choice else ()
+    return original(self, **criteria)
+
+  monkeypatch.setattr(Catalog, "filter_entries", filter_entries)
+  with pytest.raises(ValueError, match="default display filter"):
     installed_check.check_knowledge()
 
 
