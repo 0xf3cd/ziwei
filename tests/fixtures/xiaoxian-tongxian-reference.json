@@ -13,6 +13,7 @@
     ["寅", "女", 3, "寅"]
   ],
   "pdf_four_year_observation": {"printed": "亥", "adopted_as_golden": false},
+  "pdf_repeated_example_pages": [32, 33],
   "quote_xiaoxian": "不论阳阴，男顺女逆，从小限宫起一岁，一年行一宫。",
   "quote_stop": "六岁后必已进入大限，进入大限后，则依大限而论，不必再看童限。",
   "quote_parallel": "看童限，亦宜以命身为体为本，并宜参看流年和小限。",

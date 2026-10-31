@@ -268,7 +268,7 @@ def test_catalog_and_new_module_imports_do_not_load_birth_or_calendar() -> None:
   )
 
 
-def test_optimized_python_keeps_public_validation() -> None:
+def test_optimized_tongxian_palace_keeps_validation() -> None:
   subprocess.run(
     [
       sys.executable,

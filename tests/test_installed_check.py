@@ -208,6 +208,7 @@ def test_installed_check_passes_for_consumer(
   output = capsys.readouterr().out
   assert "Installed ziwei" in output
   assert "Installed liunian: pure year and both date boundaries consumed" in output
+  assert "Installed yunxian: independent positions and both explicit boundaries consumed" in output
   assert (
     f"Installed calendar: ALGO3, celestial {version('celestial-calendar')}, lunar years 1600-2199"
     in output

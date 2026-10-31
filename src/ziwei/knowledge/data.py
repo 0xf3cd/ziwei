@@ -186,7 +186,7 @@ VARIANTS = (
   RuleVariant(
     id="variant.tongxian.jielan-unresolved",
     name="《捷览》童限出后论成人小限（未决）",
-    definition="所存录文提七八九岁仍有童限，并说童限出后论成人小限；完整宫位与出限条件未核定。",
+    definition="所存童限诀写“七八九岁无间隔”，并说童限出后论成人小限；完整宫位与出限条件未核定。",
     scope="仅登记录文，不借现代大限起运年龄补成可执行古法。",
     concept_ids=("concept.tongxian", "concept.xiaoxian"),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/71",
@@ -488,13 +488,13 @@ SOURCES = (
     id="source.jingcheng-pdf",
     title="紫微斗数精成（PDF下载件）",
     authors=("大德山人（下载件署名）",),
-    edition="SHA256 cec405b5b6f253360dccfb40c939148cf3d7df6f195de6c91045fb051e9ee1cc；物理页与印刷页均为24、507，版次未核",
+    edition="SHA256 cec405b5b6f253360dccfb40c939148cf3d7df6f195de6c91045fb051e9ee1cc；物理页与印刷页均为24、32、33、507，版次未核",
     url="https://www.ziweicn.com/book/dade_jc.pdf",
     layer=TextLayer.今人说明,
     lineage_id="lineage.jingcheng-golla",
     provenance="直接核下载件页图和文字；与既有同名网页转录保守归组，载体版本关系尚未校定。",
     claims="小限起一岁、男顺女逆；童限六宫、进入大限后不再看童限、期间参看小限。",
-    limits="只核列明下载件，不认证纸本版次或转载许可。现代停止说法只有一路；当岁包含性未明。第24页女命四岁亥宫与同页规则不符，不作正确期望。",
+    limits="只核列明下载件，不认证纸本版次或转载许可。现代停止说法只有一路；当岁包含性未明。第24页女命四岁亥宫与同页规则不符，第32至33页重复该例，仍写四岁亥宫，均不作正确期望。",
     rights="仅收定位所需短引与仓内说明，不转载现代书文或页图。",
     status=SourceStatus.已核,
     checked_on=date(2026, 10, 31),
@@ -866,7 +866,7 @@ CITATIONS = (
     quote="不论阳阴，男顺女逆，从小限宫起一岁，一年行一宫。",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
-    limits="同页女命四岁亥宫为与该规则不符的印刷文字；一至三岁直接例可分别核，不能算整张盘。",
+    limits="同页女命四岁亥宫与该规则不符，第32至33页重复该例；一至三岁直接例可分别核，不能算整张盘或独立来源。",
   ),
   Citation(
     id="citation.jingcheng.tongxian-stop",
@@ -1720,7 +1720,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.tongxian.classical-unresolved",
-    statement="所存古籍录文提六岁后仍有童限，但斗数完整后续宫位与出童限条件尚未核定；不拼入现代框架。",
+    statement="所存童限诀写“七八九岁无间隔”或“十五命宫看端的”；可读作六岁后童限继续，但斗数完整后续宫位与出童限条件尚未核定，不拼入现代框架。",
     concept_ids=("concept.tongxian", "concept.xiaoxian"),
     variant_ids=("variant.tongxian.jielan-unresolved",),
     citation_ids=(
@@ -1735,7 +1735,7 @@ ENTRIES = (
     curation=CurationStatus.待整理,
     alternatives=("六岁后按斗数宫序逐宫行进的读法待核", "十五岁句另有解释或底本异文待核"),
     limits="三岁行亥只作同书条件线索，命图未见，不证明现代当岁边界。五星有相近口诀但宫序不同，单步推导自洽不证明历史同源或唯一解释；未知口径不提供可执行枚举。",
-    recheck="取得捷览影印童限原页、三岁例命图与全书十五岁句的影像，查完整宫序及出限条件；由来源研究43继续跟进，71保持开放。",
+    recheck="取得捷览影印童限原页、三岁例命图与全书十五岁句的影像，查完整宫序及出限条件。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/71",
   ),
   KnowledgeEntry(
