@@ -56,7 +56,7 @@ def test_full_chart_algorithm_end_and_rollover(
   assert (value.lunar_year, value.month, value.day, value.is_leap_month) == (2199, 12, 30, False)
   assert value.shichen is Dizhi.子 and value.day_rolled is False
   assert value.apparent_solar is (longitude is not None)
-  assert len(same.palaces) == 12 and len(same.stars) == 30
+  assert len(same.palaces) == 12 and len(same.stars) == len(Star)
   with pytest.raises(ValueError, match=r"2200-02-15.*混合支持范围"):
     create_chart(
       record,
@@ -93,7 +93,7 @@ def test_external_1954_full_chart(
     "乙亥",
   ]
   positions = {p.star: p.dizhi for p in lunar_chart.stars}
-  assert len(lunar_chart.stars) == len(positions) == 30
+  assert len(lunar_chart.stars) == len(positions) == len(Star)
   assert set(positions) == set(Star)
   assert {star: positions[star] for star in expected_1954} == expected_1954
   assert (
@@ -149,6 +149,7 @@ def test_same_external_case_gregorian_entry(lunar_chart: ZiweiChart) -> None:
   assert result.stars == lunar_chart.stars
   assert result.palaces == lunar_chart.palaces
   assert result.decades == lunar_chart.decades
+  assert result != lunar_chart
   assert result.calculation.resolved_time is None
 
 
@@ -250,7 +251,7 @@ def test_chart_is_frozen_and_copies_sequences(lunar_chart: ZiweiChart) -> None:
   stars = list(lunar_chart.stars)
   result = replace(lunar_chart, stars=stars)  # type: ignore[arg-type]
   stars.clear()
-  assert len(result.stars) == 30
+  assert len(result.stars) == len(Star)
   with pytest.raises(FrozenInstanceError):
     result.shengong = Dizhi.寅  # type: ignore[misc]
 

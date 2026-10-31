@@ -35,8 +35,8 @@
 包版本号不证明已经发布，实际发行记录以[PyPI](https://pypi.org/project/ziwei/)和
 [GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
-README面向0.3.0的功能与用法。准备合入到实际上传之间，安装命令`ziwei==0.3.0`可能暂不可用；
-此时从源码安装见[参与开发](contributing.md#运行检查)。上传后的README长描述不再随main修改。
+准备时的README面向0.3.0的功能与用法。在该准备合入到实际上传之间，安装命令`ziwei==0.3.0`可能暂不可用。
+上传后的README长描述不再随main修改；从源码安装见[参与开发](contributing.md#运行检查)。
 
 [#26](https://github.com/0xf3cd/ziwei/issues/26)继续追踪上文未完成的三项真实演练。
 本准备不执行或豁免这些演练；是否作为本次正式上传的前置条件，须在发布批准前明确。
@@ -44,7 +44,7 @@ README面向0.3.0的功能与用法。准备合入到实际上传之间，安装
 
 ## 发布前准备
 
-候选版本合入main前，更新`pyproject.toml`版本号、README发布状态和安装命令，并核对构建后的包元数据与长描述。
+候选版本合入main前，更新`pyproject.toml`版本号，核对README的安装与文档入口，以及构建后的包元数据与长描述。
 同时核对其他文档中的当前版本说明、安装示例与贡献指南的版本doctest；旧版本的发布记录和链接保留原版本。
 README会成为PyPI长描述，不保留会在上传后过时的“开发中”说明。
 README和文档入口仍须说明面向开发main还是已发布版本，不能只靠包版本号区分。

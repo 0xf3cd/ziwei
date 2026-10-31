@@ -35,7 +35,7 @@ def choices() -> ChartConfig:
 
 def _positions(value: CalculationInput) -> dict[Star, Dizhi]:
   result = place_stars(value)
-  assert len(result) == 30
+  assert len(result) == len(Star)
   assert tuple(item.star for item in result) == tuple(Star)
   return {item.star: item.dizhi for item in result}
 
@@ -74,7 +74,7 @@ def test_independent_1954_ninth_month_seventh_day_zi(
   actual = _positions(value)
   assert {star: actual[star] for star in expected} == expected
   assert len(set(expected.values())) < len(expected)  # 同宫不丢星。
-  assert _positions(replace(value, config=choices)) == actual  # 此例两种马相同，另例辨选择。
+  assert _positions(replace(value, config=choices)) == actual
 
 
 def test_default_year_horse_and_explicit_month_horse_are_recorded(choices: ChartConfig) -> None:

@@ -176,7 +176,7 @@ def test_two_stars_reach_complete_chart_palace_queries_and_both_displays(
     chart_choices,
     sihua_variant=SihuaVariant.排命盘口诀转录,
   )
-  assert len(chart.stars) == len({p.star for p in chart.stars}) == 30
+  assert len(chart.stars) == len({p.star for p in chart.stars}) == len(Star)
   assert {p.star for p in chart.stars} == set(Star)
   text = render_text(chart)
   root = fromstring(render_svg(chart))

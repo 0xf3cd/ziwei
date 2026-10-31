@@ -81,7 +81,7 @@ def test_unknown_fields_only_block_operations_that_need_them(choices: ChartConfi
   with pytest.raises(ValueError, match="时辰"):
     place_decades(value)
   known_hour = resolve(replace(record, shichen=Dizhi.子), choices)
-  assert len(place_stars(known_hour)) == 30
+  assert len(place_stars(known_hour)) == len(Star)
   with pytest.raises(ValueError, match="性别"):
     place_decades(known_hour)
   with pytest.raises(TypeError):

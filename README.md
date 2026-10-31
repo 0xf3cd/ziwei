@@ -4,8 +4,8 @@ Python 紫微斗数排盘与知识库。历法与时间由
 [celestial-calendar](https://github.com/0xf3cd/celestial-calendar) 提供；本仓记录紫微斗数的安星规则、
 四化口径、流派变体与出处，并组织可复现的命盘结果。
 
-本页介绍0.3.0源码的功能与用法。[在线文档](https://0xf3cd.github.io/ziwei/)随`main`更新，
-不固定于某次发行。版本变化见[发行说明](https://0xf3cd.github.io/ziwei/docs/releases.html)，公开发行记录以
+本页介绍所在源码版本的功能与用法。GitHub上`main`分支的本页与[在线文档](https://0xf3cd.github.io/ziwei/)随开发更新，
+可能包含尚未发行的接口。版本变化见[发行说明](https://0xf3cd.github.io/ziwei/docs/releases.html)，公开发行记录以
 [PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
@@ -21,20 +21,21 @@ Python 紫微斗数排盘与知识库。历法与时间由
 [参与开发](https://0xf3cd.github.io/ziwei/docs/contributing.html)，发布状态与失败处理见
 [发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 
-0.2.0不再提供命盘JSON保存／恢复与旧盘重算接口，也不读取旧JSON命盘。
-这项变化不改动已发布的v0.1.0及其制品。
+当前不提供命盘JSON保存／恢复与旧盘重算接口，也不读取旧JSON命盘；历史兼容变化见
+[发行说明](https://0xf3cd.github.io/ziwei/docs/releases.html)。
 
 ## 安装
 
-先确认下方[安装要求](#安装要求)中的平台限制，再在已激活的独立虚拟环境中从正式PyPI安装0.3.0。
-该版本尚未公开时，请先[从源码安装](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
+先确认下方[安装要求](#安装要求)中的平台限制，再在已激活的独立虚拟环境中从正式PyPI安装当前发行版。
 
 ```sh
-python -m pip install "ziwei==0.3.0"
+python -m pip install ziwei
 python -m pip check
 ```
 
-从`main`安装的源码不等同于PyPI发行制品；上传前的候选状态见[发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
+发行版接口与`main`文档可能不同，请先核对[发行说明中的兼容变化](https://0xf3cd.github.io/ziwei/docs/releases.html)。
+需要使用开发中的接口时，可[从源码安装](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
+`main`源码不等同于PyPI发行制品；上传前的候选状态见[发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 
 ## 安装要求
 
@@ -56,6 +57,9 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 
 下面用合成的2024年农历正月初一子时女命演示最小排盘。
 “口径”指闰月归属、子时换日和换年界线这三项计算选择；本例逐项指定，并选择一张具名生年四化表。
+本例不是闰月，闰月归属不影响结果。农历记录只给时辰、没有钟点和时区，因此按农历正月初一换年，子时采用同日口径。
+若要用立春换年，或区分早晚子时以执行晚子时归次日，须改用带钟点与时区的公历记录；
+其他出生资料的口径选择与输入要求见[解析层](https://0xf3cd.github.io/ziwei/docs/resolver.html)。
 
 ```{doctest}
 >>> from ziwei.birth import Gender, LunarBirthRecord
@@ -93,8 +97,7 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 - 起大限：顺逆由年干阴阳与性别定，首限起始虚岁由五行局数定。
 - 命盘结果不可变，保留输入、口径、历法版本与派生结果；另提供文本与静态SVG盘面用于显示。
 
-首版交付记录见[v0.1.0 milestone](https://github.com/0xf3cd/ziwei/milestone/1)，
-当前改进由[v0.3.0 milestone](https://github.com/0xf3cd/ziwei/milestone/5)追踪。
+功能与改进进度见[项目议题](https://github.com/0xf3cd/ziwei/issues)。
 
 ## 设计边界
 

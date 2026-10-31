@@ -114,7 +114,7 @@ def test_rule_display_names_do_not_change_position_identities(
 
 def test_every_star_and_rule_is_queryable_without_birth() -> None:
   catalog = load_catalog()
-  assert len(catalog.list_concepts(kind=ConceptKind.星曜)) == 30
+  assert len(catalog.list_concepts(kind=ConceptKind.星曜)) == len(stars.Star)
   for star in stars.Star:
     concept = catalog.get(star.concept_id)
     assert isinstance(concept, Concept)
@@ -234,7 +234,7 @@ print('CONCEPTS_OK', len(Star))
   expected = (
     "MISSING_ID_REJECTED"
     if change == "missing-id"
-    else f"CONCEPTS_OK {31 if change == 'append' else 30}"
+    else f"CONCEPTS_OK {len(stars.Star) + (1 if change == 'append' else 0)}"
   )
   assert result.stdout.strip() == expected
 
