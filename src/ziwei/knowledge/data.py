@@ -875,7 +875,7 @@ CITATIONS = (
     quote="六岁后必已进入大限，进入大限后，则依大限而论，不必再看童限。",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.查法,),
-    limits="现代停止框架的单源说明，不能直接裁定起限当岁包含性；与古籍录文提六岁后童限的范围不同。",
+    limits="现代停止框架的单源说明，不能直接裁定起限当岁包含性。",
   ),
   Citation(
     id="citation.jingcheng.tongxian-xiaoxian",
@@ -1697,7 +1697,7 @@ ENTRIES = (
     premise_status=PremiseStatus.已明确,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    limits="口诀同族的两处录文不计两路独立认证；男女同法只核到捷览转录，原书层次未校。原文提六岁后童限，不能将现代停止框架视作完整古法。",
+    limits="口诀同族的两处录文不计两路独立认证；男女同法只核到捷览转录，原书层次未校。不能将现代停止框架视作完整古法。",
     recheck="核捷览与全书影印中的童限原页、男女说明及第135章命图。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/71",
   ),
