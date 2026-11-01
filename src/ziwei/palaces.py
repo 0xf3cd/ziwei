@@ -169,7 +169,7 @@ def _stem_for(stems: tuple[Tiangan, ...], dizhi: Dizhi) -> Tiangan:
 
 
 def palace_dizhi(minggong: Dizhi, name: PalaceName) -> Dizhi:
-  """自命宫逆排十二宫，取指定本命宫名的地支；不需要宫干或年干。"""
+  """自命宫逆排十二宫，取指定宫名的地支。"""
   if not isinstance(minggong, Dizhi):
     raise TypeError("命宫须为 Dizhi 成员")
   if not isinstance(name, PalaceName):

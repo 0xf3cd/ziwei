@@ -203,7 +203,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ## 小限、童限与运限并读
 
-[独立定位、显式边界及来源限度](yunxian.md)。两种童限边界是现代框架下的仓内解释，必填无默认。
+小限、童限的独立查询与已有命盘的运限并读，见[运限用法](yunxian.md)。
 
 ```{eval-rst}
 .. automodule:: ziwei.xiaoxian

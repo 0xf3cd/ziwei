@@ -1,4 +1,4 @@
-"""从已有盘按显式虚岁并读小限、童限与大限，不重算出生时间或历法。"""
+"""从已有命盘查询指定虚岁的小限、童限与大限。"""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Yunxian:
-  """同虚岁的三套读数；构造核年龄和区间关系，不认证与某张未提供的原盘一致。"""
+  """同一虚岁的小限、童限与大限读数。"""
 
   xiaoxian: Xiaoxian
   tongxian: Tongxian
@@ -44,9 +44,10 @@ class Yunxian:
 
 
 def yunxian_at_age(chart: ZiweiChart, age: int, *, tongxian_boundary: TongxianBoundary) -> Yunxian:
-  """并读已有盘的同虚岁运限；小限始终给出，童限必须显式选择现代衔接读法。
+  """查询已有命盘在指定虚岁的三套运限读数。
 
-  大限在首限前为None，超过既有十二限范围抛ValueError。只接受岁数标签，不决定换岁日期。
+  小限始终给出，童限按tongxian_boundary选定的年龄范围给出。
+  首大限开始前decade为None，超过盘内十二大限范围时抛ValueError。
   """
   from ziwei.chart import ZiweiChart
 

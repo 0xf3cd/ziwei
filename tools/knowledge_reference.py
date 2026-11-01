@@ -233,13 +233,13 @@ def render_catalog(catalog: Catalog) -> str:
     ),
     (
       "implemented-tongxian",
-      "童限六宫定位（不定义停止年龄）",
+      "童限一至六岁的本命宫名",
       ("虚岁", "本命宫名", "规则"),
       _tongxian_rows(),
     ),
     (
       "implemented-tongxian-boundaries",
-      "现代衔接的仓内读法（无默认，小限始终并读）",
+      "本项目的童限边界选项与适用年龄",
       ("边界解释", "五行局", "童限虚岁范围", "起限当岁与首大限", "规则"),
       _tongxian_boundary_rows(),
     ),

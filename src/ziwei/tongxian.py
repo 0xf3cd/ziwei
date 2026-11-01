@@ -1,10 +1,4 @@
-"""童限六宫定位，以及现代大限起运框架下两种显式的当岁读法。
-
-六宫口诀见《全书》卷二与《捷览》第53章录文，传承独立性未核。
-《精成》PDF第507页主张进入大限后停止看童限，童限期间参看小限；目前只核到这一路现代文本。
-当岁包含性未由原文裁定，两个边界均为仓内解释，不是两种已认证古法。
-《捷览》录文另提七八九岁，不能把本模块最晚六岁停止的现代框架当成该录文的完整规则。
-"""
+"""童限六宫定位与起限当岁边界选择。"""
 
 from __future__ import annotations
 
@@ -17,7 +11,7 @@ from ziwei.ganzhi import Dizhi
 from ziwei.palaces import PalaceName, palace_dizhi
 
 TONGXIAN_RULE_ID: Final = "variant.tongxian.six-palaces"
-"""一至六岁按本命宫名定位的规则标识，不包含停止条件。"""
+"""一至六岁按本命宫名定位的规则标识。"""
 TONGXIAN_PALACES: Final = (
   PalaceName.命宫,
   PalaceName.财帛,
@@ -26,11 +20,11 @@ TONGXIAN_PALACES: Final = (
   PalaceName.福德,
   PalaceName.官禄,
 )
-"""一至六岁的本命宫名；不按地支固定、不作周期循环。"""
+"""一至六岁对应的本命宫名。"""
 
 
 class TongxianBoundary(StrEnum):
-  """《精成》现代停止框架的两种仓内解释；调用者须显式选择，无默认。"""
+  """童限是否包含首大限起限当岁的两种选择。"""
 
   BEFORE_DECADE = "起限当岁不含"
   THROUGH_DECADE_START = "起限当岁包含"
@@ -47,7 +41,7 @@ class TongxianBoundary(StrEnum):
 
   @property
   def definition(self) -> str:
-    """所选读法的适用年龄及与小限、大限的关系；不声称是文献明文。"""
+    """所选边界的适用年龄及并读规则。"""
     return {
       TongxianBoundary.BEFORE_DECADE: (
         "仓内读法：童限适用于一岁至局数减一岁，起限当岁停止；小限始终独立计算。"
@@ -66,7 +60,7 @@ def _check_age(age: int) -> None:
 
 
 def tongxian_palace(age: int) -> PalaceName:
-  """取一至六岁本命宫名；七岁以后抛NotImplementedError，不猜后续古法宫序。"""
+  """查询一至六岁对应的本命宫名；七岁起抛NotImplementedError。"""
   _check_age(age)
   if age > len(TONGXIAN_PALACES):
     raise NotImplementedError("六宫映射只定义一至六岁；七岁以后的古法宫序未核定")
@@ -75,7 +69,7 @@ def tongxian_palace(age: int) -> PalaceName:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Tongxian:
-  """现代具名边界下的童限读数；不适用时宫名与地支同为None，不替换为小限。"""
+  """所选边界下的童限读数；超过适用年龄时宫名与地支均为None。"""
 
   minggong: Dizhi
   ju: WuxingJu
@@ -107,8 +101,8 @@ class Tongxian:
 def tongxian_at_age(
   minggong: Dizhi, ju: WuxingJu, age: int, *, boundary: TongxianBoundary
 ) -> Tongxian:
-  """先判所选现代边界是否适用，再作六宫定位；边界必填，不要求性别或出生资料。
+  """按命宫、五行局、虚岁和边界查询童限。
 
-  超过所选适用年龄返回空宫位读数，不触发低层七岁未定义错误；非法输入仍显式失败。
+  超过所选边界的适用年龄时，返回的宫名与地支均为None。
   """
   return Tongxian(minggong=minggong, ju=ju, age=age, boundary=boundary)

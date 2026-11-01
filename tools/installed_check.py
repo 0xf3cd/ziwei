@@ -239,7 +239,7 @@ def check_liunian() -> None:
 
 
 def check_yunxian(chart: ZiweiChart) -> None:
-  """消费安装包的独立定位、两边界及已有盘并读，核来源可达。"""
+  """验证安装包的小限、童限、运限并读及规则引用。"""
   small = xiaoxian_at_age(Dizhi.寅, Gender.女, 3)
   if small.dizhi is not Dizhi.寅:
     raise ValueError("Installed yunxian xiaoxian position differs")
