@@ -416,19 +416,27 @@ def place_hour_stars(shichen: Dizhi) -> tuple[StarPlacement, ...]:
   )
 
 
+def lucun_yangtuo_dizhi(tiangan: Tiangan) -> tuple[Dizhi, Dizhi, Dizhi]:
+  """按已确定的天干返回禄存、擎羊、陀罗的地支，次序为禄、羊、陀。"""
+  if not isinstance(tiangan, Tiangan):
+    raise TypeError("天干须为 Tiangan 成员")
+  lucun = _LUCUN_BY_STEM[tuple(Tiangan).index(tiangan)]
+  return lucun, _move(lucun, 1), _move(lucun, -1)
+
+
 def place_stem_stars(year_tiangan: Tiangan) -> tuple[StarPlacement, ...]:
   """按已确定的年干安天魁、天钺、禄存、擎羊与陀罗；天魁、天钺使用现代表。"""
   if not isinstance(year_tiangan, Tiangan):
     raise TypeError("年干须为 Tiangan 成员")
   index = tuple(Tiangan).index(year_tiangan)
   kui, yue = _KUIYUE_BY_STEM[index]
-  lucun = _LUCUN_BY_STEM[index]
+  lucun, qingyang, tuoluo = lucun_yangtuo_dizhi(year_tiangan)
   return (
     _placement(Star.天魁, kui),
     _placement(Star.天钺, yue),
     _placement(Star.禄存, lucun),
-    _placement(Star.擎羊, _move(lucun, 1)),
-    _placement(Star.陀罗, _move(lucun, -1)),
+    _placement(Star.擎羊, qingyang),
+    _placement(Star.陀罗, tuoluo),
   )
 
 

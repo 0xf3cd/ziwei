@@ -12,6 +12,7 @@ from ziwei.calendar import LunarAlgorithm
 from ziwei.config import ChartConfig, DayRollover, YearBoundary
 from ziwei.decades import Decade, place_decades
 from ziwei.ganzhi import Dizhi
+from ziwei.liunian import LiunianStars, liunian_minggong, liunian_stars
 from ziwei.palaces import (
   Palace,
   PalaceName,
@@ -200,6 +201,26 @@ def palace_view(chart: ZiweiChart, palace: PalaceName | Dizhi) -> PalaceView:
     ji=chart.sihua.ji if chart.sihua.ji in members else None,
     is_shengong=selected.dizhi is chart.shengong,
   )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class LiunianView:
+  """年度三曜及流年命宫所在宫的本命内容；natal保留本命宫名与生年四化。"""
+
+  liunian: LiunianStars
+  natal: PalaceView
+
+  def __post_init__(self) -> None:
+    if not isinstance(self.liunian, LiunianStars) or not isinstance(self.natal, PalaceView):
+      raise TypeError("流年叠读须使用 LiunianStars 与 PalaceView")
+    if self.natal.palace.dizhi is not liunian_minggong(self.liunian.ganzhi_year):
+      raise ValueError("本命宫支须与流年命宫一致")
+
+
+def liunian_view(chart: ZiweiChart, ganzhi_year: int) -> LiunianView:
+  """读取年度三曜及流年命宫对应的本命宫，纪年须已确定。"""
+  annual = liunian_stars(ganzhi_year)
+  return LiunianView(liunian=annual, natal=palace_view(chart, liunian_minggong(ganzhi_year)))
 
 
 def chart_brightness(chart: ZiweiChart, *, table: BrightnessTable) -> tuple[BrightnessReading, ...]:

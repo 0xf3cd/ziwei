@@ -47,7 +47,13 @@ def test_actual_html_and_relative_stable_links(html: Path) -> None:
 
 
 @pytest.mark.parametrize(
-  "section", ["implemented-xiaoxian", "implemented-tongxian", "implemented-tongxian-boundaries"]
+  "section",
+  [
+    "implemented-liunian-stars",
+    "implemented-xiaoxian",
+    "implemented-tongxian",
+    "implemented-tongxian-boundaries",
+  ],
 )
 @pytest.mark.parametrize("defect", ["value", "missing", "duplicate"])
 def test_yunxian_reference_rows_reject_actual_corruption(
