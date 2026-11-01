@@ -511,7 +511,7 @@ SOURCES = (
     lineage_id="lineage.jingcheng-golla",
     provenance="与既有golla及PDF同属《精成》转录谱系，不另计独立来源。",
     claims="流星推算方法段明列流禄、流羊、流陀，以所查期间天干推查，查法同原命盘。",
-    limits="只核网页转录，纸本版次、忠实度与授权未核；不是古籍原文，也不是三曜十干专表。",
+    limits="只核网页转录，纸本版次、忠实度与授权未核；不是古籍原文，也不是禄羊陀十干专表。",
     rights="仅必要查法短引，不转载现代全文。",
     status=SourceStatus.待核,
     checked_on=date(2026, 11, 1),
@@ -872,7 +872,7 @@ CITATIONS = (
   Citation(
     id="citation.iluck.liunian-ren-example",
     source_id="source.iluck-year-stem",
-    locator="2012壬辰流年例/三曜位置列表与十干表壬行",
+    locator="2012壬辰流年例/禄羊陀位置列表与十干表壬行",
     quote="流禄位于亥宫。",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
@@ -1771,7 +1771,7 @@ ENTRIES = (
     "直接例仅己丑和2012壬辰，十干结果另与网页三列逐项核对，不称十干各有直接盘例。"
     "组合以合成盘检验，不称完整外部叠盘认证。",
     recheck="取得《全书》流年段及《精成》查法段的具版次影像，核文字与转载关系；"
-    "另取具明确年界的流年三曜原始盘例。",
+    "另取具明确年界的流年禄羊陀原始盘例。",
     tracking_url=_SOURCE_RESEARCH_URL,
   ),
   KnowledgeEntry(

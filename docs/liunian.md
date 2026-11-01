@@ -125,9 +125,11 @@ ALGO3在1901至2099年沿用HKO，其余使用天文算法。不能把所有历�
 >>> dated_view = liunian_view(chart, solar.ganzhi_year)
 >>> dated_view.liunian == liunian_stars(2024)
 True
+>>> dated_view.natal.palace.dizhi.value
+'辰'
 ```
 
-若只需该处本命内容，仍可用`palace_view(chart, liunian_minggong(year))`。
+若只需该处本命内容，仍可用`palace_view(chart, liunian_minggong(ganzhi_year))`。
 `LiunianView`直接构造时核类型与宫支对应关系；成员类型不对抛`TypeError`，宫支不对应抛`ValueError`。
 
 ## 来源与验证限度
