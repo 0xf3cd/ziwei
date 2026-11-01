@@ -13,9 +13,12 @@ from ziwei.bureau import bureau_of
 from ziwei.calendar import LunarAlgorithm, supported_lunar_year_range, utc_to_ut1_jd, validate_lunar_date
 from ziwei.config import ChartConfig, LeapMonthPolicy, DayRollover, YearBoundary
 from ziwei.ganzhi import Dizhi, Ganzhi, year_ganzhi
+from ziwei.chart import LiunianView, liunian_view
+from ziwei.liunian import LiunianStars, liunian_stars
 from ziwei.palaces import minggong_dizhi, month_palace_index
 from ziwei.resolver import resolve
 from ziwei.timezone import IanaTimezone, FixedOffset, resolve_civil_time
+from ziwei.stars import lucun_yangtuo_dizhi
 config = ChartConfig(leap_month_policy=LeapMonthPolicy.全月归本月,
                      day_rollover=DayRollover.晚子时归次日, year_boundary=YearBoundary.立春)
 plain = ChartConfig(leap_month_policy=LeapMonthPolicy.全月归本月,
@@ -56,6 +59,11 @@ cases = [
   lambda: bureau_of('甲子'),
   lambda: resolve('1988', plain),
   lambda: resolve(record, config),
+  lambda: lucun_yangtuo_dizhi('甲'),
+  lambda: liunian_stars(True),
+  lambda: LiunianStars(0),
+  lambda: liunian_view(None, 2025),
+  lambda: LiunianView(liunian=liunian_stars(2025), natal=None),
 ]
 for index, action in enumerate(cases):
   try:
@@ -80,7 +88,7 @@ def test_public_validation_without_rewritten_assertions(
     check=False,
   )
   assert result.returncode == 0, result.stderr
-  assert "checked=23" in result.stdout
+  assert "checked=28" in result.stdout
 
 
 def test_import_has_no_calendar_or_timezone_data_side_effects(tmp_path: Path) -> None:

@@ -189,7 +189,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ## 流年
 
-[纯纪年、日期年界与本命叠读](liunian.md)。纯纪年不初始化原生历法，日期查询显式选择独立年界。
+[纪年定位、年度禄羊陀、日期年界与本命叠读](liunian.md)。纯纪年不初始化原生历法，日期查询显式选择独立年界。
 
 ```{eval-rst}
 .. automodule:: ziwei.liunian

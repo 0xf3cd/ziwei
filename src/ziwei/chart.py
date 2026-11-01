@@ -205,7 +205,7 @@ def palace_view(chart: ZiweiChart, palace: PalaceName | Dizhi) -> PalaceView:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class LiunianView:
-  """年度三曜及流年命宫所在宫的本命内容；natal保留本命宫名与生年四化。"""
+  """年度禄羊陀及对应本命宫；natal保留原宫名、星曜、生年四化和身宫标记。"""
 
   liunian: LiunianStars
   natal: PalaceView
@@ -218,7 +218,7 @@ class LiunianView:
 
 
 def liunian_view(chart: ZiweiChart, ganzhi_year: int) -> LiunianView:
-  """读取年度三曜及流年命宫对应的本命宫，纪年须已确定。"""
+  """读取年度禄羊陀及流年命宫所在宫的本命内容，纪年须已确定。"""
   annual = liunian_stars(ganzhi_year)
   return LiunianView(liunian=annual, natal=palace_view(chart, liunian_minggong(ganzhi_year)))
 

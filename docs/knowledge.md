@@ -66,7 +66,7 @@ True
 不与本命瞬间选项混用：初一有现代作者定义，立春日期只作为固定软件行为支持的具名兼容政策。
 [定位规则](knowledge-reference.md#entry.liunian.year-branch)、[历书日期](knowledge-reference.md#source.pmo-calendar-2022)
 和软件链的支持层次分别记录；输入基准及范围见[流年指南](liunian.md)。
-年度禄羊陀沿用三颗星的概念，以[独立年度规则](knowledge-reference.md#entry.liunian.lucun-yangtuo)关联查法与直接例；
+年度禄羊陀沿用三颗星的概念；[年度规则与出处](knowledge-reference.md#entry.liunian.lucun-yangtuo)说明怎样推算位置，并列出文献例子。
 从禄存、擎羊或陀罗的概念查变体时，本命与年度规则分别返回。`find("流禄")`等短名匹配年度规则，
 不把流禄登记为化禄。数值见[年度参考表](knowledge-reference.md#implemented-liunian-stars)。
 待决条目保存具体复核动作（`recheck`）与跟进讨论入口（`tracking_url`）；issue关闭不表示争议已经解决。

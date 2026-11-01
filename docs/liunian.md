@@ -34,7 +34,7 @@
 
 参数同样是1至9999的已确定纪年，拒绝`bool`、字符串和浮点数。`LiunianStars`不可变，
 保存`ganzhi_year`，三位置由纪年派生，不能在构造时另填。此查询不需要本命盘或出生资料。
-流禄与化禄不同；这里不计算流年四化。完整十干位置见[年度参考表](knowledge-reference.md#implemented-liunian-stars)。
+流禄与化禄不同。完整十干位置见[年度参考表](knowledge-reference.md#implemented-liunian-stars)。
 
 ## 日期：显式选择年界
 
@@ -93,7 +93,7 @@ ALGO3在1901至2099年沿用HKO，其余使用天文算法。不能把所有历�
 
 ## 与已有本命盘叠读
 
-`liunian_view(chart, ganzhi_year)`同时返回年度三曜和流年命宫所在宫的本命内容。
+`liunian_view(chart, ganzhi_year)`同时返回年度禄羊陀和流年命宫所在宫的本命内容。
 下面用合成的2024年农历正月初一子时女命，查询2025乙巳年：
 
 ```{doctest}
@@ -114,17 +114,25 @@ ALGO3在1901至2099年沿用HKO，其余使用天文算法。不能把所有历�
 ('卯', '巳', '田宅')
 ```
 
-`view.liunian`给出整年的三曜位置；`view.natal`只读取流年命宫所在的一宫，本例为巳宫，
-本命宫名仍是田宅。`natal.stars`、生年四化和身宫标记保持原盘内容，不混入年度三曜。
-原本命盘和大限不变。
+`view.liunian`给出整年的禄羊陀位置；`view.natal`只读取流年命宫所在的一宫，本例为巳宫，
+本命宫名仍是田宅。`view.natal.stars`、生年四化和身宫标记均来自本命盘，不混入年度禄羊陀。
+`chart`本身不被修改。
+
+从日期叠读时，把`liunian_on_date()`结果的`ganzhi_year`传入即可；改选年界也在日期查询这一步完成。
+例如沿用上面的立春日期结果`solar`：
+
+```{doctest}
+>>> dated_view = liunian_view(chart, solar.ganzhi_year)
+>>> dated_view.liunian == liunian_stars(2024)
+True
+```
 
 若只需该处本命内容，仍可用`palace_view(chart, liunian_minggong(year))`。
 `LiunianView`直接构造时核类型与宫支对应关系；成员类型不对抛`TypeError`，宫支不对应抛`ValueError`。
 
 ## 来源与验证限度
 
-年度三曜的本命表、现代查法和两条直接例分别记录在[年度禄羊陀条目](knowledge-reference.md#entry.liunian.lucun-yangtuo)，
-其中保留转录谱系、默认展示资格与复核入口。测试分别验收己丑、2012壬辰直接例、十干表与合成叠读。
+年度禄羊陀的出处、文献例子与限度见[知识条目](knowledge-reference.md#entry.liunian.lucun-yangtuo)。
 
 - [《全书》卷三固定录文](knowledge-reference.md#source.quanshu-juan3-wikisource)十二支太岁到宫句与
   [现代作者的2025乙巳例](knowledge-reference.md#source.click108-liunian)支持窄定位。原句中的小限与吉凶保留为引文，不执行。

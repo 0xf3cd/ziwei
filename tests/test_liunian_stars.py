@@ -16,7 +16,15 @@ from ziwei.chart import LiunianView, ZiweiChart, create_chart, liunian_view, pal
 from ziwei.config import ChartConfig
 from ziwei.ganzhi import Dizhi, Tiangan, year_ganzhi
 from ziwei.knowledge import load_catalog
-from ziwei.knowledge.model import Citation, KnowledgeEntry, RuleVariant, Source, SourceStatus
+from ziwei.knowledge.model import (
+  Citation,
+  CurationStatus,
+  KnowledgeEntry,
+  PremiseStatus,
+  RuleVariant,
+  Source,
+  SourceStatus,
+)
 from ziwei.liunian import (
   LIUNIAN_STARS_DEFINITION,
   LIUNIAN_STARS_RULE_ID,
@@ -75,6 +83,13 @@ def test_annual_year_rejects_coercion_in_factory_and_constructor(invalid: Any) -
   for constructor in (liunian_stars, LiunianStars):
     with pytest.raises(TypeError):
       constructor(invalid)
+
+
+@pytest.mark.parametrize("invalid", [True, False, 2024.0, "2024", None, 0, -1, 10000])
+def test_overlay_rejects_invalid_year(lunar_chart: ZiweiChart, invalid: Any) -> None:
+  error = ValueError if type(invalid) is int else TypeError
+  with pytest.raises(error):
+    liunian_view(lunar_chart, invalid)
 
 
 @pytest.mark.parametrize("invalid", [0, -1, 10000])
@@ -198,6 +213,10 @@ def test_annual_rule_and_aliases_are_reachable_from_existing_star_concepts() -> 
   entry = catalog.get("entry.liunian.lucun-yangtuo")
   assert isinstance(entry, KnowledgeEntry) and not entry.show_by_default
   assert entry.statement == variant.definition and entry.recheck
+  assert entry.premises and entry.limits
+  assert entry.premise_status is PremiseStatus.已明确
+  assert entry.curation is CurationStatus.已整理
+  assert entry.tracking_url == "https://github.com/0xf3cd/ziwei/issues/43"
   for identifier, source in (("source.jingcheng-chapter10", "source.jingcheng-golla"),):
     new, old = catalog.get(identifier), catalog.get(source)
     assert isinstance(new, Source) and isinstance(old, Source)
@@ -209,6 +228,15 @@ def test_annual_rule_and_aliases_are_reachable_from_existing_star_concepts() -> 
   assert citation.quote == (
     "均可依大限、流年、流月、流日、流时的天干为准来推查，查法和原命盘推查方法一样。"
   )
+
+
+def test_external_table_keeps_source_snapshot_and_scope() -> None:
+  source = load_catalog().get(REFERENCE["table_source_id"])
+  assert isinstance(source, Source) and source.status is SourceStatus.待核
+  digest = REFERENCE["table_sha256"]
+  assert len(digest) == 64 and all(c in "0123456789abcdef" for c in digest)
+  assert digest in source.edition
+  assert REFERENCE["table_locator"] and REFERENCE["limits"]
 
 
 def test_pure_annual_query_and_knowledge_do_not_import_calendar() -> None:

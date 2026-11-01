@@ -160,7 +160,7 @@ VARIANTS = (
     name="流年禄存、擎羊与陀罗",
     aliases=("流禄", "流祿", "流羊", "流陀"),
     definition=LIUNIAN_STARS_DEFINITION,
-    scope="已确定纪年的年度三曜定位，流禄指禄存，不是化禄。",
+    scope="已确定纪年的年度禄羊陀定位，流禄指禄存，不是化禄。",
     concept_ids=(Star.禄存.concept_id, Star.擎羊.concept_id, Star.陀罗.concept_id),
     conditions=("目标纪年已确定；按目标流年干取位置，不取出生年干",),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/57",
@@ -1769,7 +1769,7 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     limits="十干表及羊陀方向来自《全书》本命诀，年度年干锚依iLuck与《精成》的现代明文。"
     "直接例仅己丑和2012壬辰，十干结果另与网页三列逐项核对，不称十干各有直接盘例。"
-    "网页转抄关系及纸本版次未核，不计两路独立年干锚认证；组合以合成盘检验，不称完整外部叠盘认证。",
+    "组合以合成盘检验，不称完整外部叠盘认证。",
     recheck="取得《全书》流年段及《精成》查法段的具版次影像，核文字与转载关系；"
     "另取具明确年界的流年三曜原始盘例。",
     tracking_url=_SOURCE_RESEARCH_URL,

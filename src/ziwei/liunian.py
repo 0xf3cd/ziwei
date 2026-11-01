@@ -1,4 +1,8 @@
-"""查询流年命宫与禄羊陀，并按初一或立春日期确定纪年。"""
+"""查询流年命宫与禄羊陀，并按初一或立春日期确定纪年。
+
+纯纪年查询不加载历法适配；日期计算及日期结果构造按需导入。
+年度规则出处见知识条目entry.liunian.lucun-yangtuo。
+"""
 
 from __future__ import annotations
 
@@ -42,7 +46,7 @@ class LiunianStars:
 
   @property
   def rule_id(self) -> str:
-    """年度三曜实际使用的规则标识。"""
+    """年度禄羊陀实际使用的规则标识。"""
     return LIUNIAN_STARS_RULE_ID
 
 
