@@ -152,10 +152,11 @@ def test_annual_consumer_rejects_star_identity_and_overlay_defects(
         lucun=Dizhi.子 if defect == "annual-position" else reading.lucun,
         qingyang=reading.qingyang,
         tuoluo=reading.tuoluo,
-        rule_id="variant.star.lucun-stem",
+        rule_id="variant.star.lucun-stem" if defect == "annual-rule" else reading.rule_id,
       ),
     )
-    with pytest.raises(ValueError, match="Installed liunian annual"):
+    message = "annual stars differ" if defect == "annual-position" else "annual rule or sources"
+    with pytest.raises(ValueError, match=f"Installed liunian {message}"):
       installed_check.check_liunian()
 
 
