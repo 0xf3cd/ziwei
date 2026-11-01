@@ -25,6 +25,9 @@ src/ziwei/
   sihua.py          生年四化的具名变体
   decades.py        大限的顺逆与起止
   liunian.py        第一层流年命宫与日期年界
+  xiaoxian.py       生年支、性别与虚岁的小限定位
+  tongxian.py       童限六宫定位与起限当岁边界
+  yunxian.py        从已有盘并读小限、童限与大限
   chart.py          组合与不可变命盘结果
   render.py         只读文本与静态SVG十二宫格
   knowledge/        概念、来源、条目及独立查询
@@ -34,6 +37,9 @@ docs/               中文指南与说明
 
 可执行定义归各自领域模块。`chart.py` 负责组合及完整命盘的成功条件，不收容所有共享定义。
 有真实共同使用方时才提取共享值模块。包导入与知识查询不得初始化 celestial。
+
+`xiaoxian`与`tongxian`分别负责各自的年龄定位，`yunxian`组合已有命盘的三套运限读数。
+童限边界选项归`tongxian`，执行定义供知识目录和参考页使用；用法与出处见[运限指南](yunxian.md)。
 
 ## 出生资料与时间
 

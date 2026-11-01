@@ -47,6 +47,32 @@ def test_actual_html_and_relative_stable_links(html: Path) -> None:
 
 
 @pytest.mark.parametrize(
+  "section", ["implemented-xiaoxian", "implemented-tongxian", "implemented-tongxian-boundaries"]
+)
+@pytest.mark.parametrize("defect", ["value", "missing", "duplicate"])
+def test_yunxian_reference_rows_reject_actual_corruption(
+  html: Path, section: str, defect: str
+) -> None:
+  page = html / "docs/knowledge-reference.html"
+  text = page.read_text(encoding="utf-8")
+  start = text.index(f'<section id="{section}">')
+  end = text.index("</section>", start)
+  part = text[start:end]
+  row = re.findall(r"<tr>.*?</tr>", part)[1]
+  replacement = (
+    ""
+    if defect == "missing"
+    else row * 2
+    if defect == "duplicate"
+    else row.replace("<td>", "<td>假值", 1)
+  )
+  part = part.replace(row, replacement, 1)
+  page.write_text(text[:start] + part + text[end:], encoding="utf-8")
+  with pytest.raises(ValueError, match="Rule reference"):
+    check_knowledge_reference(html)
+
+
+@pytest.mark.parametrize(
   "defect",
   ["missing", "fake", "duplicate", "quote", "premise", "policy", "jiazi", "nayin", "wuhu"],
 )

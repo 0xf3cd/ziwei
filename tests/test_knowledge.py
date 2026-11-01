@@ -297,6 +297,7 @@ def test_builtin_corpus_retains_sources_and_unresolved_premises() -> None:
   assert catalog.filter_entries(show_by_default=True) == ()
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
   assert [item.id for item in pending] == [
+    "entry.tongxian.classical-unresolved",
     "entry.decades.quanshu-adjacent",
     "entry.leap-month.month-stars-scope",
     "entry.star.huoling-year-only-pending",
