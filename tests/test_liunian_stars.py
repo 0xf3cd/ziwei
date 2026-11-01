@@ -30,7 +30,10 @@ from ziwei.sihua import SihuaVariant
 from ziwei.stars import STAR_RULES, Star, StarPlacement, lucun_yangtuo_dizhi, place_stem_stars
 
 REFERENCE = json.loads(
-  Path(__file__).with_name("fixtures").joinpath("liunian-stars-reference.json").read_text()
+  Path(__file__)
+  .with_name("fixtures")
+  .joinpath("liunian-stars-reference.json")
+  .read_text(encoding="utf-8")
 )
 
 
