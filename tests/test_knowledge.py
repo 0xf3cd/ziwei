@@ -297,6 +297,8 @@ def test_builtin_corpus_retains_sources_and_unresolved_premises() -> None:
   assert catalog.filter_entries(show_by_default=True) == ()
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
   assert [item.id for item in pending] == [
+    "entry.interpretation.ziwei-fubi",
+    "entry.interpretation.tianfu-kongwang",
     "entry.tongxian.classical-unresolved",
     "entry.decades.quanshu-adjacent",
     "entry.leap-month.month-stars-scope",
@@ -897,6 +899,7 @@ def test_source_and_citation_text_layers_are_independent(catalog: Catalog) -> No
     (EvidenceAspect.SYSTEM, "系统归属"),
     (EvidenceAspect.RULE, "规则"),
     (EvidenceAspect.METHOD, "查法"),
+    (EvidenceAspect.INTERPRETATION, "解释"),
     (SourceStatus.VERIFIED, "已核"),
     (SourceStatus.UNVERIFIED, "待核"),
     (PremiseStatus.COMPLETE, "已明确"),

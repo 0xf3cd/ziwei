@@ -57,9 +57,11 @@ class EvidenceAspect(StrEnum):
   SYSTEM = "系统归属"
   RULE = "规则"
   METHOD = "查法"
+  INTERPRETATION = "解释"
   系统归属 = SYSTEM
   规则 = RULE
   查法 = METHOD
+  解释 = INTERPRETATION
 
 
 class SourceStatus(StrEnum):
