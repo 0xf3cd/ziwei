@@ -410,6 +410,26 @@ def check_chart() -> None:
 def check_knowledge() -> None:
   """消费安装包中的语料、别名、前提与原文引用，不只检查导入成功。"""
   catalog = load_catalog()
+  if not catalog.find("天馬") or len(catalog.find("庚干四化")) != 3:
+    raise ValueError("Installed knowledge corpus or aliases are incomplete")
+  for choice in (False, True):
+    expected = tuple(item for item in catalog.entries if item.show_by_default is choice)
+    if catalog.filter_entries(show_by_default=choice) != expected:
+      raise ValueError("Installed knowledge default display filter differs from its entries")
+  pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
+  if not pending:
+    raise ValueError("Installed knowledge lost unresolved premises")
+  leap = catalog.get("entry.leap-month.month-stars-scope")
+  if not isinstance(leap, KnowledgeEntry) or len(leap.alternatives) != 2:
+    raise ValueError("Installed knowledge lost unresolved premises")
+  references = catalog.references("entry.tianma.year-branch")
+  if not references or references[0].quote != "论本生年支":
+    raise ValueError("Installed knowledge citation differs from its source")
+  references = catalog.references(BrightnessTable.全书卷二录文.table_id)
+  if not references or not any(
+    item.source_id == "source.quanshu-wikisource" for item in references
+  ):
+    raise ValueError("Installed brightness knowledge lost its source")
   interpretation_sources = catalog.filter_sources(aspect=EvidenceAspect.解释)
   if (
     EvidenceAspect.__members__["解释"] is not EvidenceAspect.INTERPRETATION
@@ -435,32 +455,23 @@ def check_knowledge() -> None:
       condition in premise for entry in selected for premise in entry.premises
     ):
       raise ValueError("Installed knowledge interpretation concept or condition changed")
+    if tuple(entry.premise_status for entry in selected) != (
+      PremiseStatus.已明确,
+      PremiseStatus.待定,
+    ):
+      raise ValueError("Installed knowledge interpretation premise status changed")
+    if any(
+      entry.statement == citation.quote
+      for entry in selected
+      for citation in catalog.references(entry.id)
+    ):
+      raise ValueError("Installed knowledge interpretation statement duplicates its citation")
     if not any(
       citation.quote == quote and citation.aspects == (EvidenceAspect.解释,)
       for entry in selected
       for citation in catalog.references(entry.id)
     ):
       raise ValueError("Installed knowledge interpretation citation changed")
-  if not catalog.find("天馬") or len(catalog.find("庚干四化")) != 3:
-    raise ValueError("Installed knowledge corpus or aliases are incomplete")
-  for choice in (False, True):
-    expected = tuple(item for item in catalog.entries if item.show_by_default is choice)
-    if catalog.filter_entries(show_by_default=choice) != expected:
-      raise ValueError("Installed knowledge default display filter differs from its entries")
-  pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
-  if not pending:
-    raise ValueError("Installed knowledge lost unresolved premises")
-  leap = catalog.get("entry.leap-month.month-stars-scope")
-  if not isinstance(leap, KnowledgeEntry) or len(leap.alternatives) != 2:
-    raise ValueError("Installed knowledge lost unresolved premises")
-  references = catalog.references("entry.tianma.year-branch")
-  if not references or references[0].quote != "论本生年支":
-    raise ValueError("Installed knowledge citation differs from its source")
-  references = catalog.references(BrightnessTable.全书卷二录文.table_id)
-  if not references or not any(
-    item.source_id == "source.quanshu-wikisource" for item in references
-  ):
-    raise ValueError("Installed brightness knowledge lost its source")
 
 
 if __name__ == "__main__":

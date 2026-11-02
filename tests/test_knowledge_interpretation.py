@@ -61,6 +61,7 @@ def test_interpretation_quotes_conditions_and_display(reference: dict[str, Any])
     assert entry.concept_ids == (expected["concept_id"],)
     assert entry.variant_ids == ()
     assert entry.citation_ids == (citation.id,)
+    assert entry.statement == expected["statement"]
     assert entry.premises == tuple(expected["premises"])
     assert entry.exceptions == tuple(expected["exceptions"])
     assert entry.premise_status is PremiseStatus[expected["premise_status"]]
