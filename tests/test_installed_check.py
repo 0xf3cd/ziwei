@@ -23,7 +23,12 @@ from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import Citation, Concept, KnowledgeEntry, PremiseStatus, RuleVariant
-from ziwei.liunian import liunian_on_date
+from ziwei.liunian import (
+  LIUNIAN_STARS_RULE_ID,
+  LiunianBoundary,
+  liunian_on_date,
+  liunian_stars,
+)
 from ziwei.palaces import PalaceName
 from ziwei.render import render_svg, render_text
 from ziwei.stars import Star, place_stars
@@ -74,7 +79,9 @@ def test_liunian_consumer_rejects_wrong_result(
       Catalog,
       "references",
       lambda self, identifier: (
-        () if identifier.startswith("variant.liunian.") else original(self, identifier)
+        ()
+        if identifier in {boundary.rule_id for boundary in LiunianBoundary}
+        else original(self, identifier)
       ),
     )
   else:
@@ -105,6 +112,52 @@ def test_liunian_consumer_rejects_wrong_result(
     monkeypatch.setattr(installed_check, "liunian_on_date", faulty)
   with pytest.raises(ValueError, match="Installed liunian"):
     installed_check.check_liunian()
+
+
+@pytest.mark.parametrize(
+  "defect", ["annual-position", "annual-rule", "annual-source", "overlay-year", "natal-palace"]
+)
+def test_annual_consumer_rejects_star_identity_and_overlay_defects(
+  monkeypatch: pytest.MonkeyPatch,
+  defect: str,
+) -> None:
+  if defect in ("overlay-year", "natal-palace"):
+    monkeypatch.setattr(
+      installed_check,
+      "liunian_view",
+      lambda chart, year: SimpleNamespace(
+        liunian=liunian_stars(year + 1 if defect == "overlay-year" else year),
+        natal=palace_view(chart, Dizhi.子 if defect == "natal-palace" else Dizhi.辰),
+      ),
+    )
+    with pytest.raises(ValueError, match="Installed liunian overlay"):
+      installed_check.check_chart()
+  elif defect == "annual-source":
+    original = Catalog.references
+    monkeypatch.setattr(
+      Catalog,
+      "references",
+      lambda self, identifier: (
+        () if identifier == LIUNIAN_STARS_RULE_ID else original(self, identifier)
+      ),
+    )
+    with pytest.raises(ValueError, match="Installed liunian annual rule or sources"):
+      installed_check.check_liunian()
+  else:
+    reading = liunian_stars(2012)
+    monkeypatch.setattr(
+      installed_check,
+      "liunian_stars",
+      lambda year: SimpleNamespace(
+        lucun=Dizhi.子 if defect == "annual-position" else reading.lucun,
+        qingyang=reading.qingyang,
+        tuoluo=reading.tuoluo,
+        rule_id="variant.star.lucun-stem" if defect == "annual-rule" else reading.rule_id,
+      ),
+    )
+    message = "annual stars differ" if defect == "annual-position" else "annual rule or sources"
+    with pytest.raises(ValueError, match=f"Installed liunian {message}"):
+      installed_check.check_liunian()
 
 
 @pytest.mark.parametrize("defect", ["value", "count", "position", "text", "svg", "source"])
@@ -208,6 +261,7 @@ def test_installed_check_passes_for_consumer(
   output = capsys.readouterr().out
   assert "Installed ziwei" in output
   assert "Installed liunian: pure year and both date boundaries consumed" in output
+  assert "Installed liunian: annual stars and separate natal palace consumed" in output
   assert "Installed yunxian: independent positions and both explicit boundaries consumed" in output
   assert (
     f"Installed calendar: ALGO3, celestial {version('celestial-calendar')}, lunar years 1600-2199"

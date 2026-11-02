@@ -7,7 +7,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from ziwei import brightness, config, decades, ganzhi, sihua, stars, tongxian, xiaoxian
+from ziwei import brightness, config, decades, ganzhi, liunian, sihua, stars, tongxian, xiaoxian
 from ziwei.birth import Gender
 from ziwei.bureau import WuxingJu
 from ziwei.ganzhi import Dizhi, Tiangan
@@ -106,6 +106,17 @@ def _star_rows() -> list[tuple[str, ...]]:
         branch = tuple(Dizhi)[month_palace_index(month)]
         rows.append((rule.id, str(month), "天马", stars.tianma_dizhi(branch).value))
   return rows
+
+
+def _liunian_star_rows() -> list[tuple[str, ...]]:
+  return [
+    (
+      stem.value,
+      *(branch.value for branch in stars.lucun_yangtuo_dizhi(stem)),
+      liunian.LIUNIAN_STARS_RULE_ID,
+    )
+    for stem in Tiangan
+  ]
 
 
 def _xiaoxian_rows() -> list[tuple[str, ...]]:
@@ -207,6 +218,12 @@ def render_catalog(catalog: Catalog) -> str:
     parts.append("<tr>" + "".join(f"<td>{_value(value, ids)}</td>" for value in row) + "</tr>")
   parts.append("</table></section>")
   for identifier, title, headers, rows in (
+    (
+      "implemented-liunian-stars",
+      "流年禄存、擎羊与陀罗",
+      ("流年干", "流禄", "流羊", "流陀", "规则标识"),
+      _liunian_star_rows(),
+    ),
     (
       "implemented-brightness",
       "十四主星七级亮度表",
@@ -381,6 +398,7 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
   if missing := expected_stars - numeric_stars:
     raise ValueError(f"Star reference missing numeric coverage: {sorted(missing)}")
   for section, rows in (
+    ("implemented-liunian-stars", _liunian_star_rows()),
     ("implemented-brightness", _brightness_rows()),
     ("implemented-sihua", _sihua_rows()),
     ("implemented-decades", _decade_rows()),

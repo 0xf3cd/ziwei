@@ -1,7 +1,7 @@
-"""按目标年支定位流年命宫，并分别按初一或立春日期确定纪年。
+"""查询流年命宫与禄羊陀，并按初一或立春日期确定纪年。
 
-出处见知识目录entry.liunian.*。日期计算与结果构造才导入历法适配，
-纯纪年和知识查询不加载历法适配。
+纯纪年查询不加载历法适配；日期计算及日期结果构造按需导入。
+年度规则出处见知识条目entry.liunian.lucun-yangtuo。
 """
 
 from __future__ import annotations
@@ -12,12 +12,47 @@ from enum import StrEnum
 from typing import TYPE_CHECKING, Final
 
 from ziwei.ganzhi import Dizhi, Ganzhi, year_ganzhi
+from ziwei.stars import lucun_yangtuo_dizhi
 
 if TYPE_CHECKING:
   from ziwei.calendar import LunarAlgorithm
 
 LIUNIAN_MINGGONG_RULE_ID: Final = "variant.liunian.year-branch"
 """目标流年地支落同支宫的规则标识。"""
+LIUNIAN_STARS_RULE_ID: Final = "variant.liunian.lucun-yangtuo"
+"""按流年干安禄存、擎羊与陀罗的规则标识。"""
+LIUNIAN_STARS_DEFINITION: Final = "以已确定流年的年干查禄存，禄存顺一宫为流羊、逆一宫为流陀。"
+"""年度禄羊陀的安置方法。"""
+
+
+@dataclass(frozen=True, slots=True)
+class LiunianStars:
+  """已确定纪年的流禄、流羊、流陀；三位置由纪年派生。"""
+
+  ganzhi_year: int
+  lucun: Dizhi = field(init=False)
+  qingyang: Dizhi = field(init=False)
+  tuoluo: Dizhi = field(init=False)
+
+  def __post_init__(self) -> None:
+    positions = lucun_yangtuo_dizhi(self.year_ganzhi.tiangan)
+    for name, position in zip(("lucun", "qingyang", "tuoluo"), positions, strict=True):
+      object.__setattr__(self, name, position)
+
+  @property
+  def year_ganzhi(self) -> Ganzhi:
+    """目标纪年的干支。"""
+    return year_ganzhi(self.ganzhi_year)
+
+  @property
+  def rule_id(self) -> str:
+    """年度禄羊陀实际使用的规则标识。"""
+    return LIUNIAN_STARS_RULE_ID
+
+
+def liunian_stars(ganzhi_year: int) -> LiunianStars:
+  """查询已确定纪年1至9999的年度禄羊陀，拒绝bool。"""
+  return LiunianStars(ganzhi_year)
 
 
 class LiunianBoundary(StrEnum):

@@ -19,13 +19,19 @@ from ziwei.birth import (
 from ziwei.brightness import BrightnessLevel, BrightnessTable, star_brightness
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import ZiweiChart, chart_brightness, create_chart, palace_view
+from ziwei.chart import ZiweiChart, chart_brightness, create_chart, liunian_view, palace_view
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import KnowledgeEntry, PremiseStatus
-from ziwei.liunian import LiunianBoundary, liunian_minggong, liunian_on_date
+from ziwei.liunian import (
+  LIUNIAN_STARS_RULE_ID,
+  LiunianBoundary,
+  liunian_minggong,
+  liunian_on_date,
+  liunian_stars,
+)
 from ziwei.palaces import Palace, PalaceName, effective_month
 from ziwei.render import render_svg, render_text
 from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
@@ -207,7 +213,12 @@ def main(expected_version: str) -> None:
 
 
 def check_liunian() -> None:
-  """消费已安装的纯纪年和两种日期查询。"""
+  """消费已安装的年度三曜、纯纪年和两种日期查询。"""
+  annual = liunian_stars(2012)
+  if (annual.lucun, annual.qingyang, annual.tuoluo) != (Dizhi.亥, Dizhi.子, Dizhi.戌):
+    raise ValueError("Installed liunian annual stars differ from the direct example")
+  if annual.rule_id != LIUNIAN_STARS_RULE_ID or not load_catalog().references(annual.rule_id):
+    raise ValueError("Installed liunian annual rule or sources differ")
   if liunian_minggong(2025) is not Dizhi.巳:
     raise ValueError("Installed liunian year position differs")
   lunar = liunian_on_date(
@@ -368,6 +379,15 @@ def check_chart() -> None:
   ke_palace = next(position.dizhi for position in chart.stars if position.star is Star.右弼)
   if palace_view(chart, ke_palace).ke is not Star.右弼:
     raise ValueError("Installed palace query lost sihua")
+  annual = liunian_view(chart, 2012)
+  if (
+    annual.liunian != liunian_stars(2012)
+    or annual.natal.palace.dizhi is not Dizhi.辰
+    or annual.natal.palace.name is not PalaceName.官禄
+    or annual.natal != palace_view(chart, Dizhi.辰)
+  ):
+    raise ValueError("Installed liunian overlay changed annual or natal content")
+  print("Installed liunian: annual stars and separate natal palace consumed")
   table = BrightnessTable.全书卷二录文
   if star_brightness(Star.紫微, Dizhi.辰, table=table).level is not BrightnessLevel.得地:
     raise ValueError("Installed brightness differs from the named table")

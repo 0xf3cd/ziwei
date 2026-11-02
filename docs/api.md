@@ -139,7 +139,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.stars
-   :members: Star, StarRule, StarPlacement, ziwei_dizhi, tianfu_dizhi, place_major_stars, place_month_stars, place_hour_stars, place_stem_stars, place_fire_bell, tianma_dizhi, place_hongluan_tianxi, place_stars
+   :members: Star, StarRule, StarPlacement, ziwei_dizhi, tianfu_dizhi, place_major_stars, place_month_stars, place_hour_stars, lucun_yangtuo_dizhi, place_stem_stars, place_fire_bell, tianma_dizhi, place_hongluan_tianxi, place_stars
    :undoc-members:
    :member-order: bysource
 
@@ -189,15 +189,21 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ## 流年
 
-[纯纪年、日期年界与本命叠读](liunian.md)。纯纪年不初始化原生历法，日期查询显式选择独立年界。
+[纪年定位、年度禄羊陀、日期年界与本命叠读](liunian.md)。纯纪年不初始化原生历法，日期查询显式选择独立年界。
 
 ```{eval-rst}
 .. automodule:: ziwei.liunian
-   :members: LiunianBoundary, LiunianYear, liunian_minggong, liunian_on_date
+   :members: LiunianStars, liunian_stars, LiunianBoundary, LiunianYear, liunian_minggong, liunian_on_date
    :undoc-members:
    :member-order: bysource
 
 .. autodata:: ziwei.liunian.LIUNIAN_MINGGONG_RULE_ID
+   :no-value:
+
+.. autodata:: ziwei.liunian.LIUNIAN_STARS_RULE_ID
+   :no-value:
+
+.. autodata:: ziwei.liunian.LIUNIAN_STARS_DEFINITION
    :no-value:
 ```
 
@@ -244,7 +250,7 @@ celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial
 
 ```{eval-rst}
 .. automodule:: ziwei.chart
-   :members: ZiweiChart, PalaceView, palace_view, chart_brightness, create_chart
+   :members: ZiweiChart, PalaceView, palace_view, LiunianView, liunian_view, chart_brightness, create_chart
    :undoc-members:
    :member-order: bysource
 

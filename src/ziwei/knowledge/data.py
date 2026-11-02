@@ -20,7 +20,12 @@ from ziwei.knowledge.model import (
   SourceStatus,
   TextLayer,
 )
-from ziwei.liunian import LIUNIAN_MINGGONG_RULE_ID, LiunianBoundary
+from ziwei.liunian import (
+  LIUNIAN_MINGGONG_RULE_ID,
+  LIUNIAN_STARS_DEFINITION,
+  LIUNIAN_STARS_RULE_ID,
+  LiunianBoundary,
+)
 from ziwei.palaces import OPPOSITE_RULE_ID, SANFANG_SIZHENG_RULE_ID, PalaceName
 from ziwei.sihua import SIHUA_TABLES, SihuaVariant
 from ziwei.stars import MAJOR_STARS, STAR_RULES, Star, StarRule
@@ -150,6 +155,17 @@ CONCEPTS = (
 )
 
 VARIANTS = (
+  RuleVariant(
+    id=LIUNIAN_STARS_RULE_ID,
+    name="流年禄存、擎羊与陀罗",
+    aliases=("流禄", "流祿", "流羊", "流陀"),
+    definition=LIUNIAN_STARS_DEFINITION,
+    scope="已确定纪年的年度禄羊陀定位，流禄指禄存，不是化禄。",
+    concept_ids=(Star.禄存.concept_id, Star.擎羊.concept_id, Star.陀罗.concept_id),
+    conditions=("目标纪年已确定；按目标流年干取位置，不取出生年干",),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/57",
+    implementation="ziwei.liunian.liunian_stars",
+  ),
   RuleVariant(
     id=XIAOXIAN_RULE_ID,
     name="生年支起小限，男顺女逆",
@@ -470,6 +486,36 @@ VARIANTS = (
 )
 
 SOURCES = (
+  Source(
+    id="source.iluck-year-stem",
+    title="iLuck：20-0. 流年干星系",
+    edition="2026-11-01取得的HTML；SHA256 "
+    "312ebd6c5e2400b32bdc885e945ec66cd57e2ae1a9baafde5dd3b6796634fa64",
+    url="https://iluck7.com/ZWDS_GB/Tutorial/PaiPan/20-0_LiuNianGanXi.php",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.iluck-year-stem",
+    provenance="网站现代教学说明；与《全书》《精成》的转抄关系未核，不计为独立传承认证。",
+    claims="明确以流年干查表；表中禄羊陀三列覆盖十干，另给2012壬辰的亥、子、戌例。",
+    limits="仅核所取网页文字与表格，作者归属、版次及传承独立性未核；不采用其余流曜或个人出生资料。",
+    rights="仅必要短引与年度位置事实，不转载全文或完整盘。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 11, 1),
+  ),
+  Source(
+    id="source.jingcheng-chapter10",
+    title="紫微斗数精成：第10章 大限流年流月流日流时（网页转录）",
+    edition="页内标2023-05-21；2026-11-01取得HTML；SHA256 "
+    "ce084be16783be4f9c50865eb84b93a4c35e3a0a0e230df1d970103dfccca92f",
+    url="https://www.chinazwds.com/Home/ArticleDetails/04d006ad219044a4bb44fe28c3e8a009",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.jingcheng-golla",
+    provenance="与既有golla及PDF同属《精成》转录谱系，不另计独立来源。",
+    claims="流星推算方法段明列流禄、流羊、流陀，以所查期间天干推查，查法同原命盘。",
+    limits="只核网页转录，纸本版次、忠实度与授权未核；不是古籍原文，也不是禄羊陀十干专表。",
+    rights="仅必要查法短引，不转载现代全文。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 11, 1),
+  ),
   Source(
     id="source.jielan-yunxian-tianji",
     title="紫微斗数捷览：小限、童限及三岁例（天机录文）",
@@ -805,6 +851,42 @@ SOURCES = (
 )
 
 CITATIONS = (
+  Citation(
+    id="citation.quanshu.liunian-lucun-yangtuo",
+    source_id="source.quanshu-wikisource",
+    locator="安流禄流羊流陀诀 论流年太岁/己丑流年例前半句",
+    quote="假如己丑流年流禄在午、流羊在未、流陀在巳",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则,),
+    limits="只给己丑位置，与年干查法相容但不独定干支锚；不带公历年，不引用后半小限例。",
+  ),
+  Citation(
+    id="citation.iluck.liunian-stem",
+    source_id="source.iluck-year-stem",
+    locator="流年干星系的求法/表前说明",
+    quote="流年干星系的求法为以流年的年干作为条件，查表可得各星曜的位置。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="年干锚依此现代明文，不归作《全书》原文；只采用禄羊陀三列。",
+  ),
+  Citation(
+    id="citation.iluck.liunian-ren-example",
+    source_id="source.iluck-year-stem",
+    locator="2012壬辰流年例/禄羊陀位置列表与十干表壬行",
+    quote="流禄位于亥宫。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="同例另列流羊子、流陀戌；只采用已确定纪年与年度位置，不复制个人出生资料。",
+  ),
+  Citation(
+    id="citation.jingcheng.liunian-stem-method",
+    source_id="source.jingcheng-chapter10",
+    locator="第十章/4、流星的推算方法/流禄羊陀所用期间干",
+    quote="均可依大限、流年、流月、流日、流时的天干为准来推查，查法和原命盘推查方法一样。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="前句主语含流禄、流羊、流陀；本次只取流年层，泛述干支的第十节不单独定锚。",
+  ),
   Citation(
     id="citation.quanshu.xiaoxian",
     source_id="source.quanshu-wikisource",
@@ -1669,6 +1751,29 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
 
 
 ENTRIES = (
+  KnowledgeEntry(
+    id="entry.liunian.lucun-yangtuo",
+    statement=LIUNIAN_STARS_DEFINITION,
+    concept_ids=(Star.禄存.concept_id, Star.擎羊.concept_id, Star.陀罗.concept_id),
+    variant_ids=(LIUNIAN_STARS_RULE_ID,),
+    citation_ids=(
+      "citation.quanshu.lucun-yangtuo",
+      "citation.quanshu.liunian-lucun-yangtuo",
+      "citation.iluck.liunian-stem",
+      "citation.iluck.liunian-ren-example",
+      "citation.jingcheng.liunian-stem-method",
+    ),
+    premises=("目标纪年已由调用者或所选流年日期年界确定；流禄指年度禄存，与化禄分开",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="十干表及羊陀方向来自《全书》本命诀，年度年干锚依iLuck与《精成》的现代明文。"
+    "直接例仅己丑和2012壬辰，十干结果另与网页三列逐项核对，不称十干各有直接盘例。"
+    "组合以合成盘检验，不称完整外部叠盘认证。",
+    recheck="取得《全书》流年段及《精成》查法段的具版次影像，核文字与转载关系；"
+    "另取具明确年界的流年禄羊陀原始盘例。",
+    tracking_url=_SOURCE_RESEARCH_URL,
+  ),
   KnowledgeEntry(
     id="entry.xiaoxian.year-branch-gender",
     statement=XIAOXIAN_DEFINITION,

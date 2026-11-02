@@ -24,7 +24,7 @@ src/ziwei/
   brightness.py     已有星位的具名亮度表与只读查询
   sihua.py          生年四化的具名变体
   decades.py        大限的顺逆与起止
-  liunian.py        第一层流年命宫与日期年界
+  liunian.py        流年命宫、年度禄羊陀与日期年界
   xiaoxian.py       生年支、性别与虚岁的小限定位
   tongxian.py       童限六宫定位与起限当岁边界
   yunxian.py        从已有盘并读小限、童限与大限
@@ -114,8 +114,10 @@ celestial-calendar 负责公历与农历互转、闰月与各月长、节气时�
 不换算日期、不指定换岁日。低层入口分别只需年干，或命宫、五行局、年干和性别。
 `chart.create_chart()`组合这些组件，并以同一计算输入核对完整结果；用法与验收限度见[完整命盘与盘面](chart.md)。
 
-第一层流年独立于本命组合：`liunian_minggong()`只消费已确定的纪年，`liunian_on_date()`另按显式日期年界确定纪年与区间。
-日期政策归`liunian`，具体历法与时标换算归`calendar`；本命宫位叠读直接组合`palace_view()`，不向本命结果加字段。
+流年查询独立于本命组合：`liunian_minggong()`只消费已确定的纪年，`liunian_on_date()`另按显式日期年界确定纪年与区间。
+日期政策归`liunian`，具体历法与时标换算归`calendar`。`liunian_stars()`按目标年干查询年度禄羊陀，
+返回的`LiunianStars`保存纪年、三位置及年度`rule_id`。它与本命安星共用`stars.lucun_yangtuo_dizhi()`的位置关系，规则标识分开。
+`chart.liunian_view()`组合年度读数与`palace_view()`，校验流年命宫支与所读本命宫一致，不向本命结果加字段。
 初一使用所选农历算法的日期标签，立春日期使用1972年起的modelled-UTC+08日期；基准、范围和瞬间区别见[流年指南](liunian.md)。
 
 安星月份→命宫→命宫干支→五行局的共享推导归`palaces`，由命盘工厂、命盘构造器、安星与大限入口使用。
