@@ -624,6 +624,7 @@ def test_knowledge_consumer_rejects_missing_or_changed_corpus(
     "missing",
     "second-source",
     "source-renamed",
+    "extra-entry",
   ],
 )
 def test_interpretation_consumer_rejects_changed_corpus(
@@ -631,7 +632,20 @@ def test_interpretation_consumer_rejects_changed_corpus(
 ) -> None:
   catalog = load_catalog()
   identifier = "entry.interpretation.ziwei-fubi"
-  if defect == "second-source":
+  if defect == "extra-entry":
+    entry = next(item for item in catalog.entries if item.id == identifier)
+    catalog = replace(
+      catalog,
+      entries=(
+        *catalog.entries,
+        replace(
+          entry,
+          id="entry.synthetic-extra-interpretation",
+          concept_ids=("concept.star.tianji",),
+        ),
+      ),
+    )
+  elif defect == "second-source":
     source = next(item for item in catalog.sources if item.id == "source.quanshu-juan1-wikisource")
     citation = catalog.references(identifier)[0]
     extra_source = replace(source, id="source.synthetic-interpretation")

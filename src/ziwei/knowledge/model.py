@@ -52,7 +52,7 @@ class TextLayer(StrEnum):
 
 
 class EvidenceAspect(StrEnum):
-  """一处引文回答的是哪一层问题。"""
+  """引文支持的内容层次。"""
 
   SYSTEM = "系统归属"
   RULE = "规则"

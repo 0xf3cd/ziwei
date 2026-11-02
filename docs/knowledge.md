@@ -99,8 +99,9 @@ True
 
 ### 按星曜和来源查解释
 
-《诸星问答论》首批提供紫微、天府各一条星性描述和一条带条件解释。用概念与来源一起筛选，
-可以将这本书的解释和已有安星条目分开读取：
+《诸星问答论》首批提供紫微、天府各一条星性描述（书中如何称述星曜）和一条带条件解释。
+用概念与来源一起筛选，可以将这本书的解释和已有安星条目分开读取。
+当前目录的解释来源只有《全书》卷一，因此示例将来源结果解包为`source`：
 
 ```{doctest}
 >>> from ziwei.knowledge.model import EvidenceAspect
@@ -111,7 +112,7 @@ True
 >>> entries = catalog.filter_entries(concept_id=ziwei.id, source_id=source.id)
 >>> [entry.id for entry in entries]
 ['entry.interpretation.ziwei-nature', 'entry.interpretation.ziwei-fubi']
->>> conditional, = (entry for entry in entries if entry.premise_status is PremiseStatus.待定)
+>>> conditional = entries[1]
 >>> print(catalog.references(conditional.id)[0].quote)
 無輔弼同行則為孤君，雖美玉不足。
 >>> conditional.premises[-1]
@@ -120,9 +121,14 @@ True
 False
 ```
 
-改为`catalog.find("天府")`可读取另一颗星。`statement`是仓内归纳，`references()`给出逐字原引，
+示例用`entries[1]`读取列表中的辅弼条件条目。改为`catalog.find("天府")`可读取另一颗星，
+此时第二条为空亡条件条目。`statement`是仓内归纳，`references()`给出逐字原引，
 `premises`、`exceptions`与`limits`分别保存条件、例外和解释范围。这些记录说明书中如何称述星曜，
-查询不会检查某张命盘是否满足条件。首批四条均可检索，但不进入默认展示。
+查询不会检查某张命盘是否满足条件。首批四条均可检索，但不进入默认展示；
+展示资格与出处、前提状态的区别见[状态说明](#状态需要分开表达)。
+
+来源、文本层次与复核动作见[卷一来源记录](knowledge-reference.md#source.quanshu-juan1-wikisource)
+及其关联条目；首批以外的星曜覆盖由[#77](https://github.com/0xf3cd/ziwei/issues/77)追踪。
 
 ## 记录与归属
 
@@ -207,8 +213,6 @@ False
 
 ### 首批材料的限度
 
-- 《诸星问答论》的来源、文本层次与复核动作见[卷一来源记录](knowledge-reference.md#source.quanshu-juan1-wikisource)
-  及其关联条目；后续星曜覆盖由[#77](https://github.com/0xf3cd/ziwei/issues/77)追踪。
 - 维基文库《紫微斗數全書/卷二》固定修订`1963110`，实际正文为简体录文；没有确认其纸本底本。
   原字如天马句中的“戍”保留不改，不能用相同书名抹平不同四化口诀。
 - golla《紫微斗數精成》与读书网《九千飞星》只作转录线索，原著版次、部分作者归属与转载许可未核。
