@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import sys
+import tarfile
 import tempfile
 import tomllib
 from html.parser import HTMLParser
@@ -26,6 +27,13 @@ from tools.artifacts import (
   source_members,
 )
 from tools.consumption import install_and_consume, run
+from tools.doushu import (
+  check_alias_typing,
+  check_alias_wheel,
+  consume_alias,
+  preserve_alias,
+  wheel_name,
+)
 from tools.knowledge_reference import check_knowledge_reference
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -135,7 +143,27 @@ def check_api_reference(directory: Path, root: Path = ROOT) -> None:
     raise ValueError("API HTML is missing signatures: " + ", ".join(sorted(missing)))
 
 
-def check_distribution(directory: Path, *, artifacts_dir: Path | None = None) -> None:
+def alias_from_sdist(sdist: Path, version: str, directory: Path) -> Path:
+  """从实际sdist中运行别名构建，证明工具与输入均已随源码分发。"""
+  source = directory / "unpacked"
+  with tarfile.open(sdist, "r:gz") as archive:
+    archive.extractall(source, filter="data")
+  roots = tuple(source.iterdir())
+  if len(roots) != 1 or not roots[0].is_dir():
+    raise ValueError("Expected one extracted source directory")
+  bundle = directory / "alias-built"
+  run(
+    (sys.executable, str(roots[0] / "tools/doushu.py"), "build", "--directory", str(bundle)),
+    cwd=roots[0],
+  )
+  wheel = bundle / "packages" / wheel_name(version)
+  check_alias_wheel(wheel, version, root=ROOT)
+  return wheel
+
+
+def check_distribution(
+  directory: Path, *, artifacts_dir: Path | None = None, doushu_artifacts_dir: Path | None = None
+) -> None:
   """从锁定后端构建sdist→wheel、隔离消费，可显式保留同一份已核产物。"""
   metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
   version = metadata["version"]
@@ -149,11 +177,19 @@ def check_distribution(directory: Path, *, artifacts_dir: Path | None = None) ->
   check_sdist(sdist, version, source_members(ROOT))
   check_wheel(wheel, version)
   run((sys.executable, "-m", "twine", "check", str(sdist), str(wheel)), cwd=ROOT)
+  alias = alias_from_sdist(sdist, version, directory)
+  alias_digest = file_sha256(alias)
   install_and_consume(wheel, version, directory, root=ROOT)
+  consume_alias(alias, version, directory, root=ROOT)
+  check_alias_typing(directory)
   if any(file_sha256(path) != digest for path, digest in hashes.items()):
     raise ValueError("Artifacts changed during installed consumption")
+  if file_sha256(alias) != alias_digest:
+    raise ValueError("Alias changed during installed consumption")
   if artifacts_dir is not None:
     preserve_artifacts(hashes, artifacts_dir)
+  if doushu_artifacts_dir is not None:
+    preserve_alias(alias, alias_digest, doushu_artifacts_dir)
 
 
 def sphinx_report(directory: Path) -> str:
@@ -204,11 +240,16 @@ def check_documentation(directory: Path) -> None:
   )
 
 
-def main(*, artifacts_dir: Path | None = None, docs_dir: Path | None = None) -> None:
+def main(
+  *,
+  artifacts_dir: Path | None = None,
+  docs_dir: Path | None = None,
+  doushu_artifacts_dir: Path | None = None,
+) -> None:
   """运行全部检查，或只构建并核验文档；失败即停止。"""
   if docs_dir is not None:
-    if artifacts_dir is not None:
-      raise ValueError("docs_dir and artifacts_dir are mutually exclusive")
+    if artifacts_dir is not None or doushu_artifacts_dir is not None:
+      raise ValueError("docs_dir and artifact destinations are mutually exclusive")
     check_documentation(docs_dir.resolve())
     print("Documentation checks passed.")
     return
@@ -233,7 +274,9 @@ def main(*, artifacts_dir: Path | None = None, docs_dir: Path | None = None) -> 
   ) as temporary:
     directory = Path(temporary)
     check_documentation(directory)
-    check_distribution(directory, artifacts_dir=artifacts_dir)
+    check_distribution(
+      directory, artifacts_dir=artifacts_dir, doushu_artifacts_dir=doushu_artifacts_dir
+    )
   print("All checks passed.")
 
 
@@ -241,16 +284,24 @@ if __name__ == "__main__":
   import argparse
 
   parser = argparse.ArgumentParser(description=__doc__)
-  outputs = parser.add_mutually_exclusive_group()
-  outputs.add_argument(
+  parser.add_argument(
     "--artifacts-dir",
     type=Path,
     help="把已核sdist、wheel与SHA256SUMS保存到此目录；目录须不存在或为空",
   )
-  outputs.add_argument(
+  parser.add_argument(
+    "--doushu-artifacts-dir",
+    type=Path,
+    help="把已核doushu wheel与SHA256SUMS保存到独立目录；可与--artifacts-dir合用",
+  )
+  parser.add_argument(
     "--docs-dir",
     type=Path,
     help="仅构建并核验文档，输出html与doctest子目录；目录须不存在或为空，不自动清理",
   )
   arguments = parser.parse_args()
-  main(artifacts_dir=arguments.artifacts_dir, docs_dir=arguments.docs_dir)
+  main(
+    artifacts_dir=arguments.artifacts_dir,
+    docs_dir=arguments.docs_dir,
+    doushu_artifacts_dir=arguments.doushu_artifacts_dir,
+  )

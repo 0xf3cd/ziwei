@@ -13,6 +13,11 @@
 页面可以同时包含枚举成员、数据字段等其他签名。
 声明与签名检查的维护方式见[参与开发](contributing.md#维护api文档)。
 
+从0.4.1起，下列模块中的公开对象也可从对应`doushu.*`路径导入，例如
+`from doushu.chart import create_chart`、`from doushu.knowledge.model import Source`。
+两种路径取得同一个对象；类型的`__module__`、repr与pickle仍使用`ziwei.*`。
+包入口不自动加载所有子模块，模块对象本身也不是同一对象；内部`ziwei.knowledge.data`不提供别名路径。
+
 ## 出生记录与计算输入
 
 ```{eval-rst}

@@ -8,6 +8,7 @@ __pycache__/
 htmlcov/
 build/
 dist/
+dist-doushu/
 *.egg-info/
 .review/
 .env

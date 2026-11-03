@@ -5,6 +5,13 @@
 本页记录各版本源码的功能与兼容变化。是否已经公开发行，以
 [PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
+## 0.4.1（候选）
+
+- 新增同版安装与导入别名`doushu`。它精确依赖`ziwei==0.4.1`，转发对应公开子模块中的原对象，
+  支持`from doushu.chart import create_chart`及独立知识查询；原有`ziwei.*`路径不变。
+- 发布流程从主包sdist内构建别名wheel，两包原件经同次跨平台消费后先上传主包、再上传别名。
+  `doushu`只提供纯Python wheel，Python与平台要求不扩大，领域算法、历法依赖和已有API不变。
+
 ## 0.4.0
 
 ### 新增

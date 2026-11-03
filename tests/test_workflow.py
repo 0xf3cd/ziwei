@@ -19,6 +19,10 @@ SOURCE_CHECK = (
   'test -z "$(git status --porcelain --untracked-files=all)"\n'
   'git diff --exit-code "$GITHUB_SHA" --\n'
 )
+BUILD_COMMAND = (
+  "uv run --locked python tools/check.py --artifacts-dir dist --doushu-artifacts-dir dist-doushu"
+)
+CONSUME_COMMAND = "uv run --locked python tools/release.py consume --doushu-directory dist-doushu"
 
 
 def load_workflow(text: str) -> dict[str, Any]:
@@ -177,8 +181,9 @@ def check_release_policy(data: dict[str, Any]) -> None:
       "actions/setup-python",
       "astral-sh/setup-uv",
       "actions/download-artifact",
+      "actions/download-artifact",
       'uv sync --locked --python "$PYTHON_VERSION"',
-      "uv run --locked python tools/release.py consume",
+      CONSUME_COMMAND,
     ),
     "Consumption execution chain",
   )
@@ -189,12 +194,13 @@ def check_release_policy(data: dict[str, Any]) -> None:
   )
   require(sync.get("shell") == "bash", "Matrix sync uses Bash variables on every platform")
   require(
-    set(jobs) == {"build", "consume", "publish-pypi"},
+    set(jobs) == {"build", "consume", "publish-pypi", "publish-pypi-doushu"},
     "Release jobs",
   )
   dependencies = {
     "consume": {"build"},
     "publish-pypi": {"build", "consume"},
+    "publish-pypi-doushu": {"build", "consume", "publish-pypi"},
   }
   for name, job in jobs.items():
     require(
@@ -210,7 +216,7 @@ def check_release_policy(data: dict[str, Any]) -> None:
     privileged = name.startswith("publish-")
     permissions = {"id-token": "write"} if privileged else {"contents": "read"}
     require(job.get("permissions") == permissions, "Least-privilege job permissions")
-    for step in job["steps"]:
+    for index, step in enumerate(job["steps"]):
       require("${{" not in step.get("run", ""), "Expressions enter scripts only through env")
       require("continue-on-error" not in step, "Steps must fail closed")
       if "uses" not in step:
@@ -234,11 +240,14 @@ def check_release_policy(data: dict[str, Any]) -> None:
           "Release uv checksum matches quality CI",
         )
       if action == "actions/download-artifact":
+        alias_download = name == "publish-pypi-doushu" or (name == "consume" and index == 4)
         require(
           options
           == {
-            "artifact-ids": "${{ needs.build.outputs.artifact_id }}",
-            "path": "dist",
+            "artifact-ids": "${{ needs.build.outputs.doushu_artifact_id }}"
+            if alias_download
+            else "${{ needs.build.outputs.artifact_id }}",
+            "path": "dist-doushu" if alias_download else "dist",
             "digest-mismatch": "error",
           },
           "Download exact artifact ID",
@@ -274,7 +283,9 @@ def check_release_policy(data: dict[str, Any]) -> None:
       steps[2]["with"]
       == {
         "repository-url": "https://upload.pypi.org/legacy/",
-        "packages-dir": "dist/packages",
+        "packages-dir": "dist-doushu/packages"
+        if name == "publish-pypi-doushu"
+        else "dist/packages",
         "attestations": "true",
         "skip-existing": "false",
       },
@@ -289,9 +300,11 @@ def check_release_policy(data: dict[str, Any]) -> None:
       "uv sync --locked --python 3.14",
       SOURCE_CHECK,
       "uv run --locked python tools/release.py validate",
-      "uv run --locked python tools/check.py --artifacts-dir dist",
+      BUILD_COMMAND,
       SOURCE_CHECK,
       "uv run --locked python tools/release.py prepare",
+      "uv run --locked python tools/doushu.py prepare",
+      "actions/upload-artifact",
       "actions/upload-artifact",
     ),
     "Full build gate before retaining outputs",
@@ -303,6 +316,7 @@ def check_release_policy(data: dict[str, Any]) -> None:
       "RELEASE_SHA": "${{ needs.build.outputs.source_sha }}",
       "SDIST_SHA256": "${{ needs.build.outputs.sdist_sha256 }}",
       "WHEEL_SHA256": "${{ needs.build.outputs.wheel_sha256 }}",
+      "DOUSHU_WHEEL_SHA256": "${{ needs.build.outputs.doushu_wheel_sha256 }}",
       "PYTHON_VERSION": "${{ matrix.python }}",
     },
     "Consumption receives independent build outputs",
@@ -319,6 +333,50 @@ def check_release_policy(data: dict[str, Any]) -> None:
     },
     "Byte verification receives independent build outputs",
   )
+  require(
+    jobs["publish-pypi-doushu"]["steps"][1]["env"]
+    == {
+      "DIST_DIR": "dist-doushu",
+      "RELEASE_VERSION": "${{ needs.build.outputs.version }}",
+      "WHEEL_NAME": "${{ needs.build.outputs.doushu_wheel_name }}",
+      "WHEEL_SHA256": "${{ needs.build.outputs.doushu_wheel_sha256 }}",
+    },
+    "Alias byte verification receives independent build outputs",
+  )
+  expected_outputs = {
+    key: "${{ steps.release.outputs." + key + " }}"
+    for key in ("version", "source_sha", "sdist_name", "wheel_name", "sdist_sha256", "wheel_sha256")
+  }
+  expected_outputs.update(
+    {
+      "artifact_id": "${{ steps.upload.outputs.artifact-id }}",
+      "doushu_wheel_name": "${{ steps.doushu.outputs.doushu_wheel_name }}",
+      "doushu_wheel_sha256": "${{ steps.doushu.outputs.doushu_wheel_sha256 }}",
+      "doushu_artifact_id": "${{ steps.upload-doushu.outputs.artifact-id }}",
+    }
+  )
+  require(jobs["build"]["outputs"] == expected_outputs, "Exact independent build outputs")
+  build_steps = jobs["build"]["steps"]
+  require(
+    build_steps[8].get("id") == "release" and build_steps[9].get("id") == "doushu",
+    "Prepare output identities",
+  )
+  for step, identifier, package, directory in (
+    (build_steps[10], "upload", "ziwei", "dist"),
+    (build_steps[11], "upload-doushu", "doushu", "dist-doushu"),
+  ):
+    require(
+      step.get("id") == identifier
+      and step["with"]
+      == {
+        "name": package + "-${{ steps.release.outputs.version }}-${{ github.run_id }}",
+        "path": directory + "/",
+        "if-no-files-found": "error",
+        "overwrite": "false",
+        "retention-days": "14",
+      },
+      "Separate immutable artifact uploads",
+    )
 
 
 def test_release_workflow_obeys_the_publication_contract() -> None:
@@ -399,11 +457,7 @@ def test_release_execution_chain_rejects_skipped_or_rebound_steps(defect: str) -
   bad = deepcopy(good)
   consume = bad["jobs"]["consume"]
   steps = consume["steps"]
-  index = next(
-    i
-    for i, step in enumerate(steps)
-    if step.get("run") == "uv run --locked python tools/release.py consume"
-  )
+  index = next(i for i, step in enumerate(steps) if step.get("run") == CONSUME_COMMAND)
   build = bad["jobs"]["build"]["steps"]
   match defect:
     case "consume-replace":
@@ -421,11 +475,7 @@ def test_release_execution_chain_rejects_skipped_or_rebound_steps(defect: str) -
     case "consume-env":
       consume["env"]["RELEASE_SHA"] = "${{ github.sha }}"
     case "build-check-if":
-      next(
-        step
-        for step in build
-        if step.get("run") == "uv run --locked python tools/check.py --artifacts-dir dist"
-      )["if"] = "false"
+      next(step for step in build if step.get("run") == BUILD_COMMAND)["if"] = "false"
     case "build-prepare-if":
       next(
         step

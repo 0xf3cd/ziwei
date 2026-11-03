@@ -323,11 +323,13 @@ def test_hashes_are_compared_to_build_outputs_not_only_the_manifest(
 
 
 @pytest.mark.parametrize("command", ["validate", "prepare", "consume"])
+@pytest.mark.parametrize("with_alias", [False, True])
 def test_release_cli_keeps_the_same_identity_and_bytes(
   bundle: tuple[Path, release.Manifest],
   tmp_path: Path,
   monkeypatch: pytest.MonkeyPatch,
   command: str,
+  with_alias: bool,
 ) -> None:
   directory, manifest = bundle
   source = tmp_path / "source"
@@ -362,6 +364,23 @@ def test_release_cli_keeps_the_same_identity_and_bytes(
 
   monkeypatch.setattr(release, "verify_bundle", observe_verify)
   monkeypatch.setattr(release, "install_and_consume", consume)
+  if with_alias and command == "consume":
+    alias_directory = tmp_path / "alias"
+    monkeypatch.setenv("DOUSHU_WHEEL_SHA256", "d" * 64)
+    monkeypatch.setattr(sys, "argv", [*sys.argv, "--doushu-directory", str(alias_directory)])
+
+    def verify_alias(path: Path, version: str, digest: str, *, root: Path) -> Path:
+      assert path == alias_directory.resolve() and version == VERSION and digest == "d" * 64
+      assert root == source
+      events.append("verify-alias")
+      return alias_directory / "packages/doushu.whl"
+
+    def consume_alias(*args: Any, **kwargs: Any) -> None:
+      assert kwargs["root"] == source
+      events.append("consume-alias")
+
+    monkeypatch.setattr(release, "verify_alias_bundle", verify_alias)
+    monkeypatch.setattr(release, "consume_alias", consume_alias)
   release.main()
   if command == "prepare":
     assert f"source_sha={SHA}\n" in (tmp_path / "outputs").read_text()
@@ -371,7 +390,9 @@ def test_release_cli_keeps_the_same_identity_and_bytes(
     == {
       "validate": [],
       "prepare": ["verify"],
-      "consume": ["verify", "consume", "verify"],
+      "consume": ["verify", "verify-alias", "consume", "consume-alias", "verify", "verify-alias"]
+      if with_alias
+      else ["verify", "consume", "verify"],
     }[command]
   )
 
