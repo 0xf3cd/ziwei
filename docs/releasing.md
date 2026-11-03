@@ -12,7 +12,8 @@
 [v0.1.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.1.0)已公开。
 轻量标签`v0.1.0`指向源码`206723d794bbf9333062ab0f07beb0d9e4751b2e`，不附独立标签签名。
 非管理员创建拒绝、真实重复上传拒收和跨attempt失败恢复仍未演练，不能用成功首发代替这些证据。
-[#26](https://github.com/0xf3cd/ziwei/issues/26)保存发布验证记录并追踪未完成项；不为补证重传0.1.0，也不改用TestPyPI。
+[#26](https://github.com/0xf3cd/ziwei/issues/26)保存发布验证记录，未完成项由
+[#67](https://github.com/0xf3cd/ziwei/issues/67)继续追踪；不为补证重传0.1.0，也不改用TestPyPI。
 
 [正式发布运行39854980639](https://github.com/0xf3cd/ziwei/actions/runs/39854980639)的attempt 1完成构建、
 七项跨平台消费及`pypi`环境批准，上传的是同一artifact-id中的原产物。
@@ -29,16 +30,20 @@
 [v0.2.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.2.0)也已公开，
 版本标签固定指向源码`5cdcc93fa3fd725177cc8532a667b0764f901a96`。
 
-## 0.3.0发布准备
+[PyPI 0.3.0](https://pypi.org/project/ziwei/0.3.0/)与
+[v0.3.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.3.0)已公开，
+版本标签固定指向源码`71cf78471a7d69146552ea902e4757dbc8173837`。
 
-本次准备将源码版本设为`0.3.0`，更新[发行说明](releases.md)和安装示例；不执行上传、创建tag或GitHub Release。
+## 0.4.0发布准备
+
+本次准备将源码版本设为`0.4.0`，同步版本示例并复核[发行说明](releases.md)；不执行上传、创建tag或GitHub Release。
 包版本号不证明已经发布，实际发行记录以[PyPI](https://pypi.org/project/ziwei/)和
 [GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
-准备时的README面向0.3.0的功能与用法。在该准备合入到实际上传之间，安装命令`ziwei==0.3.0`可能暂不可用。
-上传后的README长描述不再随main修改；从源码安装见[参与开发](contributing.md#运行检查)。
+README使用通用安装命令，安装PyPI当前发行版；0.4.0正式上传前，从源码安装候选版本见
+[参与开发](contributing.md#运行检查)。上传后的README长描述不再随main修改。
 
-[#26](https://github.com/0xf3cd/ziwei/issues/26)继续追踪上文未完成的三项真实演练。
+[#67](https://github.com/0xf3cd/ziwei/issues/67)继续追踪上文未完成的三项真实演练。
 本准备不执行或豁免这些演练；是否作为本次正式上传的前置条件，须在发布批准前明确。
 未核实的跨attempt恢复仍按下文失败处理，不能以候选检查通过推定可重跑恢复。
 

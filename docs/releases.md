@@ -5,7 +5,7 @@
 本页记录各版本源码的功能与兼容变化。是否已经公开发行，以
 [PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
-## 0.4.0（开发中）
+## 0.4.0（候选，尚未发行）
 
 ### 新增
 
