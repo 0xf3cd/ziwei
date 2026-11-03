@@ -24,7 +24,7 @@ from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
-from ziwei.knowledge.model import KnowledgeEntry, PremiseStatus
+from ziwei.knowledge.model import EvidenceAspect, KnowledgeEntry, PremiseStatus, Source
 from ziwei.liunian import (
   LIUNIAN_STARS_RULE_ID,
   LiunianBoundary,
@@ -430,6 +430,48 @@ def check_knowledge() -> None:
     item.source_id == "source.quanshu-wikisource" for item in references
   ):
     raise ValueError("Installed brightness knowledge lost its source")
+  interpretation_sources = catalog.filter_sources(aspect=EvidenceAspect.解释)
+  if (
+    EvidenceAspect.__members__["解释"] is not EvidenceAspect.INTERPRETATION
+    or len(interpretation_sources) != 1
+    or interpretation_sources[0].id != "source.quanshu-juan1-wikisource"
+  ):
+    raise ValueError("Installed knowledge interpretation source or aspect changed")
+  source = interpretation_sources[0]
+  if not isinstance(source, Source) or source.lineage_id != "lineage.quanshu-wikisource":
+    raise ValueError("Installed knowledge interpretation lineage changed")
+  entries = catalog.filter_entries(source_id=source.id)
+  if len(entries) != 4 or any(
+    entry.show_by_default or not entry.recheck or not entry.tracking_url for entry in entries
+  ):
+    raise ValueError("Installed knowledge interpretation entries or default display changed")
+  for name, quote, condition in (
+    ("紫微", "無輔弼同行則為孤君，雖美玉不足。", "同行的具体范围待核"),
+    ("天府", "若值空亡是為孤立，不可一例而推斷，大抵此星多主吉。", "空亡的具体所指待核"),
+  ):
+    (concept,) = catalog.find(name)
+    selected = catalog.filter_entries(concept_id=concept.id, source_id=source.id)
+    if len(selected) != 2 or not any(
+      condition in premise for entry in selected for premise in entry.premises
+    ):
+      raise ValueError("Installed knowledge interpretation concept or condition changed")
+    if tuple(entry.premise_status for entry in selected) != (
+      PremiseStatus.已明确,
+      PremiseStatus.待定,
+    ):
+      raise ValueError("Installed knowledge interpretation premise status changed")
+    if any(
+      entry.statement == citation.quote
+      for entry in selected
+      for citation in catalog.references(entry.id)
+    ):
+      raise ValueError("Installed knowledge interpretation statement duplicates its citation")
+    if not any(
+      citation.quote == quote and citation.aspects == (EvidenceAspect.解释,)
+      for entry in selected
+      for citation in catalog.references(entry.id)
+    ):
+      raise ValueError("Installed knowledge interpretation citation changed")
 
 
 if __name__ == "__main__":

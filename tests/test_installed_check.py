@@ -22,7 +22,14 @@ from ziwei.decades import decade_periods
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
-from ziwei.knowledge.model import Citation, Concept, KnowledgeEntry, PremiseStatus, RuleVariant
+from ziwei.knowledge.model import (
+  Citation,
+  Concept,
+  EvidenceAspect,
+  KnowledgeEntry,
+  PremiseStatus,
+  RuleVariant,
+)
 from ziwei.liunian import (
   LIUNIAN_STARS_RULE_ID,
   LiunianBoundary,
@@ -599,7 +606,120 @@ def test_knowledge_consumer_rejects_missing_or_changed_corpus(
       ),
     )
   monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
-  with pytest.raises(ValueError, match="knowledge"):
+  with pytest.raises(ValueError, match=r"knowledge corpus|knowledge lost|knowledge citation"):
+    installed_check.check_knowledge()
+
+
+@pytest.mark.parametrize(
+  "defect",
+  [
+    "quote",
+    "concept",
+    "condition",
+    "display",
+    "aspect",
+    "lineage",
+    "statement",
+    "premise-status",
+    "missing",
+    "second-source",
+    "source-renamed",
+    "extra-entry",
+  ],
+)
+def test_interpretation_consumer_rejects_changed_corpus(
+  defect: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  identifier = "entry.interpretation.ziwei-fubi"
+  if defect == "extra-entry":
+    entry = next(item for item in catalog.entries if item.id == identifier)
+    catalog = replace(
+      catalog,
+      entries=(
+        *catalog.entries,
+        replace(
+          entry,
+          id="entry.synthetic-extra-interpretation",
+          concept_ids=("concept.star.tianji",),
+        ),
+      ),
+    )
+  elif defect == "second-source":
+    source = next(item for item in catalog.sources if item.id == "source.quanshu-juan1-wikisource")
+    citation = catalog.references(identifier)[0]
+    extra_source = replace(source, id="source.synthetic-interpretation")
+    extra_citation = replace(
+      citation, id="citation.synthetic-interpretation", source_id=extra_source.id
+    )
+    catalog = replace(
+      catalog,
+      sources=(*catalog.sources, extra_source),
+      citations=(*catalog.citations, extra_citation),
+    )
+  elif defect == "source-renamed":
+    catalog = replace(
+      catalog,
+      sources=tuple(
+        replace(item, id="source.renamed-interpretation")
+        if item.id == "source.quanshu-juan1-wikisource"
+        else item
+        for item in catalog.sources
+      ),
+      citations=tuple(
+        replace(item, source_id="source.renamed-interpretation")
+        if item.source_id == "source.quanshu-juan1-wikisource"
+        else item
+        for item in catalog.citations
+      ),
+    )
+  elif defect == "missing":
+    catalog = replace(
+      catalog, entries=tuple(item for item in catalog.entries if item.id != identifier)
+    )
+  elif defect in ("quote", "aspect"):
+    catalog = replace(
+      catalog,
+      citations=tuple(
+        replace(
+          item,
+          **({"quote": "错误原文"} if defect == "quote" else {"aspects": (EvidenceAspect.规则,)}),
+        )
+        if item.id == "citation.quanshu-juan1.ziwei-fubi"
+        else item
+        for item in catalog.citations
+      ),
+    )
+  elif defect == "lineage":
+    catalog = replace(
+      catalog,
+      sources=tuple(
+        replace(item, lineage_id="lineage.false-independent")
+        if item.id == "source.quanshu-juan1-wikisource"
+        else item
+        for item in catalog.sources
+      ),
+    )
+  else:
+    if defect == "concept":
+      changes: dict[str, Any] = {"concept_ids": ("concept.star.tianfu",)}
+    elif defect == "condition":
+      changes = {"premises": ("本段以紫微的身命论述为语境。",)}
+    elif defect == "statement":
+      changes = {"statement": catalog.references(identifier)[0].quote}
+    elif defect == "premise-status":
+      changes = {"premise_status": PremiseStatus.已明确}
+    else:
+      identifier = "entry.interpretation.ziwei-nature"
+      changes = {"show_by_default": True}
+    catalog = replace(
+      catalog,
+      entries=tuple(
+        replace(item, **changes) if item.id == identifier else item for item in catalog.entries
+      ),
+    )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match="interpretation"):
     installed_check.check_knowledge()
 
 

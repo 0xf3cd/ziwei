@@ -1,0 +1,61 @@
+{
+  "source_id": "source.quanshu-juan1-wikisource",
+  "url": "https://zh.wikisource.org/w/index.php?title=紫微斗數全書/卷一&oldid=7913704",
+  "retrieved_at": "2026-11-02T04:12:16.248296+00:00",
+  "revision": 7913704,
+  "bytes": 67698,
+  "sha256": "9beb8038a8b82154d15d81c8ff822423d4f0c7c006f536a86552adeaa594818a",
+  "lineage_id": "lineage.quanshu-wikisource",
+  "tracking_url": "https://github.com/0xf3cd/ziwei/issues/11",
+  "scope": "卷一固定电子录文的四个完整句；行号从原始wiki源码首行起算。陈述、前提和例外为仓内整理预期，不是独立外部盘例。",
+  "entries": [
+    {
+      "id": "entry.interpretation.ziwei-nature",
+      "citation_id": "citation.quanshu-juan1.ziwei-nature",
+      "concept_id": "concept.star.ziwei",
+      "line": 217,
+      "locator": "诸星问答论/问紫微所主若何？/答曰首句",
+      "quote": "紫微屬土，乃中天之尊星為帝座，主掌造化樞機，人生主宰。",
+      "statement": "《诸星问答论》答曰将紫微称为属土的中天尊星、帝座。",
+      "premises": ["本条记录《诸星问答论》答曰部分对紫微的称述，按该节原文用语理解。"],
+      "premise_status": "已明确",
+      "exceptions": []
+    },
+    {
+      "id": "entry.interpretation.ziwei-fubi",
+      "citation_id": "citation.quanshu-juan1.ziwei-fubi",
+      "concept_id": "concept.star.ziwei",
+      "line": 222,
+      "locator": "诸星问答论/问紫微所主若何？/答曰无辅弼同行句",
+      "quote": "無輔弼同行則為孤君，雖美玉不足。",
+      "statement": "《诸星问答论》紫微节的答曰部分，将无辅弼同行的紫微称为孤君。",
+      "premises": ["本段以紫微的身命论述为语境。", "原文所说的无辅弼同行成立；同行的具体范围待核。"],
+      "premise_status": "待定",
+      "exceptions": []
+    },
+    {
+      "id": "entry.interpretation.tianfu-nature",
+      "citation_id": "citation.quanshu-juan1.tianfu-nature",
+      "concept_id": "concept.star.tianfu",
+      "line": 297,
+      "locator": "诸星问答论/问天府所主若何？/答曰首句",
+      "quote": "天府屬土，南斗主令第一星也。",
+      "statement": "《诸星问答论》答曰将天府称为属土、南斗主令第一星。",
+      "premises": ["本条记录《诸星问答论》答曰部分对天府的称述，按该节原文用语理解。"],
+      "premise_status": "已明确",
+      "exceptions": []
+    },
+    {
+      "id": "entry.interpretation.tianfu-kongwang",
+      "citation_id": "citation.quanshu-juan1.tianfu-kongwang",
+      "concept_id": "concept.star.tianfu",
+      "line": 298,
+      "locator": "诸星问答论/问天府所主若何？/希夷先生曰空亡句",
+      "quote": "若值空亡是為孤立，不可一例而推斷，大抵此星多主吉。",
+      "statement": "《诸星问答论》天府节的“希夷先生曰”一段称，遇空亡为孤立，不可一例推断，此星大抵多主吉。",
+      "premises": ["前文分别说兄弟宫平常、命逢天府得相佐，后文又说诸宫皆吉；本条只取空亡一句，前后句的关系待核。", "原文所说的空亡条件成立；空亡的具体所指待核。"],
+      "premise_status": "待定",
+      "exceptions": ["后文又说此星不论在哪一宫都吉，与前文按宫位分别论述的说法并存；本条不合并两说。"]
+    }
+  ]
+}

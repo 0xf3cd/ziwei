@@ -34,6 +34,7 @@ from ziwei.xiaoxian import XIAOXIAN_DEFINITION, XIAOXIAN_RULE_ID
 
 _BUREAU_NAMES = "、".join(ju.value for ju in WuxingJu)
 _SOURCE_RESEARCH_URL = "https://github.com/0xf3cd/ziwei/issues/43"
+_INTERPRETATION_RESEARCH_URL = "https://github.com/0xf3cd/ziwei/issues/11"
 _BRIGHTNESS_DEFINITION = (
   "十四主星按地支查固定录文成表，保留"
   + "、".join(level.value for level in BrightnessLevel)
@@ -487,6 +488,20 @@ VARIANTS = (
 
 SOURCES = (
   Source(
+    id="source.quanshu-juan1-wikisource",
+    title="紫微斗數全書/卷一（维基文库电子录文）",
+    edition="oldid=7913704；修订时间2026-08-07T05:47:26Z",
+    url="https://zh.wikisource.org/w/index.php?title=紫微斗數全書/卷一&oldid=7913704",
+    layer=TextLayer.原文,
+    lineage_id="lineage.quanshu-wikisource",
+    provenance="核对固定录文的诸星问答论；与卷二、卷三沿用同一电子文库谱系。",
+    claims="支持所列紫微、天府星性及带条件解释的实际措辞。",
+    limits="纸本底本及篇内希夷、玉蟾等署名归属未核；篇内多处署名不计为独立来源，所列解释不认证预测有效性。",
+    rights="仅收古籍必要短引，保留电子录文及固定修订出处；具体使用条件见来源页。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 2),
+  ),
+  Source(
     id="source.iluck-year-stem",
     title="iLuck：20-0. 流年干星系",
     edition="2026-11-01取得的HTML；SHA256 "
@@ -851,6 +866,42 @@ SOURCES = (
 )
 
 CITATIONS = (
+  Citation(
+    id="citation.quanshu-juan1.ziwei-nature",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问紫微所主若何？/答曰首句",
+    quote="紫微屬土，乃中天之尊星為帝座，主掌造化樞機，人生主宰。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="取答曰的第一完整句，记录书中称述；不连入后面的五行育万物句。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.ziwei-fubi",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问紫微所主若何？/答曰无辅弼同行句",
+    quote="無輔弼同行則為孤君，雖美玉不足。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="只取本句；后续诸杀同宫等另有条件，不与本句拼成一条断语。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.tianfu-nature",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天府所主若何？/答曰首句",
+    quote="天府屬土，南斗主令第一星也。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="只取答曰第一完整句，未收后一句会吉条件及文昌之论。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.tianfu-kongwang",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天府所主若何？/希夷先生曰空亡句",
+    quote="若值空亡是為孤立，不可一例而推斷，大抵此星多主吉。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="保留空亡条件、不可一例推断与多吉总评；前面宫位及相佐分述、后面又曰另论，句间关系待核。",
+  ),
   Citation(
     id="citation.quanshu.liunian-lucun-yangtuo",
     source_id="source.quanshu-wikisource",
@@ -1751,6 +1802,69 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
 
 
 ENTRIES = (
+  KnowledgeEntry(
+    id="entry.interpretation.ziwei-nature",
+    statement="《诸星问答论》答曰将紫微称为属土的中天尊星、帝座。",
+    concept_ids=(Star.紫微.concept_id,),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.ziwei-nature",),
+    premises=("本条记录《诸星问答论》答曰部分对紫微的称述，按该节原文用语理解。",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="仅记录本书对紫微的称述，不认证所述属性或某张命盘的结论。",
+    recheck="取得具版次的卷一纸本影像，对照星性句及篇内文本层次。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.ziwei-fubi",
+    statement="《诸星问答论》紫微节的答曰部分，将无辅弼同行的紫微称为孤君。",
+    concept_ids=(Star.紫微.concept_id,),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.ziwei-fubi",),
+    premises=(
+      "本段以紫微的身命论述为语境。",
+      "原文所说的无辅弼同行成立；同行的具体范围待核。",
+    ),
+    premise_status=PremiseStatus.待定,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="未将同行等同于同宫或三方会照，也未把本句解释为无条件吉凶。",
+    recheck="对照具版次纸本及同段例解，核同行的范围与无辅弼句的条件边界。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.tianfu-nature",
+    statement="《诸星问答论》答曰将天府称为属土、南斗主令第一星。",
+    concept_ids=(Star.天府.concept_id,),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.tianfu-nature",),
+    premises=("本条记录《诸星问答论》答曰部分对天府的称述，按该节原文用语理解。",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="仅记录本书对天府的称述；不将后一句带会吉条件的断语并入本条。",
+    recheck="取得具版次的卷一纸本影像，对照答曰首句及篇内文本层次。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.tianfu-kongwang",
+    statement="《诸星问答论》天府节的“希夷先生曰”一段称，遇空亡为孤立，不可一例推断，此星大抵多主吉。",
+    concept_ids=(Star.天府.concept_id,),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.tianfu-kongwang",),
+    premises=(
+      "前文分别说兄弟宫平常、命逢天府得相佐，后文又说诸宫皆吉；本条只取空亡一句，前后句的关系待核。",
+      "原文所说的空亡条件成立；空亡的具体所指待核。",
+    ),
+    premise_status=PremiseStatus.待定,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="未把空亡自动对应仓内地空，也未将本句的不可一例推断推广为全章解释原则。",
+    exceptions=("后文又说此星不论在哪一宫都吉，与前文按宫位分别论述的说法并存；本条不合并两说。",),
+    recheck="取得具版次纸本及例解，核空亡的所指、句间关系和同段又曰的层次。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
   KnowledgeEntry(
     id="entry.liunian.lucun-yangtuo",
     statement=LIUNIAN_STARS_DEFINITION,

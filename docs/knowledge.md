@@ -97,6 +97,39 @@ True
 每条引用的`locator`给出所见来源中的定位，`quote`保存短引；用`source_id`再读取来源记录、版本和核验状态。
 一般查询仍需处理多个匹配或多个规则；电子录文已核与纸本底本已核的区别见下方[来源状态](#状态需要分开表达)。
 
+### 按星曜和来源查解释
+
+《诸星问答论》首批提供紫微、天府各一条星性描述（书中如何称述星曜）和一条带条件解释。
+用概念与来源一起筛选，可以将这本书的解释和已有安星条目分开读取。
+当前目录的解释来源只有《全书》卷一，因此示例将来源结果解包为`source`：
+
+```{doctest}
+>>> from ziwei.knowledge.model import EvidenceAspect
+>>> source, = catalog.filter_sources(aspect=EvidenceAspect.解释)
+>>> source.id
+'source.quanshu-juan1-wikisource'
+>>> ziwei, = catalog.find("紫微")
+>>> entries = catalog.filter_entries(concept_id=ziwei.id, source_id=source.id)
+>>> [entry.id for entry in entries]
+['entry.interpretation.ziwei-nature', 'entry.interpretation.ziwei-fubi']
+>>> conditional = entries[1]
+>>> print(catalog.references(conditional.id)[0].quote)
+無輔弼同行則為孤君，雖美玉不足。
+>>> conditional.premises[-1]
+'原文所说的无辅弼同行成立；同行的具体范围待核。'
+>>> conditional.show_by_default
+False
+```
+
+示例用`entries[1]`读取列表中的辅弼条件条目。改为`catalog.find("天府")`可读取另一颗星，
+此时第二条为空亡条件条目。`statement`是仓内归纳，`references()`给出逐字原引，
+`premises`、`exceptions`与`limits`分别保存条件、例外和解释范围。这些记录说明书中如何称述星曜，
+查询不会检查某张命盘是否满足条件。首批四条均可检索，但不进入默认展示；
+展示资格与出处、前提状态的区别见[状态说明](#状态需要分开表达)。
+
+来源、文本层次与复核动作见[卷一来源记录](knowledge-reference.md#source.quanshu-juan1-wikisource)
+及其关联条目；首批以外的星曜覆盖由[#77](https://github.com/0xf3cd/ziwei/issues/77)追踪。
+
 ## 记录与归属
 
 概念、规则变体、来源、引文与知识条目使用稳定、与语言无关的标识。
@@ -155,6 +188,10 @@ True
 记录每份来源说明了哪一层、没有说明哪一层。原文未写是否把起始宫位算作第一宫时，须通过例解判断；
 找不到例解就并列保留两种读法。同名异物、转抄冒充独立来源、底本差异都可能改变结论。
 `recheck`写明要取得什么新材料、复核哪一处，不只写“以后再研究”。
+
+解释文本的支持层次另记为`EvidenceAspect.解释`，不套进安星规则或查法。
+`filter_sources(aspect=)`按引文支持层次筛来源；它不将条目分成星性或条件两种类型。
+条目的`premise_status`仍只说明前提是否表达明确，不能当作这两种内容的分类。
 
 ## 状态需要分开表达
 
