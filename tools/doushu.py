@@ -47,7 +47,7 @@ print(load_catalog().get("concept.star.ziwei").id)
 
 输出为`concept.star.ziwei`。排盘所需的出生资料与口径配置见[完整命盘指南](https://0xf3cd.github.io/ziwei/docs/chart.html)。
 原有`ziwei.*`导入继续可用，两种路径的公开对象相同。
-请从对应子模块路径导入，不依赖包入口自动加载子模块。
+请从对应子模块路径导入，不依赖包入口自动加载子模块；公开模块见[API参考](https://0xf3cd.github.io/ziwei/docs/api.html)。
 
 只提供纯Python wheel，Python与平台范围和主包相同；主包的原生历法依赖仍有平台限制。
 使用独立虚拟环境，详见[安装要求](https://github.com/0xf3cd/ziwei#安装要求)。
