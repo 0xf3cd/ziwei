@@ -6,6 +6,8 @@ import hashlib
 import io
 import json
 import os
+import pickle
+import shutil
 import subprocess
 import sys
 from copy import deepcopy
@@ -20,6 +22,7 @@ import yaml
 
 from tools import doushu, doushu_installed_check
 from tools.artifacts import file_sha256
+from ziwei.chart import ZiweiChart
 
 ROOT = doushu.ROOT
 VERSION = doushu.project(ROOT)["version"]
@@ -153,6 +156,8 @@ def test_alias_version_is_canonical(value: str) -> None:
     "record-size",
     "record-name",
     "record-self",
+    "record-row",
+    "record-count",
     "duplicate",
   ],
 )
@@ -219,6 +224,10 @@ def test_wheel_rejects_self_consistent_wrong_content(alias_wheel: Path, defect: 
         text = text.replace("doushu/py.typed", "unknown")
       case "record-self":
         text = text.replace(f"{record},,", f"{record},sha256=bad,1")
+      case "record-row":
+        text = text.replace("\n", ",extra\n", 1)
+      case "record-count":
+        text += text.splitlines()[0] + "\n"
     contents[record] = text.encode()
     with ZipFile(alias_wheel, "w") as archive:
       for name, content in contents.items():
@@ -249,7 +258,9 @@ def test_alias_bundle_preserves_bytes_and_trusts_external_digest(
   assert not (tmp_path / "later").exists()
 
 
-@pytest.mark.parametrize("defect", ["crlf", "extra", "extra-package", "changed", "mixed-version"])
+@pytest.mark.parametrize(
+  "defect", ["crlf", "extra", "extra-package", "changed", "mixed-version", "multi-checksum"]
+)
 def test_alias_bundle_rejects_pollution(alias_wheel: Path, tmp_path: Path, defect: str) -> None:
   digest = file_sha256(alias_wheel)
   directory = tmp_path / "bundle"
@@ -268,14 +279,18 @@ def test_alias_bundle_rejects_pollution(alias_wheel: Path, tmp_path: Path, defec
       (directory / "packages" / alias_wheel.name).rename(
         directory / "packages/doushu-0.0.1-py3-none-any.whl"
       )
+    case "multi-checksum":
+      sums = directory / "SHA256SUMS"
+      sums.write_bytes(sums.read_bytes() * 2)
   with pytest.raises(ValueError):
     doushu.verify_alias_bundle(directory, VERSION, digest)
 
 
-def test_runtime_consumer_rejects_wrong_api_before_chart(
+@pytest.fixture
+def runtime_aliases(
   tmp_path: Path,
   monkeypatch: pytest.MonkeyPatch,
-) -> None:
+) -> tuple[dict[str, Any], Path]:
   modules: dict[str, Any] = {}
   for module, names in doushu.documented_exports(ROOT).items():
     original = import_module(module)
@@ -285,6 +300,33 @@ def test_runtime_consumer_rejects_wrong_api_before_chart(
     modules[alias.__name__] = alias
   for name in ("doushu", "ziwei"):
     modules[name] = SimpleNamespace(__file__=str(Path(sys.prefix) / name / "__init__.py"))
+
+  birth, config = modules["ziwei.birth"], modules["ziwei.config"]
+  chart: ZiweiChart = modules["ziwei.chart"].create_chart(
+    birth.LunarBirthRecord(
+      year=2024,
+      month=1,
+      day=1,
+      is_leap_month=False,
+      shichen=modules["ziwei.ganzhi"].Dizhi.子,
+      gender=birth.Gender.女,
+    ),
+    config.ChartConfig(
+      leap_month_policy=config.LeapMonthPolicy.全月归本月,
+      day_rollover=config.DayRollover.早晚子时同日,
+      year_boundary=config.YearBoundary.农历正月初一,
+    ),
+    sihua_variant=modules["ziwei.sihua"].SihuaVariant.排命盘口诀转录,
+  )
+
+  def create_chart(*args: object, **kwargs: object) -> ZiweiChart:
+    return chart
+
+  monkeypatch.setattr(modules["ziwei.chart"], "create_chart", create_chart)
+  modules["doushu.chart"].create_chart = create_chart
+  for name in tuple(sys.modules):
+    if name == "celestial_calendar" or name.startswith("celestial_calendar."):
+      monkeypatch.delitem(sys.modules, name)
   monkeypatch.setattr(doushu_installed_check, "import_module", lambda name: modules[name])
   monkeypatch.setattr(
     doushu_installed_check,
@@ -293,16 +335,132 @@ def test_runtime_consumer_rejects_wrong_api_before_chart(
   )
   expectations = tmp_path / "names.json"
   expectations.write_text(json.dumps(doushu.documented_exports(ROOT)), encoding="utf-8")
-  modules["doushu.birth"].Gender = object()
-  with pytest.raises(ValueError, match="original objects"):
-    doushu_installed_check.main(VERSION, expectations, "doushu")
-  with pytest.raises(ValueError, match="same version"):
-    doushu_installed_check.main("0.0.1", expectations, "ziwei")
-  with pytest.raises(ValueError, match="import order"):
-    doushu_installed_check.main(VERSION, expectations, "other")
-  expectations.write_text("{}")
-  with pytest.raises(ValueError, match="omit required"):
-    doushu_installed_check.main(VERSION, expectations, "ziwei")
+  return modules, expectations
+
+
+def test_runtime_consumer_fixture_reaches_the_complete_chart(
+  runtime_aliases: tuple[dict[str, Any], Path],
+) -> None:
+  _, expectations = runtime_aliases
+  doushu_installed_check.main(VERSION, expectations, "doushu")
+
+
+@pytest.mark.parametrize(
+  "defect, message",
+  [
+    ("identity", "original objects"),
+    ("version", "same version"),
+    ("order", "import order"),
+    ("golden", "omit required"),
+    ("public-names", "public names differ"),
+    ("pin", "pin differs"),
+    ("outside", "outside the consumer environment"),
+    ("missing-file", "outside the consumer environment"),
+    ("native-query", "initialized the native calendar"),
+    ("enum-pickle", "enum identity"),
+    ("record-pickle", "record did not retain"),
+    ("knowledge-query", "knowledge query differs"),
+    ("chart-type", "chart differs"),
+    ("chart-output", "chart differs"),
+  ],
+)
+def test_runtime_consumer_rejects_invalid_contracts(
+  runtime_aliases: tuple[dict[str, Any], Path],
+  monkeypatch: pytest.MonkeyPatch,
+  defect: str,
+  message: str,
+) -> None:
+  modules, expectations = runtime_aliases
+  version, first = VERSION, "doushu"
+  match defect:
+    case "identity":
+      modules["doushu.birth"].Gender = object()
+    case "version":
+      version = "0.0.1"
+    case "order":
+      first = "other"
+    case "golden":
+      expectations.write_text("{}")
+    case "public-names":
+      modules["doushu.birth"].unchecked = object()
+    case "pin":
+      monkeypatch.setattr(
+        doushu_installed_check,
+        "distribution",
+        lambda name: SimpleNamespace(version=VERSION, requires=["ziwei>=0.1"]),
+      )
+    case "outside":
+      modules["doushu"].__file__ = str(ROOT / "src/doushu/__init__.py")
+    case "missing-file":
+      modules["doushu"].__file__ = None
+    case "native-query" | "knowledge-query":
+      original = modules["ziwei.knowledge"].load_catalog
+
+      def load_catalog() -> Any:
+        if defect == "native-query":
+          monkeypatch.setitem(sys.modules, "celestial_calendar", ModuleType("celestial_calendar"))
+          return original()
+        return SimpleNamespace(get=lambda name: SimpleNamespace(id="wrong"))
+
+      monkeypatch.setattr(modules["ziwei.knowledge"], "load_catalog", load_catalog)
+      modules["doushu.knowledge"].load_catalog = load_catalog
+    case "enum-pickle":
+      monkeypatch.setattr(pickle, "loads", lambda data: None)
+    case "record-pickle":
+      original_loads = pickle.loads
+      calls: list[bytes] = []
+
+      def loads(data: bytes) -> Any:
+        calls.append(data)
+        return original_loads(data) if len(calls) == 1 else None
+
+      monkeypatch.setattr(pickle, "loads", loads)
+    case "chart-type":
+      monkeypatch.setattr(modules["ziwei.chart"], "create_chart", lambda *args, **kwargs: object())
+      modules["doushu.chart"].create_chart = modules["ziwei.chart"].create_chart
+    case "chart-output":
+      monkeypatch.setattr(modules["ziwei.render"], "render_text", lambda chart: "wrong")
+      modules["doushu.render"].render_text = modules["ziwei.render"].render_text
+  with pytest.raises(ValueError, match=message):
+    doushu_installed_check.main(version, expectations, first)
+
+
+@pytest.mark.parametrize(
+  "results",
+  [
+    [(0, ""), (1, "error [arg-type]")],
+    [(1, "error [arg-type]")],
+    [(0, ""), (0, "")],
+    [(0, ""), (1, "unrelated error")],
+  ],
+)
+def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
+  tmp_path: Path,
+  monkeypatch: pytest.MonkeyPatch,
+  results: list[tuple[int, str]],
+) -> None:
+  calls: list[tuple[tuple[str, ...], dict[str, str]]] = []
+  pending = iter(results)
+
+  def fake_run(command: tuple[str, ...], **kwargs: Any) -> SimpleNamespace:
+    calls.append((command, kwargs["env"]))
+    code, output = next(pending)
+    return SimpleNamespace(returncode=code, stdout=output, stderr="")
+
+  monkeypatch.setattr(subprocess, "run", fake_run)
+  monkeypatch.setenv("MYPYPATH", "untrusted")
+  monkeypatch.setenv("PYTHONPATH", "untrusted")
+  valid = results == [(0, ""), (1, "error [arg-type]")]
+  if valid:
+    doushu.check_alias_typing(tmp_path)
+  else:
+    with pytest.raises(ValueError, match="did not accept"):
+      doushu.check_alias_typing(tmp_path)
+  assert calls
+  for command, env in calls:
+    assert "MYPYPATH" not in env and "PYTHONPATH" not in env
+    assert "--no-incremental" in command and "--python-executable" in command
+    assert command[command.index("--python-executable") + 1].startswith(str(tmp_path / "consumer"))
 
 
 def test_alias_installs_by_file_without_resolving_another_primary(
@@ -366,11 +524,106 @@ def test_alias_sdist_builder_runs_the_extracted_tool(
     doushu.preserve_alias(alias_wheel, file_sha256(alias_wheel), bundle)
 
   monkeypatch.setattr(check, "run", fake_run)
+  monkeypatch.setattr(check, "source_members", lambda root: ("tools/doushu.py",))
+
+  def old_extractall(
+    self: object, path: str = ".", members: object = None, *, numeric_owner: bool = False
+  ) -> None:
+    raise AssertionError("Rebuilding must not extract arbitrary archive members")
+
+  monkeypatch.setattr(tarfile.TarFile, "extractall", old_extractall)
   assert check.alias_from_sdist(sdist, VERSION, tmp_path).read_bytes() == alias_wheel.read_bytes()
   command, cwd = calls[0]
   assert Path(command[1]) == cwd / "tools/doushu.py"
   assert cwd == tmp_path / "unpacked" / f"ziwei-{VERSION}"
   assert command[2:4] == ("build", "--directory")
+
+
+@pytest.mark.parametrize("kind", ["symlink", "hardlink", "directory"])
+def test_sdist_rebuild_inputs_must_be_regular_files(
+  tmp_path: Path,
+  monkeypatch: pytest.MonkeyPatch,
+  kind: str,
+) -> None:
+  import tarfile
+
+  from tools import check
+
+  sdist = tmp_path / "source.tar.gz"
+  with tarfile.open(sdist, "w:gz") as archive:
+    entry = tarfile.TarInfo(f"ziwei-{VERSION}/tools/doushu.py")
+    entry.type = {
+      "symlink": tarfile.SYMTYPE,
+      "hardlink": tarfile.LNKTYPE,
+      "directory": tarfile.DIRTYPE,
+    }[kind]
+    entry.linkname = "../../outside"
+    archive.addfile(entry)
+  monkeypatch.setattr(check, "source_members", lambda root: ("tools/doushu.py",))
+  with pytest.raises(ValueError, match="regular files"):
+    check.alias_from_sdist(sdist, VERSION, tmp_path)
+  assert not (tmp_path / "outside").exists()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows创建符号链接可能需要特权")
+@pytest.mark.parametrize("component", ["bundle", "packages", "SHA256SUMS", "wheel"])
+def test_bundle_rejects_each_symlink_boundary(
+  alias_wheel: Path, tmp_path: Path, component: str
+) -> None:
+  directory = tmp_path / "bundle"
+  digest = file_sha256(alias_wheel)
+  doushu.preserve_alias(alias_wheel, digest, directory)
+  if component == "bundle":
+    link = tmp_path / "linked-bundle"
+    link.symlink_to(directory, target_is_directory=True)
+    directory = link
+  elif component == "packages":
+    packages = directory / "packages"
+    target = tmp_path / "original-packages"
+    packages.rename(target)
+    packages.symlink_to(target, target_is_directory=True)
+  else:
+    path = (
+      directory / "SHA256SUMS"
+      if component == "SHA256SUMS"
+      else directory / "packages" / alias_wheel.name
+    )
+    target = tmp_path / (component + "-target")
+    path.rename(target)
+    path.symlink_to(target)
+  with pytest.raises(ValueError):
+    doushu.verify_alias_bundle(directory, VERSION, digest)
+
+
+@pytest.mark.parametrize("kind", ["file", "symlink"])
+def test_preserve_alias_refuses_nonregular_destination(
+  alias_wheel: Path, tmp_path: Path, kind: str
+) -> None:
+  directory = tmp_path / "destination"
+  if kind == "file":
+    directory.write_bytes(b"keep")
+  else:
+    if sys.platform == "win32":
+      pytest.skip("Windows创建符号链接可能需要特权")
+    target = tmp_path / "target"
+    target.mkdir()
+    directory.symlink_to(target, target_is_directory=True)
+  with pytest.raises(ValueError, match="empty regular directory"):
+    doushu.preserve_alias(alias_wheel, file_sha256(alias_wheel), directory)
+
+
+def test_alias_builder_rejects_extra_output(
+  alias_wheel: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  def fake_run(command: tuple[str, ...], *, cwd: Path) -> None:
+    output = Path(command[command.index("--outdir") + 1])
+    output.mkdir()
+    shutil.copyfile(alias_wheel, output / alias_wheel.name)
+    (output / "extra.whl").touch()
+
+  monkeypatch.setattr(doushu, "run", fake_run)
+  with pytest.raises(ValueError, match="exactly one built alias wheel"):
+    doushu.build_alias(tmp_path / "build")
 
 
 @pytest.mark.parametrize("phase", ["primary", "alias"])

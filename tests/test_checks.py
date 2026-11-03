@@ -606,8 +606,9 @@ def test_docs_and_artifact_commands_are_mutually_exclusive(tmp_path: Path, optio
     text=True,
     check=False,
   )
-  assert result.returncode == 1
-  assert "mutually exclusive" in result.stderr
+  assert result.returncode == 2
+  assert "not allowed with argument" in result.stderr
+  assert "Traceback" not in result.stderr
   assert not (tmp_path / "site").exists()
   assert not (tmp_path / "artifacts").exists()
   with pytest.raises(ValueError, match="mutually exclusive"):
@@ -808,8 +809,10 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
   monkeypatch.setattr(check, "check_wheel", lambda *args: None)
   monkeypatch.setattr(check, "alias_from_sdist", lambda *args: wheel)
   monkeypatch.setattr(check, "consume_alias", lambda *args, **kwargs: None)
-  monkeypatch.setattr(check, "check_alias_typing", lambda *args: None)
+  typing_calls: list[Path] = []
+  monkeypatch.setattr(check, "check_alias_typing", lambda directory: typing_calls.append(directory))
   check.check_distribution(tmp_path)
+  assert typing_calls == [tmp_path]
   python = (
     tmp_path / "consumer" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
   )
@@ -983,9 +986,11 @@ def test_installed_consumption_refuses_a_repository_directory() -> None:
     )
 
 
-@pytest.mark.parametrize("retain", [False, True])
+@pytest.mark.parametrize(
+  "retain_primary, retain_alias", [(False, False), (True, False), (False, True), (True, True)]
+)
 def test_main_runs_every_gate_in_order(
-  monkeypatch: pytest.MonkeyPatch, tmp_path: Path, retain: bool
+  monkeypatch: pytest.MonkeyPatch, tmp_path: Path, retain_primary: bool, retain_alias: bool
 ) -> None:
   calls: list[object] = []
 
@@ -1016,8 +1021,8 @@ def test_main_runs_every_gate_in_order(
     ),
   )
   monkeypatch.setenv("SCRATCH", str(tmp_path))
-  destination = tmp_path / "kept" if retain else None
-  alias_destination = tmp_path / "alias-kept" if retain else None
+  destination = tmp_path / "kept" if retain_primary else None
+  alias_destination = tmp_path / "alias-kept" if retain_alias else None
   check.main(artifacts_dir=destination, doushu_artifacts_dir=alias_destination)
   assert calls == [
     ("-m", "ruff", "check", "."),

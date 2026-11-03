@@ -145,16 +145,25 @@ def check_api_reference(directory: Path, root: Path = ROOT) -> None:
 
 def alias_from_sdist(sdist: Path, version: str, directory: Path) -> Path:
   """从实际sdist中运行别名构建，证明工具与输入均已随源码分发。"""
-  source = directory / "unpacked"
+  source = directory / "unpacked" / f"ziwei-{version}"
+  source.mkdir(parents=True)
   with tarfile.open(sdist, "r:gz") as archive:
-    archive.extractall(source, filter="data")
-  roots = tuple(source.iterdir())
-  if len(roots) != 1 or not roots[0].is_dir():
-    raise ValueError("Expected one extracted source directory")
+    # 只读取本仓清单中的普通文件，不依赖3.11后续补丁才加入的解包过滤器。
+    for name in source_members(ROOT):
+      member = archive.getmember(f"ziwei-{version}/{name}")
+      if not member.isfile():
+        raise ValueError("Source rebuild inputs must be regular files")
+      stream = archive.extractfile(member)
+      if stream is None:
+        raise ValueError("Missing source rebuild input")
+      destination = source / name
+      destination.parent.mkdir(parents=True, exist_ok=True)
+      with stream:
+        destination.write_bytes(stream.read())
   bundle = directory / "alias-built"
   run(
-    (sys.executable, str(roots[0] / "tools/doushu.py"), "build", "--directory", str(bundle)),
-    cwd=roots[0],
+    (sys.executable, str(source / "tools/doushu.py"), "build", "--directory", str(bundle)),
+    cwd=source,
   )
   wheel = bundle / "packages" / wheel_name(version)
   check_alias_wheel(wheel, version, root=ROOT)
@@ -300,6 +309,12 @@ if __name__ == "__main__":
     help="仅构建并核验文档，输出html与doctest子目录；目录须不存在或为空，不自动清理",
   )
   arguments = parser.parse_args()
+  if arguments.docs_dir is not None and (
+    arguments.artifacts_dir is not None or arguments.doushu_artifacts_dir is not None
+  ):
+    parser.error(
+      "--docs-dir is not allowed with argument --artifacts-dir or --doushu-artifacts-dir"
+    )
   main(
     artifacts_dir=arguments.artifacts_dir,
     docs_dir=arguments.docs_dir,
