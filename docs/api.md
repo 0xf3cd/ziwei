@@ -15,8 +15,9 @@
 
 从0.4.1起，下列模块中的公开对象也可从对应`doushu.*`路径导入，例如
 `from doushu.chart import create_chart`、`from doushu.knowledge.model import Source`。
-两种路径取得同一个对象；类型的`__module__`、repr与pickle仍使用`ziwei.*`。
-包入口不自动加载所有子模块，模块对象本身也不是同一对象；内部`ziwei.knowledge.data`不提供别名路径。
+两种路径取得同一个对象。例如，`LunarBirthRecord.__module__`仍为`ziwei.birth`，repr与pickle也保持原样。
+例如，`doushu.chart`和`ziwei.chart`是两个不同的模块，其中的`create_chart`是同一个函数。
+包入口不会自动加载所有子模块；内部模块`ziwei.knowledge.data`不提供别名路径。
 
 ## 出生记录与计算输入
 

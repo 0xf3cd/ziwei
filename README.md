@@ -45,13 +45,12 @@ python -m pip install doushu
 ```
 
 ```python
-import doushu
 from doushu.chart import create_chart
 from doushu.knowledge import load_catalog
 ```
 
 `doushu`精确依赖同版本`ziwei`，对应公开子模块中的函数、类型、枚举和数据是原对象。
-下方示例的`ziwei.*`可换成`doushu.*`；原有路径继续可用，安装要求相同。
+下方示例的`ziwei.*`可换成`doushu.*`；原有路径继续可用，平台与Python要求相同。
 请从对应子模块导入；具体转发范围见[API参考](https://0xf3cd.github.io/ziwei/docs/api.html)。
 
 ## 安装要求

@@ -41,8 +41,6 @@
 
 ## 发布前准备
 
-当前源码候选为`ziwei 0.4.1`与`doushu 0.4.1`，尚未记录为公开发行；已有0.4.0制品和标签不动。
-
 候选版本合入main前，更新`pyproject.toml`版本号，核对README的安装与文档入口，以及构建后的包元数据与长描述。
 同时核对其他文档中的当前版本说明、安装示例与贡献指南的版本doctest；旧版本的发布记录和链接保留原版本。
 README会成为PyPI长描述，不保留会在上传后过时的“开发中”说明。
@@ -70,9 +68,10 @@ README和文档入口仍须说明面向开发main还是已发布版本，不能�
    即使PyPI把environment标为可选，本流程也必须填写，让发布身份绑定受保护的环境。
 
 只有新项目才登记pending publisher；它首次使用时才创建项目，**不会预留名称**。
+公开项目查询404也不能证明名称已保留。
 ziwei已完成首发，不应重新登记为pending publisher。doushu首次上传前，由维护者在账户Publishing页登记
 项目名`doushu`及上述仓库、workflow、environment；成功首发后确认已转为普通publisher，不再重复登记。
-公开项目查询404也不能证明名称已保留。新配置、拒绝行为与OIDC换取凭据的结果，
+新配置、拒绝行为与OIDC换取凭据的结果，
 在实际核验前不能记为已完成；既有0.1.0证据也不能证明修改后的配置仍然有效。
 
 官方说明：[新项目发布者](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)、
@@ -143,7 +142,8 @@ artifact名称不包含attempt，不能据同名把不同attempt的outputs与制
 尚未验证可用的跨attempt恢复步骤，因此本页不承诺重跑一定能恢复。
 重跑build或整条流程会重新构建，不属于沿用原产物的恢复路径。
 
-主包已成功、别名失败时，保留两份artifact和各自outputs，停止后再评估是否能以同一已验原件窄恢复；
+主包已成功、别名失败时，保留两份artifact和各自outputs，停止后再评估能否只补传别名wheel，
+且使用的仍是已验证的同一份原件；
 不重传主包，不承诺重跑失败job能跨attempt复用outputs或再次等待批准。
 任一上传失败后，分别到[ziwei文件页](https://pypi.org/project/ziwei/#files)和
 [doushu文件页](https://pypi.org/project/doushu/#files)核对远端实际已有的文件及hash；
