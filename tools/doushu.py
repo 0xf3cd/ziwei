@@ -177,7 +177,13 @@ def check_alias_wheel(wheel: Path, version: str, *, root: Path = ROOT) -> None:
       primary["requires-python"]
     ):
       raise ValueError("Alias supported Python versions differ")
-    if metadata.get_all("Provides-Extra") or metadata.get_payload(decode=True) != README.encode():
+    payload = metadata.get_payload(decode=True)
+    # Windows元数据可能写CRLF；文本比对统一换行，RECORD仍校验归档原字节。
+    if (
+      metadata.get_all("Provides-Extra")
+      or not isinstance(payload, bytes)
+      or payload.replace(b"\r\n", b"\n") != README.encode()
+    ):
       raise ValueError("Alias extras or README differs")
     if sorted(metadata.get_all("Classifier") or ()) != sorted(primary["classifiers"]):
       raise ValueError("Alias supported Python classifiers differ")
@@ -219,7 +225,7 @@ def build_alias(directory: Path, *, root: Path = ROOT) -> Path:
     path.write_bytes(content)
   # 许可证统一为LF，避免Windows checkout与Linux工件仅因换行不同而校验失败。
   (source / "LICENSE").write_bytes((root / "LICENSE").read_text(encoding="utf-8").encode())
-  (source / "README.md").write_text(README, encoding="utf-8")
+  (source / "README.md").write_bytes(README.encode())
   primary = project(root)
   metadata = {
     **{

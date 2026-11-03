@@ -108,6 +108,19 @@ def test_license_is_independent_of_checkout_newlines(
   doushu.check_alias_wheel(alias_wheel, VERSION, root=checkout)
 
 
+def test_metadata_text_accepts_crlf_without_ignoring_content(alias_wheel: Path) -> None:
+  with ZipFile(alias_wheel) as archive:
+    contents = {name: archive.read(name) for name in archive.namelist()}
+  metadata = f"doushu-{VERSION}.dist-info/METADATA"
+  contents[metadata] = contents[metadata].replace(b"\n", b"\r\n")
+  write_wheel(alias_wheel, contents)
+  doushu.check_alias_wheel(alias_wheel, VERSION)
+  contents[metadata] += b"unexpected content\r\n"
+  write_wheel(alias_wheel, contents)
+  with pytest.raises(ValueError, match="README differs"):
+    doushu.check_alias_wheel(alias_wheel, VERSION)
+
+
 @pytest.mark.parametrize(
   "value", ["01.2.3", "1.0", "1.0.0rc1", "1.0.0/other", "\uff11.0.0", "1\uff12.0.0"]
 )
@@ -394,7 +407,7 @@ def test_consumption_cannot_replace_retained_artifacts(
   assert not (tmp_path / "kept").exists() and not (tmp_path / "kept-alias").exists()
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="GitHub发布job仅在Linux执行Bash")
+@pytest.mark.skipif(sys.platform != "linux", reason="GitHub发布job仅在Linux执行Bash")
 @pytest.mark.parametrize(
   "defect", [None, "digest", "changed", "extra", "name", "missing", "symlink"]
 )
@@ -436,6 +449,7 @@ def test_real_alias_publish_bash_blocks_upload(
     },
     capture_output=True,
     text=True,
+    timeout=10,
   )
   assert result.returncode == (0 if defect is None else 1), result.stderr
   assert marker.exists() is (defect is None)
