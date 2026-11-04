@@ -39,6 +39,14 @@
 [v0.4.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.4.0)已公开，
 版本标签固定指向源码`78bf22b5e1fcbef7b0ccb771d359c70a9a4133ae`。
 
+[ziwei PyPI 0.4.1](https://pypi.org/project/ziwei/0.4.1/)、
+[doushu PyPI 0.4.1](https://pypi.org/project/doushu/0.4.1/)与
+[v0.4.1 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.4.1)已公开，
+版本标签固定指向源码`419f14edc6e8a9fca3093142b9c355eabd548028`。
+[正式运行41770565687](https://github.com/0xf3cd/ziwei/actions/runs/41770565687)的attempt 1完成构建、七项跨平台消费与两包上传。
+三份公开制品与同次原件逐字节相同，PEP740发布身份、制品摘要与源码／workflow／environment／run／attempt字段已核对；
+Python3.11／3.14各三种全新索引安装消费通过，含别名的组合也通过类型正反例。本次两个上传job分别等待并取得了`pypi`环境批准。
+
 ## 发布前准备
 
 候选版本合入main前，更新`pyproject.toml`版本号，核对README的安装与文档入口，以及构建后的包元数据与长描述。
@@ -69,8 +77,8 @@ README和文档入口仍须说明面向开发main还是已发布版本，不能�
 
 只有新项目才登记pending publisher；它首次使用时才创建项目，**不会预留名称**。
 公开项目查询404也不能证明名称已保留。
-ziwei已完成首发，不应重新登记为pending publisher。doushu首次上传前，由维护者在账户Publishing页登记
-项目名`doushu`及上述仓库、workflow、environment；成功首发后确认已转为普通publisher，不再重复登记。
+ziwei与doushu均已完成首发，不应重新登记为pending publisher。维护者在账户Publishing页确认
+doushu已归入自己的项目并转为普通publisher；后续发布核对上述仓库、workflow与environment，不重复登记。
 新配置、拒绝行为与OIDC换取凭据的结果，
 在实际核验前不能记为已完成；既有0.1.0证据也不能证明修改后的配置仍然有效。
 
