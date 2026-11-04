@@ -2,7 +2,8 @@
 
 [项目入口](../README.md) · [参与开发](contributing.md) · [参考盘例与限度](chart.md#参考盘例与验收限度)
 
-项目名、PyPI发行名和Python导入名均为`ziwei`。本页说明随`main`维护的发布流程，
+主项目名、PyPI发行名和Python导入名均为`ziwei`；从0.4.1起，另发同版本`doushu`别名wheel，精确依赖主包。
+本页说明随`main`维护的发布流程，
 区分已有发布记录与下一候选版本的操作。
 发布流程只使用正式PyPI。代码准备、服务端配置、正式上传、tag与Release是分别需要确认的操作。
 
@@ -62,12 +63,15 @@ README和文档入口仍须说明面向开发main还是已发布版本，不能�
 3. 用GitHub只读API核对`protection_rules`、`deployment_branch_policy`和
    `deployment-branch-policies`；在网页保存后重新打开环境设置，确认禁止管理员绕过。
    再按授权演练非main拒绝、等待批准和不能绕过的行为。workflow里的ref判断不能代替这些服务端规则。
-4. 核对PyPI trusted publisher：项目`ziwei`，owner`0xf3cd`，repo`ziwei`，
+4. 分别核对两个PyPI项目的trusted publisher：`ziwei`与`doushu`，owner`0xf3cd`，repo`ziwei`，
    workflow文件名`release.yml`，environment填写`pypi`。
    即使PyPI把environment标为可选，本流程也必须填写，让发布身份绑定受保护的环境。
 
 只有新项目才登记pending publisher；它首次使用时才创建项目，**不会预留名称**。
-ziwei已完成首发，不应重新登记为pending publisher。新配置、拒绝行为与OIDC换取凭据的结果，
+公开项目查询404也不能证明名称已保留。
+ziwei已完成首发，不应重新登记为pending publisher。doushu首次上传前，由维护者在账户Publishing页登记
+项目名`doushu`及上述仓库、workflow、environment；成功首发后确认已转为普通publisher，不再重复登记。
+新配置、拒绝行为与OIDC换取凭据的结果，
 在实际核验前不能记为已完成；既有0.1.0证据也不能证明修改后的配置仍然有效。
 
 官方说明：[新项目发布者](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)、
@@ -86,17 +90,22 @@ ziwei已完成首发，不应重新登记为pending publisher。新配置、拒�
 
 1. **构建与门禁**：使用锁文件中的开发工具与后端，经sdist构建wheel，检查文档、元数据和内容，
    在仓外以锁定hash安装依赖、以`--no-deps`安装目标wheel，运行普通／优化两种模式的完整盘面消费。
-   两个产物在消费前后须保持相同hash，不能检查完再重建。
+   从同一sdist内的工具构建一次doushu wheel，在同一仓外环境中继续安装消费，并核静态类型正反例。
+   主包两文件与别名wheel在消费前后须保持相同hash，不能检查完再重建。
    同步依赖后和保留产物前，还须核checkout没有偏离本次源码SHA或混入未跟踪文件；
    这项一致性检查不等于隔离了runner上所有依赖代码。
 2. **支持矩阵消费**：Linux的Python3.11–3.14、Linux ARM64和macOS／Windows3.14
-   下载同一个artifact-id，按构建job单独输出的hash核对后，运行相同安装消费函数。
+   分别按两个artifact-id下载到`dist`与`dist-doushu`，按构建job独立输出的hash核对后，
+   安装同次主wheel和别名wheel，运行普通／优化模式消费；此阶段不安装mypy。
    安装平台范围仍以[安装要求](../README.md#安装要求)为准。
 3. **PyPI批准与上传**：构建和全部矩阵消费成功后，等待`pypi`环境批准，
    再下载同一个artifact-id，核对文件名与构建job给出的两文件hash，调用固定到完整提交SHA的上传action。
    上传job不检出或执行项目源码，不安装项目开发工具。
+4. **别名上传**：`publish-pypi-doushu`显式依赖构建、全部矩阵消费与主包上传成功，
+   使用同一个受保护`pypi`环境，只下载和核验别名原wheel后上传。
+   是否再次等待批准以当前运行的待部署状态为准；若等待，由维护者批准，不代批。
 
-在PyPI发布工作流中，只有`publish-pypi`拥有`id-token: write`。不使用长期PyPI token、缓存或`skip-existing`，
+在PyPI发布工作流中，只有两个上传job拥有`id-token: write`。不使用长期PyPI token、缓存或`skip-existing`，
 不在push／PR上自动上传。输入和job输出只经环境变量进入脚本。
 
 消费矩阵保留`fail-fast: false`，便于一个组合失败后继续收集其他组合的结果。
@@ -119,9 +128,10 @@ artifact保留14天。批准时间须留在原产物的有效期内；过期或�
 - 运行URL、`run-id`、`run-attempt`、本次`source SHA`与请求的版本。
 - 失败job／step、完整日志、批准或取消状态，以及远端是否已经收到文件。
 - 本次build的outputs：`version`、`source_sha`、`sdist_name`、`wheel_name`、
-  `sdist_sha256`、`wheel_sha256`、`artifact_id`。
+  `sdist_sha256`、`wheel_sha256`、`artifact_id`，以及别名的`doushu_wheel_name`、`doushu_wheel_sha256`、`doushu_artifact_id`。
 - 对应artifact的ID、名称、所属运行及attempt、到期时间；取回原bundle，保存`release.json`、
   `SHA256SUMS`与两份分发文件，并重新核对文件摘要。
+  同时保存别名独立bundle中的单行`SHA256SUMS`与wheel，不能用它覆盖主包目录中的同名文件。
 
 artifact名称不包含attempt，不能据同名把不同attempt的outputs与制品拼在一起。
 恢复时须能证明artifact-id、源码SHA、两个文件名和摘要均属于已经验收的那一组产物。
@@ -132,7 +142,11 @@ artifact名称不包含attempt，不能据同名把不同attempt的outputs与制
 尚未验证可用的跨attempt恢复步骤，因此本页不承诺重跑一定能恢复。
 重跑build或整条流程会重新构建，不属于沿用原产物的恢复路径。
 
-任一上传失败后，先到[PyPI文件页](https://pypi.org/project/ziwei/#files)核对远端实际已有的文件及hash；
+主包已成功、别名失败时，保留两份artifact和各自outputs，停止后再评估能否只补传别名wheel，
+且使用的仍是已验证的同一份原件；
+不重传主包，不承诺重跑失败job能跨attempt复用outputs或再次等待批准。
+任一上传失败后，分别到[ziwei文件页](https://pypi.org/project/ziwei/#files)和
+[doushu文件页](https://pypi.org/project/doushu/#files)核对远端实际已有的文件及hash；
 不能只凭本地退出码认定“什么都没上传”。
 
 正式上传完成后，核PyPI文件摘要与PEP740证明中的Source Repository Digest，
@@ -145,10 +159,11 @@ tag创建、移动和删除规则同样需要明确配置与验证；本工作�
 正常开发入口不变。需要保留同一份已核产物时，先确保输出目录为空，再运行：
 
 ```sh
-uv run --locked python tools/check.py --artifacts-dir dist
+uv run --locked python tools/check.py --artifacts-dir dist --doushu-artifacts-dir dist-doushu
 ```
 
 输出目录保存`packages/`中的sdist与wheel，以及消费前固定的`SHA256SUMS`。
+独立的`dist-doushu`只保存`packages/`中的别名wheel与单行`SHA256SUMS`，不混入主包bundle。
 发布工作流随后加入`release.json`，并把文件名、hash和artifact-id分别传给下游job。
 本地保留入口拒绝非空目的地，不静默覆盖；发布工具另核保留目录的精确成员、身份、软链和摘要，
 缺文件、多文件、错误身份或hash不符时拒绝继续。

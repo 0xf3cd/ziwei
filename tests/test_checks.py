@@ -590,14 +590,15 @@ def test_docs_command_rejects_invalid_exports(
   assert not (checked_docs_source / "site/html/index.html").exists()
 
 
-def test_docs_and_artifact_commands_are_mutually_exclusive(tmp_path: Path) -> None:
+@pytest.mark.parametrize("option", ["--artifacts-dir", "--doushu-artifacts-dir"])
+def test_docs_and_artifact_commands_are_mutually_exclusive(tmp_path: Path, option: str) -> None:
   result = subprocess.run(
     (
       sys.executable,
       str(check.ROOT / "tools/check.py"),
       "--docs-dir",
       str(tmp_path / "site"),
-      "--artifacts-dir",
+      option,
       str(tmp_path / "artifacts"),
     ),
     cwd=tmp_path,
@@ -607,10 +608,13 @@ def test_docs_and_artifact_commands_are_mutually_exclusive(tmp_path: Path) -> No
   )
   assert result.returncode == 2
   assert "not allowed with argument" in result.stderr
+  assert "Traceback" not in result.stderr
   assert not (tmp_path / "site").exists()
   assert not (tmp_path / "artifacts").exists()
   with pytest.raises(ValueError, match="mutually exclusive"):
     check.main(docs_dir=tmp_path / "site", artifacts_dir=tmp_path / "artifacts")
+  with pytest.raises(ValueError, match="mutually exclusive"):
+    check.main(docs_dir=tmp_path / "site", doushu_artifacts_dir=tmp_path / "artifacts")
 
 
 def test_source_members_follow_the_tree(tmp_path: Path) -> None:
@@ -803,7 +807,12 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
   monkeypatch.setattr(check, "source_members", lambda path: ())
   monkeypatch.setattr(check, "check_sdist", lambda *args: None)
   monkeypatch.setattr(check, "check_wheel", lambda *args: None)
+  monkeypatch.setattr(check, "alias_from_sdist", lambda *args: wheel)
+  monkeypatch.setattr(check, "consume_alias", lambda *args, **kwargs: None)
+  typing_calls: list[Path] = []
+  monkeypatch.setattr(check, "check_alias_typing", lambda directory: typing_calls.append(directory))
   check.check_distribution(tmp_path)
+  assert typing_calls == [tmp_path]
   python = (
     tmp_path / "consumer" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
   )
@@ -887,6 +896,9 @@ def test_distribution_rejects_changes_during_consumption(
   monkeypatch.setattr(check, "run", lambda *args, **kwargs: None)
   monkeypatch.setattr(check, "check_sdist", lambda *args: None)
   monkeypatch.setattr(check, "check_wheel", lambda *args: None)
+  monkeypatch.setattr(check, "alias_from_sdist", lambda *args: wheel)
+  monkeypatch.setattr(check, "consume_alias", lambda *args, **kwargs: None)
+  monkeypatch.setattr(check, "check_alias_typing", lambda *args: None)
   monkeypatch.setattr(
     check, "install_and_consume", lambda *args, **kwargs: wheel.write_bytes(b"changed")
   )
@@ -974,9 +986,11 @@ def test_installed_consumption_refuses_a_repository_directory() -> None:
     )
 
 
-@pytest.mark.parametrize("retain", [False, True])
+@pytest.mark.parametrize(
+  "retain_primary, retain_alias", [(False, False), (True, False), (False, True), (True, True)]
+)
 def test_main_runs_every_gate_in_order(
-  monkeypatch: pytest.MonkeyPatch, tmp_path: Path, retain: bool
+  monkeypatch: pytest.MonkeyPatch, tmp_path: Path, retain_primary: bool, retain_alias: bool
 ) -> None:
   calls: list[object] = []
 
@@ -1002,11 +1016,14 @@ def test_main_runs_every_gate_in_order(
   monkeypatch.setattr(
     check,
     "check_distribution",
-    lambda directory, *, artifacts_dir=None: calls.append(("distribution", artifacts_dir)),
+    lambda directory, *, artifacts_dir=None, doushu_artifacts_dir=None: calls.append(
+      ("distribution", artifacts_dir, doushu_artifacts_dir)
+    ),
   )
   monkeypatch.setenv("SCRATCH", str(tmp_path))
-  destination = tmp_path / "kept" if retain else None
-  check.main(artifacts_dir=destination)
+  destination = tmp_path / "kept" if retain_primary else None
+  alias_destination = tmp_path / "alias-kept" if retain_alias else None
+  check.main(artifacts_dir=destination, doushu_artifacts_dir=alias_destination)
   assert calls == [
     ("-m", "ruff", "check", "."),
     ("-m", "ruff", "format", "--check", "."),
@@ -1024,7 +1041,7 @@ def test_main_runs_every_gate_in_order(
     ("examples", "report"),
     "api_reference",
     "knowledge_reference",
-    ("distribution", destination),
+    ("distribution", destination, alias_destination),
   ]
 
 

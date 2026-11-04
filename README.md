@@ -38,6 +38,21 @@ python -m pip check
 需要使用开发中的接口时，可[从源码安装](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
 `main`源码不等同于PyPI发行制品；上传前的候选状态见[发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 
+从0.4.1起，也可用`doushu`（斗数）安装和导入：
+
+```sh
+python -m pip install doushu
+```
+
+```python
+from doushu.chart import create_chart
+from doushu.knowledge import load_catalog
+```
+
+`doushu`精确依赖同版本`ziwei`，对应公开子模块中的函数、类型、枚举和数据是原对象。
+下方示例的`ziwei.*`可换成`doushu.*`；原有路径继续可用，平台与Python要求相同。
+请从对应子模块导入；具体转发范围见[API参考](https://0xf3cd.github.io/ziwei/docs/api.html)。
+
 ## 安装要求
 
 支持Python 3.11–3.14。运行时精确依赖`celestial-calendar==0.8.0`与`tzdata==2026.5`。

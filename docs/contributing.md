@@ -30,12 +30,19 @@ CI在Linux x86_64的3.11／3.14、Linux ARM64的3.14和macOS／Windows3.14上运
 - sdist内容与由它重建的wheel。锁定开发组提供build和setuptools后端，构建使用`python -m build --no-isolation`。
   sdist须带全源码、测试、工具、workflow、文档、锁文件与协作约定，不得夹带`.review/`。
   检查会在构建前删除`src/*.egg-info`，避免旧文件清单掩盖`MANIFEST.in`的变化。
+- 从同一sdist取出源码清单中的普通文件，运行其中的`tools/doushu.py`构建别名wheel，
+  检查精确成员、许可证、元数据与RECORD。
+  别名转发的模块清单取自[API参考](api.md)中列出的模块；各模块的导出名取自对应源码里的
+  公开函数、类、类型别名和带说明的常量。转发文件只做显式同名导入。
 - 在仓外以隔离模式导入安装后的包，分别运行普通／优化消费。运行时依赖按锁文件hash安装，
-  本项目wheel用`--no-deps`安装；消费前后比对产物hash，拒绝被改写的文件。
+  主包wheel用`--no-deps`安装，再在同一环境中以`--no-deps`安装同次别名wheel。
+  检查两种导入顺序、对象身份、知识查询和完整盘面；锁定mypy检查同一文件里同时从`ziwei.*`与`doushu.*`
+  导入的用法，要求正确用法通过、错误参数被拒绝。消费前后比对两包摘要，不能重建后替换。
 
 临时HTML、doctest报告、分发包和安装验证环境优先使用环境变量`SCRATCH`，否则使用系统临时目录，
 退出时删除。构建元数据和工具缓存可能保留在仓内已忽略的目录中。
-显式传入`--artifacts-dir`可将同一份已核产物保留到空目录，详见[发布指南](releasing.md)。
+显式传入`--artifacts-dir`与`--doushu-artifacts-dir`可分别保留同一份已核主包和别名产物，
+目录须不存在或为空；两者都不能与`--docs-dir`合用，详见[发布指南](releasing.md)。
 
 工具版本由 `uv.lock` 锁定：Python 3.11 使用 Sphinx 8.2.3，较新 Python 使用 Sphinx 9.1.0。
 覆盖率报告用于定位遗漏。当前测试覆盖历法解析、安星、四化与大限、整盘组合、文本显示和知识查询，
@@ -63,13 +70,13 @@ uv run --locked python tools/check.py --docs-dir build/docs
 根入口使用相对链接，离线打开和部署到项目子路径都使用同一份输出。
 [开发文档站](https://0xf3cd.github.io/ziwei/)随`main`更新，不固定于某次发行。
 
-按上面的`uv sync`从本仓安装源码，本地分发名／版本为`ziwei`／`0.4.0`。
+按上面的`uv sync`从本仓安装源码，本地分发名／版本为`ziwei`／`0.4.1`。
 可检查安装的版本字符串：
 
 ```{doctest}
 >>> from importlib.metadata import version
 >>> version("ziwei")
-'0.4.0'
+'0.4.1'
 ```
 
 同一版本字符串不能证明安装来源或具体源码提交；核对安装对象时还须检查这两项。

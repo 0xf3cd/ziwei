@@ -23,6 +23,7 @@ from tools.artifacts import (
   source_members,
 )
 from tools.consumption import install_and_consume
+from tools.doushu import consume_alias, verify_alias_bundle
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -136,6 +137,7 @@ def main() -> None:
   parser.add_argument(
     "--directory", type=Path, default=Path("dist"), help="门禁保留的产物目录（默认dist）"
   )
+  parser.add_argument("--doushu-directory", type=Path, help="同次构建的独立别名产物目录")
   args = parser.parse_args()
   version, source_sha = os.environ["RELEASE_VERSION"], os.environ["RELEASE_SHA"]
   metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
@@ -162,6 +164,11 @@ def main() -> None:
     return
   expected = Manifest(version, source_sha, os.environ["SDIST_SHA256"], os.environ["WHEEL_SHA256"])
   verify_bundle(args.directory, expected)
+  alias = None
+  if args.doushu_directory is not None:
+    alias = verify_alias_bundle(
+      args.doushu_directory.resolve(), version, os.environ["DOUSHU_WHEEL_SHA256"], root=ROOT
+    )
   with tempfile.TemporaryDirectory(prefix="ziwei-consume-", dir=os.environ.get("SCRATCH")) as tmp:
     install_and_consume(
       args.directory.resolve() / "packages" / expected.filenames[1],
@@ -169,7 +176,13 @@ def main() -> None:
       Path(tmp),
       root=ROOT,
     )
+    if alias is not None:
+      consume_alias(alias, version, Path(tmp), root=ROOT)
   verify_bundle(args.directory, expected)
+  if args.doushu_directory is not None:
+    verify_alias_bundle(
+      args.doushu_directory.resolve(), version, os.environ["DOUSHU_WHEEL_SHA256"], root=ROOT
+    )
 
 
 if __name__ == "__main__":
