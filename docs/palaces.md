@@ -23,8 +23,8 @@
 
 宫干由年干经[五虎遁](knowledge-reference.md#implemented-wuhu)查寅宫干，其余各宫顺十天干排布
 （《起五行寅例》）。闰月出生按具名口径取有效生月（`effective_month`）：
-《全书》安身命段的[闰正月例](knowledge-reference.md#entry.leap-month.next)按二月起命身，
-其他月系星是否沿用仍待核；LifeDNA列本月、次月、前后半月三法，自述采用第三种。
+《全书》安身命段的[闰正月例](knowledge-reference.md#entry.leap-month.next)按二月起命身；
+LifeDNA列本月、次月、前后半月三法，自述采用第三种。
 闰十二月全月归下月时没有对应安星月；按前后半月归属时，十六日起同样失败，初一至十五仍归本月。
 `effective_month`不合成“来年正月”的无出处规则。
 
