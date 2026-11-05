@@ -491,7 +491,7 @@ SOURCES = (
     id="source.quanshu-juan1-wikisource",
     title="紫微斗數全書/卷一（维基文库电子录文）",
     edition="oldid=7913704；修订时间2026-08-07T05:47:26Z",
-    url="https://zh.wikisource.org/w/index.php?title=紫微斗數全書/卷一&oldid=7913704",
+    url="https://zh.wikisource.org/w/index.php?title=%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8%E5%85%A8%E6%9B%B8/%E5%8D%B7%E4%B8%80&oldid=7913704",
     layer=TextLayer.原文,
     lineage_id="lineage.quanshu-wikisource",
     provenance="核对固定录文的诸星问答论；与卷二、卷三沿用同一电子文库谱系。",
@@ -519,8 +519,8 @@ SOURCES = (
   Source(
     id="source.jingcheng-chapter10",
     title="紫微斗数精成：第10章 大限流年流月流日流时（网页转录）",
-    edition="页内标2023-05-21；2026-11-01取得HTML；SHA256 "
-    "ce084be16783be4f9c50865eb84b93a4c35e3a0a0e230df1d970103dfccca92f",
+    edition="页内标2023-05-21；2026-11-01取得HTML，归档件SHA256 "
+    "ce084be16783be4f9c50865eb84b93a4c35e3a0a0e230df1d970103dfccca92f；动态页再取字节会变",
     url="https://www.chinazwds.com/Home/ArticleDetails/04d006ad219044a4bb44fe28c3e8a009",
     layer=TextLayer.今人说明,
     lineage_id="lineage.jingcheng-golla",
@@ -533,17 +533,48 @@ SOURCES = (
   ),
   Source(
     id="source.jielan-yunxian-tianji",
-    title="紫微斗数捷览：小限、童限及三岁例（天机录文）",
-    edition="2026-10-31所存第52、53、135章电子录文；未校影印底本",
+    title="紫微斗数捷览：第53章定小儿童限诀（天机录文）",
+    edition="第53章电子录文；2026-11-05取得HTML，归档件SHA256 "
+    "a98f6e6e689910670240581b010ea76e3c195740a3e6a487c82e759b479fc54d；未校影印底本",
     url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/53",
     layer=TextLayer.原文,
     lineage_id="lineage.jielan-tianji",
     provenance="核所存网页文字；同站有编者校记，不认证本段属于原书正文还是注文。",
-    claims="小限一岁起算、男顺女逆；童限六宫、不问男女、提七八九岁及童限出后；三岁行亥的断语。",
-    limits="版次和影印未核。与全书口诀同族，传承独立性未核；三岁例未见命图，不作现代边界盘例。",
+    claims="童限六宫、不问男女、提七八九岁及童限出后。",
+    limits="版次和影印未核。与全书口诀同族，传承独立性未核。",
     rights="仅必要古籍录文短引；网页转载许可未核，不转载全文。",
     status=SourceStatus.待核,
-    checked_on=date(2026, 10, 31),
+    checked_on=date(2026, 11, 5),
+  ),
+  Source(
+    id="source.jielan-xiaoxian-tianji",
+    title="紫微斗数捷览：第52章定小限诀（天机录文）",
+    edition="第52章电子录文；2026-11-05取得HTML，归档件SHA256 "
+    "50970dfad35d413c66aaaf026ba7a5e382795644a2e42684f7f5a7aaa00bea1c；未校影印底本",
+    url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/52",
+    layer=TextLayer.原文,
+    lineage_id="lineage.jielan-tianji",
+    provenance="核所存网页文字；同站有编者校记，不认证本段属于原书正文还是注文。",
+    claims="小限一岁起算、男顺女逆。",
+    limits="版次和影印未核。与全书口诀同族，传承独立性未核。",
+    rights="仅必要古籍录文短引；网页转载许可未核，不转载全文。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 11, 5),
+  ),
+  Source(
+    id="source.jielan-mingtu-tianji",
+    title="紫微斗数捷览：第135章附古今命图（天机录文）",
+    edition="第135章电子录文；2026-11-05取得HTML，归档件SHA256 "
+    "47d3f9d457467feafc3c2c19da7ce8bc58f062e80c66e5d625e92e9d30647578；未校影印底本",
+    url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/135",
+    layer=TextLayer.原文,
+    lineage_id="lineage.jielan-tianji",
+    provenance="核所存网页文字；同站有编者校记，不认证本段属于原书正文还是注文。",
+    claims="三岁童限行亥的断语。",
+    limits="版次和影印未核，命图未见；三岁例不作现代边界盘例。",
+    rights="仅必要古籍录文短引；网页转载许可未核，不转载全文。",
+    status=SourceStatus.待核,
+    checked_on=date(2026, 11, 5),
   ),
   Source(
     id="source.jingcheng-pdf",
@@ -563,9 +594,10 @@ SOURCES = (
   Source(
     id="source.quanshu-juan3-wikisource",
     title="紫微斗數全書/卷三（维基文库固定录文）",
-    edition="固定修订2268626，2026-10-28抓取；HTML SHA256 "
-    "62bd440cff3c042777b8125ec968e87845ffde9d90aeaf94db685ed7ad068c37",
-    url="https://zh.wikisource.org/w/index.php?title=紫微斗數全書/卷三&oldid=2268626",
+    edition="固定修订2268626（修订时间2023-03-15T10:18:42Z）；2026-11-05取得该修订raw wikitext，"
+    "归档件SHA256 ed327a68253a89a6e8b2962932a16f75546826ffcdd2e9e4ac419ad0f389b03b；"
+    "渲染页HTML每次取回不同，不记其哈希",
+    url="https://zh.wikisource.org/w/index.php?title=%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8%E5%85%A8%E6%9B%B8/%E5%8D%B7%E4%B8%89&oldid=2268626",
     layer=TextLayer.原文,
     lineage_id="lineage.quanshu-wikisource",
     provenance="固定电子录文；与本目录卷二同书谱系，纸本底本未核。",
@@ -573,23 +605,24 @@ SOURCES = (
     limits="同句并列小限与吉凶，本条只取太岁位置；所核段落未载流年换年的定义。",
     rights="必要古籍短引，固定修订由维基文库提供；纸本版次未确认。",
     status=SourceStatus.已核,
-    checked_on=date(2026, 10, 28),
+    checked_on=date(2026, 11, 5),
   ),
   Source(
     id="source.click108-liunian",
     title="本命、流年命盤大不同？這篇教你分清楚",
     authors=("Beatrice",),
     edition="页面发布2023-10-02T10:30:00+08:00、修改2024-11-05T10:10:58+08:00；"
-    "2026-10-28快照SHA256 5be193bca806ce1cffda49aba05e81336634a373fc0c615c769ebd5862e30e10",
+    "2026-11-05取得HTML，归档件SHA256 736c38c3a25f5d18eb6849b436c4945aba8750f50d83362f117c3acdf0dc1bbd；"
+    "页尾缓存时间戳使每次取回字节不同",
     url="https://news.click108.com.tw/2023/10/ziwei/2855/",
     layer=TextLayer.今人说明,
     lineage_id="lineage.click108-liunian",
     provenance="科技紫微網网页，作者取byline元数据；正文已含2025乙巳例，另有自家产品推广。",
     claims="初一至除夕的流年定义、目标年支到同支宫及流年命宫称名。",
-    limits="只核抓取快照，不把页面发布日期当成未修订的正文年代，不认证所有流派。",
+    limits="只核归档的取回件，不把页面发布日期当成未修订的正文年代，不认证所有流派。",
     rights="只取两句必要短引与来源信息，不转载现代全文或推广段落。",
     status=SourceStatus.已核,
-    checked_on=date(2026, 10, 28),
+    checked_on=date(2026, 11, 5),
   ),
   Source(
     id="source.iztro-liunian-date",
@@ -598,8 +631,9 @@ SOURCES = (
     edition="iztro commit42bec9f88591a4dd082133aab7650e40ee55eba9（该提交package.json版本2.6.3）；"
     "lunar-lite commit1d104fffa31609e9f112898cc57545827e8d57ae（该提交package.json版本0.2.8）；"
     "lunar-typescript1.8.6 commit0f3e95d15e31f1a7c7b93d624542649347328a20，"
-    "Lunar.ts SHA256 91217f0d1e12dab85fd6b785a0b3a96e45fbfabd04982df04a7ff48c3d9f2362",
-    url="https://github.com/SylarLong/iztro/blob/42bec9f88591a4dd082133aab7650e40ee55eba9/src/astro/FunctionalAstrolabe.ts",
+    "Lunar.ts SHA256 91217f0d1e12dab85fd6b785a0b3a96e45fbfabd04982df04a7ff48c3d9f2362；"
+    "地址为引文所在的6tail/lunar-typescript固定提交原始文件",
+    url="https://raw.githubusercontent.com/6tail/lunar-typescript/0f3e95d15e31f1a7c7b93d624542649347328a20/src/lib/Lunar.ts",
     layer=TextLayer.今人说明,
     lineage_id="lineage.iztro-lunar-lite",
     provenance="iztro经lunar-lite调用6tail的lunar-typescript；三个库是一条调用链，不按网址计作多条独立证据。",
@@ -737,7 +771,7 @@ SOURCES = (
     id="source.doushuxuantan-geng",
     title="紫微斗數命例 六【庚干四化】（斗数玄谈）",
     edition="页内2014-12-10；2026-10-20所见原图与母页",
-    url="https://doushuxuantan.com/庚干四化/",
+    url="https://doushuxuantan.com/%E5%BA%9A%E5%B9%B2%E5%9B%9B%E5%8C%96/",
     layer=TextLayer.今人说明,
     lineage_id="lineage.doushuxuantan-geng",
     provenance="原图独立写1970庚戌，不从四化反推年干；非王亭之本人作品。",
@@ -751,7 +785,7 @@ SOURCES = (
     id="source.quanshu-wikisource",
     title="紫微斗數全書/卷二（维基文库电子录文）",
     edition="oldid=1963110；修订时间2020-09-04T14:06:27Z；正文为简体录文",
-    url="https://zh.wikisource.org/w/index.php?title=紫微斗數全書/卷二&oldid=1963110",
+    url="https://zh.wikisource.org/w/index.php?title=%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8%E5%85%A8%E6%9B%B8/%E5%8D%B7%E4%BA%8C&oldid=1963110",
     layer=TextLayer.原文,
     lineage_id="lineage.quanshu-wikisource",
     provenance="维基文库所见录文；底本刊本未确认，不与其他全书转录自动合并。",
@@ -764,8 +798,8 @@ SOURCES = (
   Source(
     id="source.jielan-tianji",
     title="紫微斗数捷览：安红鸾天喜星诀（天机电子录文）",
-    edition="2026-10-27取得的第29章HTML；SHA256 "
-    "5c5a922f716d6372eb9755e6031e19dcfe0af87ad334b663fcacf819234c0c16",
+    edition="第29章；2026-11-05取得HTML，归档件SHA256 "
+    "23c8b0556aeabab6faf0720966d6c377293f591db098f527d47ca0b4bef74b4a；页面构建标识使每次取回字节不同",
     url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/29",
     layer=TextLayer.原文,
     lineage_id="lineage.jielan-tianji",
@@ -774,7 +808,7 @@ SOURCES = (
     limits="只核所列网页，纸本版次、录文忠实度及历史作者归属未核；未载换年界线，也没有完整生辰盘例。",
     rights="仅收古籍录文的必要两例与出处说明；网页转载许可未核，不转载全文。",
     status=SourceStatus.已核,
-    checked_on=date(2026, 10, 27),
+    checked_on=date(2026, 11, 5),
   ),
   Source(
     id="source.jingcheng-golla",
@@ -844,7 +878,9 @@ SOURCES = (
     lineage_id="lineage.zhongzhou-wangtingzhi",
     provenance="与既有王亭之博客转录同路；星侨网站的多条口诀与之同文，不计为另一独立传承。",
     claims="第6至13条中除第10条外，支持紫微例解、两系、辅弼昌曲空劫、现代表魁钺、禄羊陀与火铃方向；第18条支持年马。第10条安四化星诀提供完整十干表，年干四化和本命安星语境另见前言。",
-    limits="只核网页所引片段；条号和印刷页码据网页转录页眉，未见纸本，不认证完整章节。未核原著版次、OCR忠实度或转载授权。博客原页未覆盖的章节不归给博客。",
+    limits="只核网页所引片段；条号和印刷页码据网页转录页眉，未见纸本，不认证完整章节。未核原著版次、OCR忠实度或转载授权。博客原页未覆盖的章节不归给博客。"
+    "来源失联：2026-11-04、11-05多次连接超时，Wayback无该页快照，没有留存原始字节；"
+    "所属引文按2026-10-20所见转录保留。复核：换时段或网络出口重试源站，取得后逐条重核引文。",
     rights="仅必要短引与自撰事实说明，不收讲义全文。",
     status=SourceStatus.待核,
     checked_on=date(2026, 10, 20),
@@ -949,7 +985,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.jielan.xiaoxian",
-    source_id="source.jielan-yunxian-tianji",
+    source_id="source.jielan-xiaoxian-tianji",
     locator="第52章定小限诀，解说段",
     quote="以生年为主，假如寅午戌年生人，俱自辰宫起一岁，一年过一宫，男顺行，女逆行，余仿此。",
     layer=TextLayer.原文,
@@ -985,7 +1021,7 @@ CITATIONS = (
   ),
   Citation(
     id="citation.jielan.tongxian-age3",
-    source_id="source.jielan-yunxian-tianji",
+    source_id="source.jielan-mingtu-tianji",
     locator="第135章附古今命图，三岁断语",
     quote="况三岁童限行亥，遇天使，巳宫太岁金锁鸡飞关，杀冲限，故死于三岁。",
     layer=TextLayer.原文,
@@ -1890,7 +1926,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.xiaoxian.year-branch-gender",
-    statement=XIAOXIAN_DEFINITION,
+    statement="按生年支三合组定一岁起宫，男命按地支顺行、女命逆行，每岁一宫。",
     concept_ids=("concept.xiaoxian",),
     variant_ids=(XIAOXIAN_RULE_ID,),
     citation_ids=(
@@ -1902,7 +1938,8 @@ ENTRIES = (
     premise_status=PremiseStatus.已明确,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    limits="录文传承独立性未核；所核直接年龄例只覆盖辰起组，其余组用口诀展开检验，不冒充完整外部盘例。五星小限与八字小运是同名异物，不采用其起法。",
+    limits="三条引文都没有明写年龄计法；年龄按正整数虚岁是本项目的输入口径，见前提。"
+    "录文传承独立性未核；所核直接年龄例只覆盖辰起组，其余组用口诀展开检验，不冒充完整外部盘例。五星小限与八字小运是同名异物，不采用其起法。",
     recheck="取得具版次原页及未起、丑起等组的明确生年支、性别和年龄直接例。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/57",
   ),
