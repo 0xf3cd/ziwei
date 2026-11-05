@@ -65,9 +65,13 @@
 下例是合成的女命，公历2024年2月6日12:00生于上海，在立春之后、农历正月初一之前：
 
 ```{doctest}
+>>> from datetime import date, time
+>>> from ziwei.birth import Gender, GregorianBirthRecord, TimePrecision
 >>> from ziwei.chart import create_chart
+>>> from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 >>> from ziwei.render import render_text
 >>> from ziwei.sihua import SihuaVariant
+>>> from ziwei.timezone import IanaTimezone
 >>> record = GregorianBirthRecord(
 ...   birth_date=date(2024, 2, 6), birth_time=time(12), time_precision=TimePrecision.分,
 ...   timezone=IanaTimezone("Asia/Shanghai"), gender=Gender.女,

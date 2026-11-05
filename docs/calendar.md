@@ -16,8 +16,8 @@ celestial 原生库，适配函数在首次调用时才加载它。
 | `ALGO2` 天文计算 | 410–2500 | 更宽的计算窗口 |
 | `ALGO3` 混合 | 1600–2199 | 默认：1901–2099 与 HKO 表一致 |
 
-`resolve()`与`create_chart()`的`lunar_algorithm`参数不传时取`ALGO3`。这是出生解析中唯一有默认值的选项；
-闰月归属、子时换日和换年仍须显式指定。
+`resolve()`与`create_chart()`的`lunar_algorithm`参数不传时取`ALGO3`，这是解析入口参数中唯一有默认值的一项；
+闰月归属、子时换日和换年仍须显式指定。`ChartConfig.tianma_rule`另有按年支安天马的默认值，见[安星](stars.md)。
 
 `gregorian_to_lunar`消费最终取用的日期标签：解析层先选当地民用钟或真太阳钟的日期，再按该钟应用子时换日。
 超出算法覆盖范围时显式失败。
