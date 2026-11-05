@@ -192,6 +192,11 @@ def write_sdist(path: Path, members: dict[str, str], base: str = "ziwei-0.0.0") 
   return path
 
 
+def test_empty_document_tree(tmp_path: Path) -> None:
+  with pytest.raises(ValueError, match="docs must contain pages"):
+    check_documents(tmp_path)
+
+
 def test_docs_without_pages(docs: Path) -> None:
   (docs / "docs/index.md").unlink()
   (docs / "README.md").write_text("text\n", encoding="utf-8")
