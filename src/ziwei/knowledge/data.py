@@ -641,7 +641,7 @@ SOURCES = (
     limits="只核固定代码的静态行为，未运行外部排盘器；软件选项不证明紫微古籍或流派应采用该年界。",
     rights="三库均标MIT；仅保存必要代码短引与固定版本定位。",
     status=SourceStatus.已核,
-    checked_on=date(2026, 10, 28),
+    checked_on=date(2026, 11, 5),
   ),
   Source(
     id="source.pmo-calendar-2022",

@@ -925,9 +925,9 @@ def test_jielan_citations_belong_to_the_chapter_their_source_records() -> None:
   for citation in catalog.citations:
     source = catalog.get(citation.source_id)
     assert isinstance(source, Source)
-    chapter = re.match(r"第(\d+)章", citation.locator)
+    chapter = re.search(r"第(\d+)章", citation.locator)
     if source.lineage_id != "lineage.jielan-tianji" or chapter is None:
       continue
     assert source.url.endswith(f"/{chapter[1]}"), citation.id
     checked += 1
-  assert checked >= 4
+  assert checked >= 5
