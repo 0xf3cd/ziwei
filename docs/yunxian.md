@@ -39,6 +39,7 @@
 
 ```{doctest}
 >>> from ziwei.bureau import WuxingJu
+>>> from ziwei.ganzhi import Dizhi
 >>> from ziwei.tongxian import TongxianBoundary, tongxian_at_age
 >>> through = tongxian_at_age(
 ...   Dizhi.辰, WuxingJu.木三局, 3, boundary=TongxianBoundary.起限当岁包含,
@@ -63,10 +64,12 @@
 用`yunxian_at_age()`查询已有命盘在指定虚岁的三套运限：
 
 ```{doctest}
->>> from ziwei.birth import LunarBirthRecord
+>>> from ziwei.birth import Gender, LunarBirthRecord
 >>> from ziwei.chart import create_chart
 >>> from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
+>>> from ziwei.ganzhi import Dizhi
 >>> from ziwei.sihua import SihuaVariant
+>>> from ziwei.tongxian import TongxianBoundary
 >>> from ziwei.yunxian import yunxian_at_age
 >>> chart = create_chart(
 ...   LunarBirthRecord(year=2024, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.女),
@@ -82,8 +85,19 @@
 (False, True)
 ```
 
-上例切换童限边界后，`xiaoxian`和`decade`保持相同。首大限开始前`decade`为`None`，
+上例切换童限边界后，`xiaoxian`和`decade`保持相同；只读小限或大限时，`tongxian_boundary`
+选哪一项都不影响这两套读数。首大限开始前`decade`为`None`，
 超过盘内十二大限的最后一年则抛`ValueError`。独立小限查询支持任意正整数虚岁。
+
+小限与大限给出的是地支；用`palace_view(chart, dizhi)`读取该地支上的本命宫名与星曜：
+
+```{doctest}
+>>> from ziwei.chart import palace_view
+>>> (a.xiaoxian.dizhi.value, palace_view(chart, a.xiaoxian.dizhi).palace.name.value)
+('巳', '田宅')
+>>> palace_view(chart, a.decade.dizhi).palace.name.value
+'命宫'
+```
 
 ## 出处、解释与未决知识
 
@@ -101,11 +115,10 @@ False
 
 [小限条目](knowledge-reference.md#entry.xiaoxian.year-branch-gender)记录四组起宫和男顺女逆；
 [六宫条目](knowledge-reference.md#entry.tongxian.six-palaces)保留《全书》与《捷览》的录文。
-两份录文中的口诀相近；是否出自同一路转抄，尚待核对。男女用法一致的说明见《捷览》的电子录文，
-原书中这段是正文还是注文，仍待影印本核对。
+两份录文中的口诀相近；男女用法一致的说明见《捷览》的电子录文。
 
 [《精成》下载件](knowledge-reference.md#source.jingcheng-pdf)第507页主张进入大限后停止看童限，并在童限期间参看小限。
-目前只核到这一路现代文本，纸本版次未核；原文没有明确起限当岁如何处理，本项目提供包含与不含两个选项：
+原文没有明确起限当岁如何处理，本项目提供包含与不含两个选项：
 [不含当岁](knowledge-reference.md#entry.tongxian.before-decade)与
 [包含当岁](knowledge-reference.md#entry.tongxian.through-decade-start)分别记录定义、前提和限度。
 

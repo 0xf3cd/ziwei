@@ -176,7 +176,7 @@ True
 天干阴阳分类见《五行大義》卷二“第五論配支幹”，另见《選擇要略》上“十干所屬陰陽”：
 已读的维基文库电子录文分别为[修订7915687](https://zh.wikisource.org/w/index.php?title=%E4%BA%94%E8%A1%8C%E5%A4%A7%E7%BE%A9/2&oldid=7915687)
 与[修订2413684](https://zh.wikisource.org/w/index.php?title=%E9%81%B8%E6%93%87%E8%A6%81%E7%95%A5/%E4%B8%8A&oldid=2413684)。
-只取基础分类，不引入其中其他术数的查法或吉凶解释；所据影印刊本与页码未核，不作纸本版本声称。
+只取基础分类，不引入其中其他术数的查法或吉凶解释。
 
 时区行为依据 [Python 3.11 zoneinfo 文档](https://docs.python.org/3.11/library/zoneinfo.html)及实际钉版时区资源。
 这些来源不证明任何安星、四化或大限规则，也不构成完整命盘的独立盘例。

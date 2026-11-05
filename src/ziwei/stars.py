@@ -4,7 +4,7 @@
 另以王亭之《中州派紫微斗数初级讲义》与《紫微斗數精成》网页转录作对照。
 具体出处、转录关系和未核事项见知识目录；计算与参考页共用本模块的规则和数值表。
 
-天魁、天钺采用现代资料所列的表，《全书》中不同的口诀只存入知识目录，待核后再决定是否执行。
+天魁、天钺采用现代资料所列的表；《全书》的不同口诀只记在知识目录，不执行。
 《全书》火铃段只列年支四组与宫位，未明说子时起数、随生时移动或方向。
 本项目采用子时起数、两星顺数到生时的查法，依据讲义例解、《精成》及论坛明文，不归作古籍明文。
 本模块的地空按出生时辰安星；《全书》虽称它为天空，本项目不设这个全局别名，以免与另一颗
@@ -18,10 +18,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final
 
+from ziwei._frame import chart_frame
 from ziwei.bureau import WuxingJu
 from ziwei.config import TianmaRule
 from ziwei.ganzhi import Dizhi, Tiangan
-from ziwei.palaces import _chart_frame, month_palace_index, opposite_dizhi
+from ziwei.palaces import month_palace_index, opposite_dizhi
 
 if TYPE_CHECKING:
   from ziwei.birth import CalculationInput
@@ -368,7 +369,7 @@ def ziwei_dizhi(ju: WuxingJu, day: int) -> Dizhi:
   if not isinstance(ju, WuxingJu):
     raise TypeError("五行局须为 WuxingJu 成员")
   if type(day) is not int:
-    raise TypeError("农历日须为整数，不接受 bool")
+    raise TypeError("农历日不接受 bool" if isinstance(day, bool) else "农历日须为整数")
   if not 1 <= day <= 30:
     raise ValueError("农历日须在1至30之间")
   quotient = (day + ju.number - 1) // ju.number
@@ -494,7 +495,7 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
     raise TypeError("安星需要解析后的 CalculationInput")
   if value.shichen is None:
     raise ValueError("安星需要已知时辰")
-  frame = _chart_frame(value)
+  frame = chart_frame(value)
   year = value.year_ganzhi
   if value.config.tianma_rule is TianmaRule.YEAR_BRANCH:
     ma_branch = year.dizhi

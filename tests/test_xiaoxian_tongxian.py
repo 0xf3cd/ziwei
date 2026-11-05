@@ -278,3 +278,11 @@ def test_optimized_tongxian_palace_keeps_validation() -> None:
     ],
     check=True,
   )
+
+
+@pytest.mark.parametrize(("invalid", "message"), [("1", "须为整数"), (True, "不接受 bool")])
+def test_age_type_errors_name_the_actual_problem(invalid: Any, message: str) -> None:
+  with pytest.raises(TypeError, match=f"^童限虚岁{message}$"):
+    tongxian_palace(invalid)
+  with pytest.raises(TypeError, match=f"^小限虚岁{message}$"):
+    Xiaoxian(year_dizhi=Dizhi.寅, gender=Gender.男, age=invalid)

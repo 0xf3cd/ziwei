@@ -26,7 +26,7 @@
 《全书》安身命段的[闰正月例](knowledge-reference.md#entry.leap-month.next)按二月起命身，
 其他月系星是否沿用仍待核；LifeDNA列本月、次月、前后半月三法，自述采用第三种。
 闰十二月全月归下月时没有对应安星月；按前后半月归属时，十六日起同样失败，初一至十五仍归本月。
-`effective_month`不合成「来年正月」的无出处规则。
+`effective_month`不合成“来年正月”的无出处规则。
 
 `Palace`构造时要求地支、天干与宫名分别为所属枚举成员，并核对干支阴阳配对。
 同值字符串或列表抛`TypeError`，如甲丑这样的不合法配对抛`ValueError`；接受的宫位值不可变。
@@ -68,6 +68,5 @@ v0.2.0新增两个不依赖出生资料的关系查询。`opposite_dizhi()`返�
 成员关系据[《名詞解釋》](knowledge-reference.md#source.ntnu-palace-glossary)与
 [安迪作者站](knowledge-reference.md#source.andy-sanfang-sizheng)的现代说明及具体例子登记。
 两页对单独“三方”的表达不同，本接口只提供成员一致的“三方四正”组合，不据此定义单独的“三方”。
-《名詞解釋》的子女例与其一般定义不一致，不用于验收；两份网页的原始谱系与纸本均未核，不声称古籍或流派共识。
 执行规则与短引见[对宫](knowledge-reference.md#variant.palace.opposite)、
 [三方四正](knowledge-reference.md#variant.palace.sanfang-sizheng)。

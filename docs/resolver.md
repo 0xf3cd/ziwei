@@ -8,12 +8,12 @@
 
 ## 解析顺序
 
-1. 时刻：只有立春口径或真太阳时（有经度）才解析 UTC 瞬间；正月初一口径加无经度纯民用
+1. 时刻：只有立春口径或真太阳时（有经度）才解析 UTC 瞬间。正月初一口径加无经度的纯民用
    路径只取记录标签，不验证DST间隙、重叠选择或fold适用性，也不认证当地钟点存在。
 2. 时辰：民用路径取记录钟面；真太阳时路径取真太阳钟。时辰所附民用日＝民用路径取出生地
    当地民用日、真太阳时路径取真太阳钟的民用日。
-3. 子时换日：时辰为子且落在所附民用日 23:00–24:00（晚子时）时，「晚子时归次日」取次日日标签，
-   「早晚子时同日」不改；`day_rolled` 记录是否顺延。
+3. 子时换日：时辰为子且落在所附民用日 23:00–24:00（晚子时）时，“晚子时归次日”取次日日标签，
+   “早晚子时同日”不改；`day_rolled` 记录是否顺延。
 4. 农历日：只换算最终取用的日标签，不要求未取用的前一日也在算法范围内。
 5. 换年：立春 → 出生瞬间按 modelled-UT1 换算（见[时标合同](calendar.md#时标合同)）与立春
    时刻比较，左闭右开（出生瞬间等于立春时刻归新年）；正月初一 → 按（换日调整后的）农历日
@@ -57,4 +57,43 @@
 ((1988, 5, 18), '午')
 >>> str(value.year_ganzhi), value.ut1_jd
 ('戊辰', None)
+```
+
+## 改用立春换年
+
+立春换年要比较出生瞬间，只能用带钟点与时区的公历记录；农历记录选立春口径会显式失败。
+下例是合成的女命，公历2024年2月6日12:00生于上海，在立春之后、农历正月初一之前：
+
+```{doctest}
+>>> from ziwei.chart import create_chart
+>>> from ziwei.render import render_text
+>>> from ziwei.sihua import SihuaVariant
+>>> record = GregorianBirthRecord(
+...   birth_date=date(2024, 2, 6), birth_time=time(12), time_precision=TimePrecision.分,
+...   timezone=IanaTimezone("Asia/Shanghai"), gender=Gender.女,
+... )
+>>> lichun = ChartConfig(
+...   leap_month_policy=LeapMonthPolicy.全月归本月,
+...   day_rollover=DayRollover.晚子时归次日,
+...   year_boundary=YearBoundary.立春,
+... )
+>>> chart = create_chart(record, lichun, sihua_variant=SihuaVariant.排命盘口诀转录)
+>>> print(render_text(chart).splitlines()[0])
+土五局 · 大限逆行 · 虚岁首尾包含
+>>> value = chart.calculation
+>>> value.ganzhi_year, value.lunar_year, str(value.year_ganzhi)
+(2024, 2023, '甲辰')
+```
+
+年干支按立春归2024甲辰年，农历日期仍是2023年十二月二十七。
+同一记录改按农历正月初一换年时，年干支为癸卯，五行局与大限方向随之改变：
+
+```{doctest}
+>>> from dataclasses import replace
+>>> new_year = replace(lichun, year_boundary=YearBoundary.农历正月初一)
+>>> other = create_chart(record, new_year, sihua_variant=SihuaVariant.排命盘口诀转录)
+>>> print(render_text(other).splitlines()[0])
+火六局 · 大限顺行 · 虚岁首尾包含
+>>> str(other.calculation.year_ganzhi)
+'癸卯'
 ```
