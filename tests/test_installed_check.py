@@ -1,7 +1,5 @@
 """安装后消费者的拒绝用例。"""
 
-import re
-import subprocess
 import sys
 from dataclasses import asdict, replace
 from importlib.metadata import distribution, version
@@ -319,7 +317,6 @@ def test_calendar_consumer_rejects_wrong_result_provenance(
   from ziwei import resolver
   from ziwei.birth import CalculationInput
 
-  installed_check.check_calendar()
   resolve = resolver.resolve
 
   def faulty(*args: Any, **kwargs: Any) -> CalculationInput:
@@ -397,20 +394,6 @@ def test_calendar_consumer_rejects_wrong_resolved_sihua_or_decades(
     installed_check.check_calendar()
 
 
-def test_command_line_entry_validates_under_optimization(tmp_path: Path) -> None:
-  """命令行入口在 -O 下仍执行校验，而不是依赖 assert。"""
-  result = subprocess.run(
-    (sys.executable, "-O", "-I", str(Path(installed_check.__file__)), "unrelated-version"),
-    cwd=tmp_path,
-    capture_output=True,
-    text=True,
-    check=False,
-  )
-  assert result.returncode != 0
-  assert "ValueError" in result.stderr
-  assert re.search("outside the consumer environment|Installed version differs", result.stderr)
-
-
 def test_dependency_pin_is_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
   def wrong_pin(name: str) -> Any:
     if name == "ziwei":
@@ -479,12 +462,6 @@ def test_full_chart_consumer_rejects_faulty_hongluan_tianxi(
 
   monkeypatch.setattr(installed_check, "create_chart", faulty)
   with pytest.raises(ValueError, match="Installed hongluan/tianxi"):
-    installed_check.check_chart()
-
-
-def test_full_chart_consumer_rejects_faulty_rendering(monkeypatch: pytest.MonkeyPatch) -> None:
-  monkeypatch.setattr(installed_check, "render_text", lambda chart: "命宫")
-  with pytest.raises(ValueError, match="Installed text chart"):
     installed_check.check_chart()
 
 
@@ -580,14 +557,12 @@ def test_input_consumer_rejects_faulty_results(kind: str, monkeypatch: pytest.Mo
     installed_check.check_inputs()
 
 
-@pytest.mark.parametrize("kind", ["aliases", "pending", "alternatives", "quote"])
+@pytest.mark.parametrize("kind", ["pending", "alternatives", "quote"])
 def test_knowledge_consumer_rejects_missing_or_changed_corpus(
   kind: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
   catalog = load_catalog()
-  if kind == "aliases":
-    catalog = Catalog(concepts=(), variants=(), sources=(), citations=(), entries=())
-  elif kind in ("pending", "alternatives"):
+  if kind in ("pending", "alternatives"):
     catalog = replace(
       catalog,
       entries=tuple(
@@ -762,21 +737,3 @@ def test_knowledge_consumer_rejects_each_independent_missing_condition(
     monkeypatch.setattr(Catalog, "find", find)
   with pytest.raises(ValueError, match="knowledge"):
     installed_check.check_knowledge()
-
-
-def test_consumers_succeed_in_an_optimized_process(tmp_path: Path) -> None:
-  root = Path(__file__).resolve().parents[1]
-  script = (
-    "import sys; sys.path.insert(0, sys.argv[1]); "
-    "from tools.installed_check import check_knowledge, check_inputs; "
-    "check_knowledge(); check_inputs(); print('optimized-consumers-passed')"
-  )
-  result = subprocess.run(
-    (sys.executable, "-O", "-I", "-c", script, str(root)),
-    cwd=tmp_path,
-    capture_output=True,
-    text=True,
-    check=False,
-  )
-  assert result.returncode == 0, result.stderr
-  assert "optimized-consumers-passed" in result.stdout

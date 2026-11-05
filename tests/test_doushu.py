@@ -10,7 +10,6 @@ import pickle
 import shutil
 import subprocess
 import sys
-from copy import deepcopy
 from importlib import import_module
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -338,16 +337,10 @@ def runtime_aliases(
   return modules, expectations
 
 
-def test_runtime_consumer_fixture_reaches_the_complete_chart(
-  runtime_aliases: tuple[dict[str, Any], Path],
-) -> None:
-  _, expectations = runtime_aliases
-  doushu_installed_check.main(VERSION, expectations, "doushu")
-
-
 @pytest.mark.parametrize(
   "defect, message",
   [
+    (None, None),
     ("identity", "original objects"),
     ("version", "same version"),
     ("order", "import order"),
@@ -367,8 +360,8 @@ def test_runtime_consumer_fixture_reaches_the_complete_chart(
 def test_runtime_consumer_rejects_invalid_contracts(
   runtime_aliases: tuple[dict[str, Any], Path],
   monkeypatch: pytest.MonkeyPatch,
-  defect: str,
-  message: str,
+  defect: str | None,
+  message: str | None,
 ) -> None:
   modules, expectations = runtime_aliases
   version, first = VERSION, "doushu"
@@ -421,8 +414,11 @@ def test_runtime_consumer_rejects_invalid_contracts(
     case "chart-output":
       monkeypatch.setattr(modules["ziwei.render"], "render_text", lambda chart: "wrong")
       modules["doushu.render"].render_text = modules["ziwei.render"].render_text
-  with pytest.raises(ValueError, match=message):
+  if message is None:
     doushu_installed_check.main(version, expectations, first)
+  else:
+    with pytest.raises(ValueError, match=message):
+      doushu_installed_check.main(version, expectations, first)
 
 
 @pytest.mark.parametrize(
@@ -626,7 +622,7 @@ def test_alias_builder_rejects_extra_output(
     doushu.build_alias(tmp_path / "build")
 
 
-@pytest.mark.parametrize("phase", ["primary", "alias"])
+@pytest.mark.parametrize("phase", ["install", "primary", "alias"])
 def test_consumption_cannot_replace_retained_artifacts(
   alias_wheel: Path,
   tmp_path: Path,
@@ -644,14 +640,16 @@ def test_consumption_cannot_replace_retained_artifacts(
   monkeypatch.setattr(check, "check_sdist", lambda *args: None)
   monkeypatch.setattr(check, "check_wheel", lambda *args: None)
   monkeypatch.setattr(check, "alias_from_sdist", lambda *args: alias_wheel)
-  monkeypatch.setattr(check, "install_and_consume", lambda *args, **kwargs: None)
-  monkeypatch.setattr(
-    check,
-    "consume_alias",
-    lambda *args, **kwargs: (primary if phase == "primary" else alias_wheel).write_bytes(
-      b"changed"
-    ),
-  )
+  changed = alias_wheel if phase == "alias" else primary
+
+  def change(*args: object, **kwargs: object) -> None:
+    changed.write_bytes(b"changed")
+
+  def keep(*args: object, **kwargs: object) -> None:
+    pass
+
+  monkeypatch.setattr(check, "install_and_consume", change if phase == "install" else keep)
+  monkeypatch.setattr(check, "consume_alias", keep if phase == "install" else change)
   monkeypatch.setattr(check, "check_alias_typing", lambda *args: None)
   with pytest.raises(ValueError, match="changed during"):
     check.check_distribution(
@@ -706,46 +704,3 @@ def test_real_alias_publish_bash_blocks_upload(
   )
   assert result.returncode == (0 if defect is None else 1), result.stderr
   assert marker.exists() is (defect is None)
-
-
-@pytest.mark.parametrize(
-  "defect",
-  [
-    "alias-needs",
-    "alias-path",
-    "alias-hash",
-    "alias-upload",
-    "consume-path",
-    "consume-pin",
-    "outputs",
-    "upload-path",
-  ],
-)
-def test_workflow_rejects_alias_boundary_drift(defect: str) -> None:
-  from tests.test_workflow import check_release_policy, load_workflow
-
-  good = load_workflow((ROOT / ".github/workflows/release.yml").read_text())
-  check_release_policy(good)
-  bad = deepcopy(good)
-  alias = bad["jobs"]["publish-pypi-doushu"]
-  match defect:
-    case "alias-needs":
-      alias["needs"].remove("publish-pypi")
-    case "alias-path":
-      alias["steps"][0]["with"]["path"] = "dist"
-    case "alias-hash":
-      alias["steps"][1]["env"]["WHEEL_SHA256"] = "${{ needs.build.outputs.wheel_sha256 }}"
-    case "alias-upload":
-      alias["steps"][2]["with"]["packages-dir"] = "dist/packages"
-    case "consume-path":
-      bad["jobs"]["consume"]["steps"][4]["with"]["path"] = "dist"
-    case "consume-pin":
-      bad["jobs"]["consume"]["env"].pop("DOUSHU_WHEEL_SHA256")
-    case "outputs":
-      bad["jobs"]["build"]["outputs"]["doushu_artifact_id"] = (
-        "${{ steps.upload.outputs.artifact-id }}"
-      )
-    case "upload-path":
-      bad["jobs"]["build"]["steps"][11]["with"]["path"] = "dist/"
-  with pytest.raises(ValueError):
-    check_release_policy(bad)

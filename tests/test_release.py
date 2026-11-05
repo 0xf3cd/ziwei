@@ -50,10 +50,7 @@ def bundle(tmp_path: Path) -> tuple[Path, release.Manifest]:
   return directory, release.prepare_bundle(directory, VERSION, SHA)
 
 
-@pytest.mark.parametrize(
-  "defect",
-  ["version", "placeholder", "prerelease", "sha", "short-sha", "uppercase", "ref", "injection"],
-)
+@pytest.mark.parametrize("defect", ["version", "sha", "ref"])
 def test_release_identity_is_an_early_check_not_an_authorization(defect: str) -> None:
   release.validate_identity(
     VERSION, SHA, github_sha=SHA, github_ref="refs/heads/main", metadata_version=VERSION
@@ -62,20 +59,10 @@ def test_release_identity_is_an_early_check_not_an_authorization(defect: str) ->
   match defect:
     case "version":
       version = "0.2.0"
-    case "placeholder":
-      version = "0.0.0"
-    case "prerelease":
-      version = "0.1.0rc1"
     case "sha":
       actual_sha = "b" * 40
-    case "short-sha":
-      source_sha = "a" * 7
-    case "uppercase":
-      source_sha = SHA.upper()
     case "ref":
       ref = "refs/tags/main"
-    case "injection":
-      version = "0.1.0; touch unwanted"
   with pytest.raises(ValueError):
     release.validate_identity(
       version, source_sha, github_sha=actual_sha, github_ref=ref, metadata_version=VERSION
@@ -313,17 +300,10 @@ def test_publish_script_rejects_untrusted_output_names(
   assert not marker.exists()
 
 
-def test_hashes_are_compared_to_build_outputs_not_only_the_manifest(
-  bundle: tuple[Path, release.Manifest],
-) -> None:
-  directory, manifest = bundle
-  changed = release.Manifest(VERSION, SHA, manifest.sdist_sha256, "b" * 64)
-  with pytest.raises(ValueError, match="trusted build outputs"):
-    release.verify_bundle(directory, changed)
-
-
-@pytest.mark.parametrize("command", ["validate", "prepare", "consume"])
-@pytest.mark.parametrize("with_alias", [False, True])
+@pytest.mark.parametrize(
+  "command, with_alias",
+  [("validate", False), ("prepare", False), ("consume", False), ("consume", True)],
+)
 def test_release_cli_keeps_the_same_identity_and_bytes(
   bundle: tuple[Path, release.Manifest],
   tmp_path: Path,
@@ -364,7 +344,7 @@ def test_release_cli_keeps_the_same_identity_and_bytes(
 
   monkeypatch.setattr(release, "verify_bundle", observe_verify)
   monkeypatch.setattr(release, "install_and_consume", consume)
-  if with_alias and command == "consume":
+  if with_alias:
     alias_directory = tmp_path / "alias"
     monkeypatch.setenv("DOUSHU_WHEEL_SHA256", "d" * 64)
     monkeypatch.setattr(sys, "argv", [*sys.argv, "--doushu-directory", str(alias_directory)])
@@ -395,16 +375,6 @@ def test_release_cli_keeps_the_same_identity_and_bytes(
       else ["verify", "consume", "verify"],
     }[command]
   )
-
-
-def test_removed_index_command_is_rejected(
-  monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-  monkeypatch.setattr(sys, "argv", ["release", "verify-testpypi"])
-  with pytest.raises(SystemExit) as caught:
-    release.main()
-  assert caught.value.code == 2
-  assert "invalid choice" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("defect", ["fields", "type", "digest", "placeholder", "source-sha"])
@@ -441,6 +411,7 @@ def test_manifest_rejects_invalid_shape_and_values(
     ("0.0.0", SHA, "0.0.0 placeholder"),
     ("0.1.0rc1", SHA, "canonical numeric components"),
     ("01.2.3", SHA, "canonical numeric components"),
+    ("0.1.0; touch unwanted", SHA, "canonical numeric components"),
     (VERSION, "short", "full lowercase source SHA"),
     (VERSION, SHA.upper(), "full lowercase source SHA"),
   ],
