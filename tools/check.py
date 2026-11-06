@@ -99,6 +99,8 @@ def check_api_reference(directory: Path, root: Path = ROOT) -> None:
   expected: set[str] = set()
   for module in (root / "src/ziwei").rglob("*.py"):
     parts = module.relative_to(root / "src").with_suffix("").parts
+    if any(part.startswith("_") and part != "__init__" for part in parts):
+      continue
     namespace = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
     source = module.read_text(encoding="utf-8")
     lines = source.split("\n")

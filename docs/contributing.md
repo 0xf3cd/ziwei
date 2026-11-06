@@ -2,7 +2,7 @@
 
 [项目入口](../README.md) · [文档入口](index.md)
 
-本指南面向参与`main`开发的人；固定发行版本的文档请从相应源码标签查阅。
+本指南面向参与开发的人；固定发行版本的文档请从相应源码标签查阅。
 先读[相关 issue](https://github.com/0xf3cd/ziwei/issues)和[结构设计](architecture.md)，确认功能范围与验收盘例。
 仓库的编码、知识整理与交付约定统一维护在[AGENTS.md](https://github.com/0xf3cd/ziwei/blob/main/AGENTS.md)，它也是唯一的agent指令源；
 本页说明如何安装、检查和准备贡献，不另列一套规约。
@@ -70,13 +70,15 @@ uv run --locked python tools/check.py --docs-dir build/docs
 根入口使用相对链接，离线打开和部署到项目子路径都使用同一份输出。
 [开发文档站](https://0xf3cd.github.io/ziwei/)随`main`更新，不固定于某次发行。
 
-按上面的`uv sync`从本仓安装源码，本地分发名／版本为`ziwei`／`0.4.1`。
+按上面的`uv sync`从本仓安装源码，本地分发名为`ziwei`，版本号与`pyproject.toml`相同。
 可检查安装的版本字符串：
 
 ```{doctest}
+:options: +ELLIPSIS
+
 >>> from importlib.metadata import version
 >>> version("ziwei")
-'0.4.1'
+'...'
 ```
 
 同一版本字符串不能证明安装来源或具体源码提交；核对安装对象时还须检查这两项。
@@ -106,6 +108,7 @@ celestial 0.7.0／0.9.0的探索以`--no-deps`强制安装，选定排盘例及H
 ## 准备PR
 
 按[AGENTS.md](https://github.com/0xf3cd/ziwei/blob/main/AGENTS.md#验证与交付)准备PR格式、验证记录与署名。
+版本开发期间，PR以该版本的集成分支`milestone/<version>`为目标；补丁与依赖更新直接以`main`为目标。
 说明对应issue、变更的行为、实际运行的命令和未解决问题；使用AI编写的贡献仍由贡献者负责。
 改规则时先核[知识与来源](knowledge.md)，参考盘例及其限度见[完整命盘](chart.md#参考盘例与验收限度)。
 改文档时除运行示例外，还应打开生成页面，检查文字、完整盘面与目标锚点是否可读。

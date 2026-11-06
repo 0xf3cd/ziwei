@@ -297,7 +297,7 @@ def test_create_checks_complete_before_components(
     raise AssertionError("组件计算不应先于完整性检查")
 
   monkeypatch.setattr(CalculationInput, "require_complete", reject)
-  monkeypatch.setattr(module, "_chart_frame", unexpected_frame)
+  monkeypatch.setattr(module, "chart_frame", unexpected_frame)
   record = LunarBirthRecord(
     year=2024, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.男
   )
