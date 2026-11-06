@@ -65,7 +65,9 @@ def _check_lunar_date(
 ) -> None:
   for value, maximum, name in ((year, 9999, "年"), (month, 12, "月"), (day, 30, "日")):
     if type(value) is not int:
-      raise TypeError(f"农历{name}须为整数，不接受 bool")
+      raise TypeError(
+        f"农历{name}不接受 bool" if isinstance(value, bool) else f"农历{name}须为整数"
+      )
     if not 1 <= value <= maximum:
       raise ValueError(f"农历{name}须在1至{maximum}之间")
   if type(is_leap_month) is not bool:

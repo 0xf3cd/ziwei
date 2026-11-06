@@ -141,7 +141,7 @@ def validate_lunar_date(
   _check_algorithm(algorithm)
   for value, label in ((year, "农历年"), (month, "农历月"), (day, "农历日")):
     if type(value) is not int:
-      raise TypeError(f"{label}须为整数，不接受 bool")
+      raise TypeError(f"{label}不接受 bool" if isinstance(value, bool) else f"{label}须为整数")
   if type(is_leap) is not bool:
     raise TypeError("闰月标志须为 bool")
   if year < _ALGORITHM_RANGE[algorithm][0] or year > _ALGORITHM_RANGE[algorithm][1]:
@@ -301,7 +301,9 @@ def lichun_date(year: int) -> date:
   支持年份见LICHUN_DATE_YEAR_RANGE。返回整日标签，使用utc_to_ut1_jd中的闰秒与ΔT模型。
   """
   if type(year) is not int:
-    raise TypeError("立春日期查询年份须为整数，不接受 bool")
+    raise TypeError(
+      "立春日期查询年份不接受 bool" if isinstance(year, bool) else "立春日期查询年份须为整数"
+    )
   first, last = LICHUN_DATE_YEAR_RANGE
   if not first <= year <= last:
     raise ValueError(f"立春日期查询年份须在{first}至{last}之间")

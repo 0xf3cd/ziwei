@@ -44,7 +44,7 @@ class Xiaoxian:
     if self.gender is Gender.未知:
       raise ValueError("小限需要已知性别")
     if type(self.age) is not int:
-      raise TypeError("小限虚岁须为整数，不接受 bool")
+      raise TypeError("小限虚岁不接受 bool" if isinstance(self.age, bool) else "小限虚岁须为整数")
     if self.age < 1:
       raise ValueError("小限虚岁须为正整数")
     start = next(start for group, start in XIAOXIAN_STARTS if self.year_dizhi in group)

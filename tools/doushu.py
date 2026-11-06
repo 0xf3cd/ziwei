@@ -28,7 +28,7 @@ from tools.artifacts import file_sha256
 from tools.consumption import run
 
 ROOT = Path(__file__).resolve().parents[1]
-INTERNAL_MODULES = {"ziwei", "ziwei.knowledge.data"}
+INTERNAL_MODULES = {"ziwei", "ziwei._frame", "ziwei.knowledge.data"}
 ROOT_SOURCE = '"""ziwei的同版别名入口。"""\n\nimport ziwei as _ziwei\n'
 README = """# doushu（斗数）
 

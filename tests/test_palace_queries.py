@@ -259,7 +259,7 @@ def test_queries_do_not_recompute_or_load_resources(
         "place_decades",
         "twelve_palaces",
         "shengong_dizhi",
-        "_chart_frame",
+        "chart_frame",
       ),
     ),
     (resolver, ("resolve",)),

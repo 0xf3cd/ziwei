@@ -22,7 +22,9 @@ class IanaTimezone:
       raise ValueError("IANA 标识须为不含路径跳转的相对标识")
     if self.fold is not None:
       if type(self.fold) is not int:
-        raise TypeError("fold 须为整数或 None，不接受 bool")
+        raise TypeError(
+          "fold 不接受 bool" if isinstance(self.fold, bool) else "fold 须为整数或 None"
+        )
       if self.fold not in (0, 1):
         raise ValueError("fold 只能为0或1")
 
@@ -107,7 +109,9 @@ class ResolvedTime:
     _require_modern_utc(self.utc)
     _check_offset(self.offset)
     if type(self.fold) is not int or self.fold not in (0, 1):
-      raise ValueError("实际 fold 须为0或1，不接受 bool")
+      raise ValueError(
+        "实际 fold 不接受 bool" if isinstance(self.fold, bool) else "实际 fold 须为0或1"
+      )
     if not isinstance(self.zone, IanaTimezone | FixedOffset):
       raise TypeError("时区须为 IanaTimezone 或 FixedOffset")
     if isinstance(self.zone, IanaTimezone):

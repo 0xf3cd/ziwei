@@ -185,3 +185,16 @@ def test_module_heading_guard_distinguishes_rest_from_literal_markdown(
     page.write_text(markup.replace(f"<h2>{title}</h2>", f"<p>## {title}</p>"), encoding="utf-8")
     with pytest.raises(ValueError, match=title):
       _check_module_headings(tmp_path)
+
+
+def test_private_modules_are_not_required_in_the_api(api_tree: Path) -> None:
+  (api_tree / "src/ziwei/_frame.py").write_text("def chart_frame():\n  pass\n", encoding="utf-8")
+  (api_tree / "docs/api.html").write_text(
+    '<dt id="ziwei.sample.Value"></dt><dt id="ziwei.sample.Value.check"></dt>'
+    '<dt id="ziwei.sample.resolve"></dt>',
+    encoding="utf-8",
+  )
+  check_api_reference(api_tree, api_tree)
+  (api_tree / "src/ziwei/frame.py").write_text("def chart_frame():\n  pass\n", encoding="utf-8")
+  with pytest.raises(ValueError, match=re.escape("ziwei.frame.chart_frame")):
+    check_api_reference(api_tree, api_tree)
