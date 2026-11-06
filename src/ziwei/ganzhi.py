@@ -196,7 +196,9 @@ def year_ganzhi(ganzhi_year: int) -> Ganzhi:
   正月初一或立春换年须由历法解析层先决定纪年编号，不能直接用出生公历年代替。
   """
   if type(ganzhi_year) is not int:
-    raise TypeError("干支纪年编号须为整数，不接受 bool")
+    raise TypeError(
+      "干支纪年编号不接受 bool" if isinstance(ganzhi_year, bool) else "干支纪年编号须为整数"
+    )
   if not 1 <= ganzhi_year <= 9999:
     raise ValueError("干支纪年编号须在1至9999之间")
   return YEAR_GANZHI[(ganzhi_year - YEAR_GANZHI[0][0]) % len(YEAR_GANZHI)][1]

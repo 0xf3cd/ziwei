@@ -195,3 +195,11 @@ def test_effective_month_rejects_unimplemented_policy(
   assert effective_month(2, 16, is_leap, cast(LeapMonthPolicy, extended["CURRENT_MONTH"])) == 2
   with pytest.raises(ValueError, match="尚未实现的闰月口径：未实现测试口径"):
     effective_month(2, 16, is_leap, cast(LeapMonthPolicy, extended["UNIMPLEMENTED"]))
+
+
+@pytest.mark.parametrize(("invalid", "message"), [("1", "须为整数"), (True, "不接受 bool")])
+def test_month_and_day_type_errors_name_the_actual_problem(invalid: Any, message: str) -> None:
+  with pytest.raises(TypeError, match=f"^农历生月{message}$"):
+    module.month_palace_index(invalid)
+  with pytest.raises(TypeError, match=f"^农历日{message}$"):
+    module.effective_month(1, invalid, False, LeapMonthPolicy.全月归本月)

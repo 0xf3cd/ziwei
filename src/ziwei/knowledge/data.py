@@ -241,7 +241,7 @@ VARIANTS = (
     id=BrightnessTable.全书卷二录文.table_id,
     name=BrightnessTable.全书卷二录文.value,
     definition=_BRIGHTNESS_DEFINITION,
-    scope="《紫微斗数全书》卷二oldid=1963110七级成表中的十四主星与十二地支",
+    scope="《紫微斗數全書》卷二oldid=1963110七级成表中的十四主星与十二地支",
     concept_ids=(
       "concept.brightness.major-star-levels",
       *(star.concept_id for star in MAJOR_STARS),

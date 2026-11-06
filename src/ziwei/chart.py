@@ -5,6 +5,7 @@ from datetime import datetime, time
 from math import isfinite
 from typing import TypeVar, cast
 
+from ziwei._frame import chart_frame
 from ziwei.birth import BirthRecord, CalculationInput, LunarBirthRecord
 from ziwei.brightness import BrightnessReading, BrightnessTable, star_brightness
 from ziwei.bureau import WuxingJu
@@ -16,7 +17,6 @@ from ziwei.liunian import LiunianStars, liunian_minggong, liunian_stars
 from ziwei.palaces import (
   Palace,
   PalaceName,
-  _chart_frame,
   shengong_dizhi,
   twelve_palaces,
 )
@@ -119,7 +119,7 @@ class ZiweiChart:
       object.__setattr__(self, name, items)
     value = self.calculation
     _check_calculation(value)
-    frame = _chart_frame(value)
+    frame = chart_frame(value)
     shichen = cast(Dizhi, value.shichen)
     _check_component_sequence(
       self.palaces, twelve_palaces(frame.minggong, value.year_ganzhi.tiangan), "十二宫"
@@ -242,7 +242,7 @@ def create_chart(
   """解析原始记录并组合完整盘；时辰、性别或所请求口径不可用时整次失败。"""
   value = resolve(record, config, lunar_algorithm)
   value.require_complete()
-  frame = _chart_frame(value)
+  frame = chart_frame(value)
   shichen = cast(Dizhi, value.shichen)
   return ZiweiChart(
     calculation=value,

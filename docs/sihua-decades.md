@@ -93,13 +93,11 @@ True
 
 ## 来源与验证的限度
 
-两套四化各采用所选转录的完整表，不把不同来源的单行说明拼成第三套表，也不声称取得第二份完整同表。
-逐项支持与盘例限度见[网页转录四化](knowledge-reference.md#entry.sihua.zhongyi999)及
-[讲义四化](knowledge-reference.md#entry.sihua.wangtingzhi-lecture)；纸本、PDF图像与版次尚未核对。
-[1970庚戌图](knowledge-reference.md#citation.doushuxuantan.geng-example)不是王亭之原图，只检验庚干四化；
-没有完整生日，不能重排全星位或证明其余九干。
+两套四化各采用所选转录的完整表，不把不同来源的单行说明拼成第三套表。
+逐项支持、盘例与版本限度见[网页转录四化](knowledge-reference.md#entry.sihua.zhongyi999)、
+[讲义四化](knowledge-reference.md#entry.sihua.wangtingzhi-lecture)及
+[1970庚戌图](knowledge-reference.md#citation.doushuxuantan.geng-example)。
 
-大限的虚岁与含首尾区间依据论坛原例，讲义存档正文另支持局数起限；
-图四图题与图内岁数尚未取得图像核对。定位及未核事项见[大限条目](knowledge-reference.md#entry.decades.xusui-inclusive)。
-这些材料不规定实际换岁日期；《全书》的[邻宫起限异文](knowledge-reference.md#entry.decades.quanshu-adjacent)仍待核、不执行。
+大限的虚岁与含首尾区间依据论坛原例，讲义存档正文另支持局数起限；限度见[大限条目](knowledge-reference.md#entry.decades.xusui-inclusive)。
+这些材料不规定实际换岁日期；《全书》的[邻宫起限异文](knowledge-reference.md#entry.decades.quanshu-adjacent)只记在知识目录，不执行。
 规则可以计算，不代表对应知识条目可以默认展示或用来解释某张命盘。

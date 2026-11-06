@@ -54,7 +54,7 @@ class TongxianBoundary(StrEnum):
 
 def _check_age(age: int) -> None:
   if type(age) is not int:
-    raise TypeError("童限虚岁须为整数，不接受 bool")
+    raise TypeError("童限虚岁不接受 bool" if isinstance(age, bool) else "童限虚岁须为整数")
   if age < 1:
     raise ValueError("童限虚岁须为正整数")
 
@@ -63,7 +63,7 @@ def tongxian_palace(age: int) -> PalaceName:
   """查询一至六岁对应的本命宫名；七岁起抛NotImplementedError。"""
   _check_age(age)
   if age > len(TONGXIAN_PALACES):
-    raise NotImplementedError("六宫映射只定义一至六岁；七岁以后的古法宫序未核定")
+    raise NotImplementedError("六宫映射只定义一至六岁")
   return TONGXIAN_PALACES[age - 1]
 
 

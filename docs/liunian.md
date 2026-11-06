@@ -39,6 +39,7 @@
 ## 日期：显式选择年界
 
 同一日期在两种年界下可能属于不同的纪年。初一政策必须指定农历算法；立春日期政策不接受农历算法。
+不确定选哪种算法时，可用与解析层默认相同的`LunarAlgorithm.混合`（ALGO3）。
 
 ```{doctest}
 >>> from datetime import date
@@ -141,7 +142,7 @@ True
 - 初一至除夕的流年定义来自现代作者网页；[两份PMO历书](knowledge-reference.md#source.pmo-calendar-2022)分别见证
   2022初一先于立春、2024立春先于初一。历书给出的立春时刻到分钟，测试只取日级预期。
 - [固定软件调用链](knowledge-reference.md#source.iztro-liunian-date)支持立春**日期级**行为，作为具名兼容政策；
-  所收材料尚未提供独立的紫微流年定义，不把软件选项称为古籍共识。依赖链不是多个独立来源。
+  调用链上的几个库只算一路来源。
 
-离线材料分别保存外部观测与项目采用预期，差异按口径、输入、实现和来源未决分类。
-固定印本、独立完整生辰流年盘和专业软件原始样本仍未取得；安装消费、合成组合与来源单元测试分别验收。
+两种日期政策的限度与复核条件见[初一](knowledge-reference.md#entry.liunian.lunar-new-year)与
+[立春日期](knowledge-reference.md#entry.liunian.lichun-date)条目。

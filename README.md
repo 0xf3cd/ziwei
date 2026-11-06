@@ -36,7 +36,6 @@ python -m pip check
 
 发行版接口与`main`文档可能不同，请先核对[发行说明中的兼容变化](https://0xf3cd.github.io/ziwei/docs/releases.html)。
 需要使用开发中的接口时，可[从源码安装](https://0xf3cd.github.io/ziwei/docs/contributing.html)。
-`main`源码不等同于PyPI发行制品；上传前的候选状态见[发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 
 从0.4.1起，也可用`doushu`（斗数）安装和导入：
 
@@ -75,7 +74,7 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 “口径”指闰月归属、子时换日和换年界线这三项计算选择；本例逐项指定，并选择一张具名生年四化表。
 本例不是闰月，闰月归属不影响结果。农历记录只给时辰、没有钟点和时区，因此按农历正月初一换年，子时采用同日口径。
 若要用立春换年，或区分早晚子时以执行晚子时归次日，须改用带钟点与时区的公历记录；
-其他出生资料的口径选择与输入要求见[解析层](https://0xf3cd.github.io/ziwei/docs/resolver.html)。
+[解析层](https://0xf3cd.github.io/ziwei/docs/resolver.html)有立春换年的完整示例，也列出其他出生资料的口径选择与输入要求。
 
 ```{doctest}
 >>> from ziwei.birth import Gender, LunarBirthRecord
