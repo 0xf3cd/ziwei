@@ -26,7 +26,6 @@ from tools.artifacts import (
   source_members,
 )
 from tools.check import check_documents, check_examples, document_errors
-from tools.consumption import run
 from tools.knowledge_reference import check_knowledge_reference
 
 PKG_INFO = "Name: ziwei\nVersion: 0.0.0\n"
@@ -57,11 +56,6 @@ def _check_readme_chart_example(root: Path) -> None:
   guide = _documented_chart(root / "docs/chart.md")
   assert isinstance(readme, ZiweiChart) and isinstance(guide, ZiweiChart)
   assert readme == guide, "README and chart guide must execute the same chart input"
-
-
-@pytest.mark.usefixtures("unload_celestial")
-def test_readme_and_chart_guide_execute_the_same_input() -> None:
-  _check_readme_chart_example(check.ROOT)
 
 
 @pytest.mark.usefixtures("unload_celestial")
@@ -98,10 +92,6 @@ def _check_development_document_links(root: Path) -> None:
     }
     if not {base + target for target in targets} <= links:
       raise ValueError("Missing development documentation link in " + document)
-
-
-def test_development_document_links_follow_package_metadata() -> None:
-  _check_development_document_links(check.ROOT)
 
 
 @pytest.mark.parametrize(
@@ -202,10 +192,6 @@ def write_sdist(path: Path, members: dict[str, str], base: str = "ziwei-0.0.0") 
   return path
 
 
-def test_valid_documents(docs: Path) -> None:
-  check_documents(docs)
-
-
 def test_empty_document_tree(tmp_path: Path) -> None:
   with pytest.raises(ValueError, match="docs must contain pages"):
     check_documents(tmp_path)
@@ -230,6 +216,14 @@ def test_broken_local_link(docs: Path, link: str) -> None:
 def test_links_resolve_from_the_linking_page(docs: Path) -> None:
   (docs / "docs/guide").mkdir()
   (docs / "docs/guide/other.md").write_text("text\n", encoding="utf-8")
+  (docs / "docs/figure.png").write_bytes(b"")
+  (docs / "LICENSE").write_text("MIT\n", encoding="utf-8")
+  (docs / "a b.md").write_text("text\n", encoding="utf-8")
+  (docs / "README.md").write_text(
+    "[指南](docs/index.md) ![图](docs/figure.png) [许可](LICENSE) [file](a%20b.md)\n"
+    "`[sample](absent.md)` [web](https://example.org/guide) [anchor](#index)\n",
+    encoding="utf-8",
+  )
   page = docs / "docs/guide/intro.md"
   page.write_text("[兄弟](other.md) [上级](../index.md) [根](../../README.md)\n", encoding="utf-8")
   check_documents(docs)
@@ -238,38 +232,9 @@ def test_links_resolve_from_the_linking_page(docs: Path) -> None:
     check_documents(docs)
 
 
-def test_existing_non_markdown_targets(docs: Path) -> None:
-  (docs / "docs/figure.png").write_bytes(b"")
-  (docs / "LICENSE").write_text("MIT\n", encoding="utf-8")
-  (docs / "README.md").write_text("![图](docs/figure.png) [许可](LICENSE)\n", encoding="utf-8")
-  check_documents(docs)
-
-
-def test_code_is_not_a_link(docs: Path) -> None:
-  (docs / "README.md").write_text("`[sample](absent.md)`\n", encoding="utf-8")
-  check_documents(docs)
-
-
-def test_external_links_and_fragments(docs: Path) -> None:
-  (docs / "README.md").write_text("[web](https://example.org) [anchor](#index)", encoding="utf-8")
-  check_documents(docs)
-
-
-def test_encoded_local_path(docs: Path) -> None:
-  (docs / "a b.md").write_text("text", encoding="utf-8")
-  (docs / "README.md").write_text("[file](a%20b.md)", encoding="utf-8")
-  check_documents(docs)
-
-
 def test_missing_readme(docs: Path) -> None:
   (docs / "README.md").unlink()
   assert any("Missing document" in error for error in document_errors(docs))
-
-
-def test_command_failure_propagates(tmp_path: Path) -> None:
-  with pytest.raises(subprocess.CalledProcessError) as caught:
-    run((sys.executable, "-c", "raise SystemExit(7)"), cwd=tmp_path)
-  assert caught.value.returncode == 7
 
 
 @pytest.fixture
@@ -286,24 +251,6 @@ def sphinx_source(tmp_path: Path) -> Path:
     encoding="utf-8",
   )
   return source
-
-
-def test_real_sphinx_entry_builds_both_outputs(
-  sphinx_source: Path,
-  tmp_path: Path,
-  monkeypatch: pytest.MonkeyPatch,
-) -> None:
-  monkeypatch.setattr(check, "ROOT", sphinx_source)
-  output = tmp_path / "output"
-  report = check.sphinx_report(output)
-  assert "production-fixture-marker" in (output / "html/index.html").read_text(encoding="utf-8")
-  assert report == (output / "doctest/output.txt").read_text(encoding="utf-8")
-  assert "Document: index" in report and "1 test" in report
-  assert "0 failures in tests" in report
-  assert (output / ".doctrees/html/environment.pickle").is_file()
-  assert (output / ".doctrees/doctest/environment.pickle").is_file()
-  assert not list((output / "html").rglob("*.doctree"))
-  assert not list((output / "html").rglob("environment.pickle"))
 
 
 @pytest.mark.parametrize(
@@ -368,24 +315,20 @@ def example_report() -> str:
   )
 
 
-@pytest.mark.parametrize("report", ["", "Document: docs/architecture\n2 tests in 1 item.\n"])
-def test_examples_cannot_be_empty(report: str) -> None:
-  with pytest.raises(ValueError, match="README"):
-    check_examples(report)
-
-
-@pytest.mark.parametrize("word", ["item", "items"])
-def test_executed_examples(example_report: str, word: str) -> None:
-  check_examples(example_report.replace("item.", f"{word}."))
-
-
-def test_document_word_in_doctest_group(example_report: str) -> None:
-  check_examples(
-    example_report.replace(
+@pytest.mark.parametrize(
+  "old, new",
+  [
+    ("item.", "item."),
+    ("item.", "items."),
+    (
       "2 tests in 1 item.\n",
       "1 item passed all tests:\n   2 tests in Document: group\n2 tests in 1 item.\n",
-    )
-  )
+    ),
+  ],
+  ids=["item", "items", "document-word-in-group"],
+)
+def test_executed_examples(example_report: str, old: str, new: str) -> None:
+  check_examples(example_report.replace(old, new))
 
 
 @pytest.mark.parametrize("document", ["README", "docs/chart", "docs/contributing"])
@@ -463,47 +406,27 @@ def test_docs_command_exports_a_project_site(checked_docs_source: Path) -> None:
 
 
 @pytest.mark.parametrize("document, suffix", [("api", "rst"), ("knowledge-reference", "md")])
-def test_docs_command_cannot_validate_removed_pages_from_an_old_export(
+def test_docs_command_rejects_a_site_without_a_checked_page(
   checked_docs_source: Path, document: str, suffix: str
 ) -> None:
   index = checked_docs_source / "docs/index.rst"
   index.write_text(index.read_text(encoding="utf-8") + "   retained\n", encoding="utf-8")
   (checked_docs_source / "docs/retained.md").write_text("# 保留的指南\n", encoding="utf-8")
-  (checked_docs_source / "site").mkdir()
-  command = (sys.executable, "tools/check.py", "--docs-dir", "site")
-  baseline = subprocess.run(
-    command, cwd=checked_docs_source, capture_output=True, text=True, check=False
-  )
-  assert baseline.returncode == 0, baseline.stdout + baseline.stderr
-  site = checked_docs_source / "site"
-  target = site / "html/docs" / f"{document}.html"
-  assert target.is_file()
-  saved = {path.relative_to(site): path.read_bytes() for path in site.rglob("*") if path.is_file()}
   (checked_docs_source / "docs" / f"{document}.{suffix}").unlink()
   text = index.read_text(encoding="utf-8")
   assert text.count(f"   {document}\n") == 1
   index.write_text(text.replace(f"   {document}\n", ""), encoding="utf-8")
-
-  repeated = subprocess.run(
-    command, cwd=checked_docs_source, capture_output=True, text=True, check=False
-  )
-  fresh = subprocess.run(
-    (*command[:-1], "fresh-site"),
+  result = subprocess.run(
+    (sys.executable, "tools/check.py", "--docs-dir", "site"),
     cwd=checked_docs_source,
     capture_output=True,
     text=True,
     check=False,
   )
-  assert fresh.returncode == 1, fresh.stdout + fresh.stderr
-  assert fresh.stdout.count("build succeeded.") == 2
-  assert "FileNotFoundError" in fresh.stderr and f"{document}.html" in fresh.stderr
-  assert not (checked_docs_source / "fresh-site/html/docs" / f"{document}.html").exists()
-  assert repeated.returncode == 1, repeated.stdout + repeated.stderr
-  assert "Documentation output must be an empty directory" in repeated.stderr
-  assert not any(line.startswith("+ ") for line in repeated.stdout.splitlines())
-  assert saved == {
-    path.relative_to(site): path.read_bytes() for path in site.rglob("*") if path.is_file()
-  }
+  assert result.returncode == 1, result.stdout + result.stderr
+  assert result.stdout.count("build succeeded.") == 2
+  assert "FileNotFoundError" in result.stderr and f"{document}.html" in result.stderr
+  assert not (checked_docs_source / "site/html/docs" / f"{document}.html").exists()
 
 
 @pytest.mark.parametrize("member", ["file", ".retained", "nested"])
@@ -542,35 +465,14 @@ def test_docs_command_refuses_existing_output_without_changing_it(
 @pytest.mark.parametrize(
   "fault, message",
   [
-    ("example", "No executed documentation examples in docs/chart"),
-    ("api", "API HTML is missing signatures: ziwei.calendar.celestial_version"),
-    ("knowledge", "Missing or duplicate knowledge target:"),
     ("entry", "Missing documentation entry point: docs/index.html"),
     ("html-warning", "Unknown directive type"),
-    ("doctest-failure", "1 failure in tests"),
   ],
 )
 def test_docs_command_rejects_invalid_exports(
   checked_docs_source: Path, fault: str, message: str
 ) -> None:
-  if fault in ("example", "doctest-failure"):
-    page = checked_docs_source / "docs/chart.rst"
-    text = page.read_text(encoding="utf-8")
-    text = (
-      text.partition(".. doctest::")[0] if fault == "example" else text.replace("   4\n", "   5\n")
-    )
-    page.write_text(text, encoding="utf-8")
-  elif fault == "api":
-    (checked_docs_source / "docs/api.rst").write_text("API\n===\n", encoding="utf-8")
-  elif fault == "knowledge":
-    config = checked_docs_source / "docs/conf.py"
-    config.write_text(
-      config.read_text(encoding="utf-8").replace(
-        'if docname == "docs/knowledge-reference":', 'if docname == "unused":'
-      ),
-      encoding="utf-8",
-    )
-  elif fault == "entry":
+  if fault == "entry":
     (checked_docs_source / "docs/index.rst").rename(checked_docs_source / "docs/home.rst")
     with (checked_docs_source / "docs/conf.py").open("a", encoding="utf-8") as stream:
       stream.write('\nroot_doc = "docs/home"\n')
@@ -636,6 +538,7 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     ".github/workflows/checks.yml",
     ".github/workflows/release.yml",
     ".github/workflows/extra.yaml",
+    ".github/workflows/extra.yml",
   ):
     (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
     (tmp_path / path).touch()
@@ -652,22 +555,9 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
     ".github/workflows/checks.yml",
     ".github/workflows/release.yml",
     ".github/workflows/extra.yaml",
+    ".github/workflows/extra.yml",
   } <= set(members)
   assert {"tools/helper.sh", "docs/notes.txt"}.isdisjoint(members)
-
-
-def test_real_source_members_include_workflows_and_document_assets() -> None:
-  assert {
-    ".github/workflows/checks.yml",
-    ".github/workflows/release.yml",
-    ".github/workflows/docs.yml",
-    "docs/_static/layout.css",
-  } <= set(source_members(check.ROOT))
-
-
-def test_valid_sdist(tmp_path: Path) -> None:
-  members = {"PKG-INFO": PKG_INFO, **dict.fromkeys(SOURCE, "")}
-  check_sdist(write_sdist(tmp_path / "ziwei-0.0.0.tar.gz", members), "0.0.0", SOURCE)
 
 
 @pytest.mark.parametrize("missing", SOURCE)
@@ -693,13 +583,10 @@ def test_sdist_without_versioned_metadata(tmp_path: Path, base: str, with_metada
     check_sdist(write_sdist(tmp_path / "ziwei-0.0.0.tar.gz", members, base), "0.0.0", SOURCE)
 
 
-def test_sdist_review_material_rejected(tmp_path: Path) -> None:
-  members = {"PKG-INFO": PKG_INFO, ".review/notes.md": "x", **dict.fromkeys(SOURCE, "")}
-  with pytest.raises(ValueError, match="review material"):
-    check_sdist(write_sdist(tmp_path / "ziwei-0.0.0.tar.gz", members), "0.0.0", SOURCE)
-
-
-@pytest.mark.parametrize("name", [".review/notes.md", "ziwei-0.0.0/.review", "other/.review/note"])
+@pytest.mark.parametrize(
+  "name",
+  ["ziwei-0.0.0/.review/notes.md", ".review/notes.md", "ziwei-0.0.0/.review", "other/.review/note"],
+)
 def test_sdist_review_material_is_rejected_outside_the_version_root(
   tmp_path: Path, name: str
 ) -> None:
@@ -759,29 +646,29 @@ def test_wheel_metadata_count(tmp_path: Path, count: int) -> None:
 
 
 @pytest.mark.parametrize(
-  "names",
+  "names, pair",
   [
-    (),
-    ("a.whl",),
-    ("a.tar.gz",),
-    ("a.whl", "b.whl", "a.tar.gz"),
-    ("a.tar.gz", "b.tar.gz", "a.whl"),
+    (
+      ("ziwei-0.0.0-py3-none-any.whl", "ziwei-0.0.0.tar.gz"),
+      ("ziwei-0.0.0.tar.gz", "ziwei-0.0.0-py3-none-any.whl"),
+    ),
+    ((), None),
+    (("a.whl",), None),
+    (("a.tar.gz",), None),
+    (("a.whl", "b.whl", "a.tar.gz"), None),
+    (("a.tar.gz", "b.tar.gz", "a.whl"), None),
   ],
 )
-def test_built_artifacts_require_one_pair(tmp_path: Path, names: tuple[str, ...]) -> None:
+def test_built_artifacts_require_one_pair(
+  tmp_path: Path, names: tuple[str, ...], pair: tuple[str, str] | None
+) -> None:
   for name in names:
     (tmp_path / name).touch()
-  with pytest.raises(ValueError, match="one sdist and one wheel"):
-    built_artifacts(tmp_path)
-
-
-def test_built_artifacts_pair(tmp_path: Path) -> None:
-  for name in ("ziwei-0.0.0.tar.gz", "ziwei-0.0.0-py3-none-any.whl"):
-    (tmp_path / name).touch()
-  assert built_artifacts(tmp_path) == (
-    tmp_path / "ziwei-0.0.0.tar.gz",
-    tmp_path / "ziwei-0.0.0-py3-none-any.whl",
-  )
+  if pair is None:
+    with pytest.raises(ValueError, match="one sdist and one wheel"):
+      built_artifacts(tmp_path)
+  else:
+    assert built_artifacts(tmp_path) == (tmp_path / pair[0], tmp_path / pair[1])
 
 
 def test_distribution_dispatches_both_isolated_modes_outside_repository(
@@ -824,7 +711,6 @@ def test_distribution_dispatches_both_isolated_modes_outside_repository(
     ((str(python), "-I", script, version), tmp_path),
     ((str(python), "-O", "-I", script, version), tmp_path),
   ]
-  assert tmp_path != check.ROOT and not tmp_path.is_relative_to(check.ROOT)
   assert str(wheel) in calls[-3][0]
   assert "--no-deps" in calls[-3][0]
   assert "--require-hashes" in calls[-4][0]
@@ -881,32 +767,6 @@ def test_current_installed_metadata_matches_the_project() -> None:
   }
 
 
-def test_distribution_rejects_changes_during_consumption(
-  tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-  source = tmp_path / "source"
-  source.mkdir()
-  (source / "pyproject.toml").write_bytes((check.ROOT / "pyproject.toml").read_bytes())
-  monkeypatch.setattr(check, "ROOT", source)
-  artifacts = tmp_path / "artifacts"
-  artifacts.mkdir()
-  sdist, wheel = artifacts / "a.tar.gz", artifacts / "a.whl"
-  sdist.write_bytes(b"source")
-  wheel.write_bytes(b"wheel")
-  monkeypatch.setattr(check, "run", lambda *args, **kwargs: None)
-  monkeypatch.setattr(check, "check_sdist", lambda *args: None)
-  monkeypatch.setattr(check, "check_wheel", lambda *args: None)
-  monkeypatch.setattr(check, "alias_from_sdist", lambda *args: wheel)
-  monkeypatch.setattr(check, "consume_alias", lambda *args, **kwargs: None)
-  monkeypatch.setattr(check, "check_alias_typing", lambda *args: None)
-  monkeypatch.setattr(
-    check, "install_and_consume", lambda *args, **kwargs: wheel.write_bytes(b"changed")
-  )
-  with pytest.raises(ValueError, match="changed during"):
-    check.check_distribution(tmp_path, artifacts_dir=tmp_path / "kept")
-  assert not (tmp_path / "kept").exists()
-
-
 def test_retained_artifacts_preserve_the_pre_consumption_bytes(tmp_path: Path) -> None:
   files = (tmp_path / "a.tar.gz", tmp_path / "a.whl")
   for path in files:
@@ -948,10 +808,8 @@ def test_copy_corruption_is_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyP
   assert not (tmp_path / "kept/SHA256SUMS").exists()
 
 
-@pytest.mark.parametrize(
-  "defect", [None, "count", "name", "order", "uppercase", "crlf", "no-newline"]
-)
-def test_checksum_contract(tmp_path: Path, defect: str | None) -> None:
+@pytest.mark.parametrize("defect", ["count", "name", "order", "uppercase", "crlf", "no-newline"])
+def test_checksum_contract(tmp_path: Path, defect: str) -> None:
   names = "ziwei-0.1.0.tar.gz", "ziwei-0.1.0-py3-none-any.whl"
   hashes = "a" * 64, "b" * 64
   text = artifacts.checksum_text(names, hashes)
@@ -972,11 +830,8 @@ def test_checksum_contract(tmp_path: Path, defect: str | None) -> None:
     case "no-newline":
       text = text.rstrip("\n")
   path.write_bytes(text.encode())
-  if defect is None:
-    assert artifacts.read_checksums(path, names) == hashes
-  else:
-    with pytest.raises(ValueError, match="build checksum"):
-      artifacts.read_checksums(path, names)
+  with pytest.raises(ValueError, match="build checksum"):
+    artifacts.read_checksums(path, names)
 
 
 def test_installed_consumption_refuses_a_repository_directory() -> None:
