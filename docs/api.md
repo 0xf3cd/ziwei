@@ -97,7 +97,7 @@ assert LunarBirthRecord.__module__ == "ziwei.birth"
 
 ## 历法适配
 
-celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial 原生库（公开函数在
+celestial-calendar 的具体适配；导入本模块不初始化 celestial 原生库（公开函数在
 函数体内导入）。所选农历算法与支持范围见[历法与时间](calendar.md)，时标合同见
 [解析层](resolver.md)。
 

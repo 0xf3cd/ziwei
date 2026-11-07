@@ -54,12 +54,12 @@ from doushu.knowledge import load_catalog
 
 ## 安装要求
 
-支持Python 3.11–3.14。运行时精确依赖`celestial-calendar==0.8.0`与`tzdata==2026.5`。
-celestial-calendar 0.8.0在PyPI只提供下列原生wheel，没有源码分发包；ziwei自身的纯Python wheel不扩大这个范围：
+支持Python 3.11–3.14。运行时精确依赖`celestial-calendar==1.1.1`与`tzdata==2026.6`。
+celestial-calendar 1.1.1在PyPI只提供下列原生wheel，没有源码分发包；ziwei自身的纯Python wheel不扩大这个范围：
 
 | 平台 | 架构与最低系统要求 |
 |---|---|
-| macOS | arm64，macOS 14或更新 |
+| macOS | arm64，macOS 15或更新 |
 | Linux | x86_64，glibc 2.26或更新；aarch64，glibc 2.24或更新 |
 | Windows | amd64 |
 

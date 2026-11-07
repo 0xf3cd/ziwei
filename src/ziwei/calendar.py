@@ -1,4 +1,4 @@
-"""celestial-calendar 0.8.0 的具体适配；导入本模块不初始化 celestial。
+"""celestial-calendar 的具体适配；导入本模块不初始化 celestial。
 
 公开函数在函数体内 `import celestial_calendar`，包导入与知识查询不会加载原生历法库。
 所选农历算法、支持范围与 celestial 版本随解析结果保存；超出支持范围或闰月/日组合
@@ -11,9 +11,7 @@ celestial 的节气时刻是 UT1，民用输入是 UTC 或固定偏移；本模�
 
 - 立春比较：出生瞬间换算到 UT1 日数（`utc_to_ut1_jd`），与立春 UT1 时刻
   （`lichun_jd`）直接比较，不直接比较钟面数值。
-- 换算采用 celestial 的 modelled-UT1 定义：TT=UTC+(ΔAT+32.184s)，UT1=TT-ΔT；
-  ΔAT 取1972年起的内置闰秒表，2017-01-01起沿用最后已知的37秒，不预测未来闰秒；
-  ΔT 取 `delta_t` 的 DEFAULT 模型（ALGO5），在 TT 处估一次。
+- 换算使用 celestial 的 UTC→TT→UT1 出口，ΔT 固定使用 ALGO5。
 - UTC转UT1与民用时刻解析均拒绝1972年以前的UTC瞬间；无需瞬间的纯民用排盘不受此下界限制。
 
 真太阳时（apparent solar time）
@@ -164,91 +162,6 @@ def validate_lunar_date(
     raise ValueError(f"{label}没有第{day}日")
 
 
-#: TAI-UTC生效日与秒数，1972首行是基线；晚于最后一行时沿用最后已知偏移。
-#: IERS历史数据：https://hpiers.obspm.fr/iers/bul/bulc/Leap_Second.dat
-_LEAP_SECOND_TABLE: Final[tuple[tuple[date, int], ...]] = (
-  (date(1972, 1, 1), 10),
-  (date(1972, 7, 1), 11),
-  (date(1973, 1, 1), 12),
-  (date(1974, 1, 1), 13),
-  (date(1975, 1, 1), 14),
-  (date(1976, 1, 1), 15),
-  (date(1977, 1, 1), 16),
-  (date(1978, 1, 1), 17),
-  (date(1979, 1, 1), 18),
-  (date(1980, 1, 1), 19),
-  (date(1981, 7, 1), 20),
-  (date(1982, 7, 1), 21),
-  (date(1983, 7, 1), 22),
-  (date(1985, 7, 1), 23),
-  (date(1988, 1, 1), 24),
-  (date(1990, 1, 1), 25),
-  (date(1991, 1, 1), 26),
-  (date(1992, 7, 1), 27),
-  (date(1993, 7, 1), 28),
-  (date(1994, 7, 1), 29),
-  (date(1996, 1, 1), 30),
-  (date(1997, 7, 1), 31),
-  (date(1999, 1, 1), 32),
-  (date(2006, 1, 1), 33),
-  (date(2009, 1, 1), 34),
-  (date(2012, 7, 1), 35),
-  (date(2015, 7, 1), 36),
-  (date(2017, 1, 1), 37),
-)
-
-
-def _delta_at(day: date) -> int:
-  """1972年起UTC日期的TAI-UTC秒数；调用方负责下界，未来沿用最后已知偏移。"""
-  value = 37
-  for boundary, leap in _LEAP_SECOND_TABLE:
-    if day < boundary:
-      break
-    value = leap
-  return value
-
-
-def _civil_to_jd(year: int, month: int, day: int, fraction: float) -> float:
-  """公历（无历标）转儒略日；fraction 为当日小数。"""
-  a = (14 - month) // 12
-  y = year + 4800 - a
-  m = month + 12 * a - 3
-  julian = day + (153 * m + 2) // 5 + 365 * y + y // 4 - y // 100 + y // 400 - 32045
-  return julian + fraction - 0.5
-
-
-def _jd_to_civil(jd: float) -> tuple[int, int, int, float]:
-  """儒略日转公历年月日与当日小数（与 _civil_to_jd 互逆）。"""
-  adjusted = jd + 0.5
-  z = int(adjusted)
-  fraction = adjusted - z
-  if z < 2299161:
-    a = float(z)
-  else:
-    alpha = (z - 1867216.25) // 36524.25
-    a = z + 1 + alpha - alpha // 4
-  b = a + 1524
-  c = (b - 122.1) // 365.25
-  d = int(365.25 * c)
-  e = (b - d) // 30.6001
-  day_float = b - d - int(30.6001 * e) + fraction
-  day = int(day_float)
-  month = int(e) - 1 if e < 14 else int(e) - 13
-  year = int(c) - 4716 if month > 2 else int(c) - 4715
-  return year, month, day, day_float - day
-
-
-def _days_in_year(year: int) -> int:
-  return 366 if (year % 4 == 0 and year % 100 != 0) or year % 400 == 0 else 365
-
-
-def _decimal_year(jd: float) -> float:
-  """儒略日对应的十进制公历年，供 delta_t 取 ΔT。"""
-  year, month, day, fraction = _jd_to_civil(jd)
-  day_of_year = int(_civil_to_jd(year, month, 1, 0) - _civil_to_jd(year, 1, 1, 0)) + day
-  return year + (day_of_year - 1 + fraction) / _days_in_year(year)
-
-
 def _check_utc(utc: datetime) -> None:
   if type(utc) is not datetime:
     raise TypeError("UTC 时刻须为 datetime")
@@ -259,22 +172,17 @@ def _check_utc(utc: datetime) -> None:
 def utc_to_ut1_jd(utc: datetime) -> float:
   """把 UTC 瞬间按 modelled-UT1 定义换算到 UT1 日数。
 
-  TT=UTC+(ΔAT+32.184s)，UT1=TT-ΔT；ΔT 在 TT 处估一次，固定 DEFAULT(ALGO5)。
-  只支持1972年起的瞬间；内置表末行之后沿用最后已知偏移，不预测未来闰秒。
+  上游 UTC→TT 使用闰秒表，TT→UT1 的 ΔT 固定为 ALGO5。
+  下界按 UTC 瞬间判断，只支持1972年起；表末行之后沿用最后已知偏移。
   Python datetime不能表达23:59:60，本函数不接受闰秒本秒。
   """
   _check_utc(utc)
   utc_utc = utc.astimezone(UTC)
   _require_modern_utc(utc_utc)
-  fraction = (
-    utc_utc.hour * 3600 + utc_utc.minute * 60 + utc_utc.second + utc_utc.microsecond / 1e6
-  ) / 86400.0
-  jd_utc = _civil_to_jd(utc_utc.year, utc_utc.month, utc_utc.day, fraction)
-  tt = jd_utc + (_delta_at(utc_utc.date()) + 32.184) / 86400.0
   import celestial_calendar as celestial
 
-  delta_t = celestial.delta_t(_decimal_year(tt), celestial.DeltaTModel.DEFAULT)
-  return tt - delta_t / 86400.0
+  jde_tt = celestial.utc_to_jde(celestial.CivilDateTime(*utc_civil(utc_utc)))
+  return celestial.ut1_to_jd(celestial.jde_to_ut1(jde_tt))
 
 
 def lichun_jd(year: int) -> float:
@@ -310,8 +218,7 @@ def lichun_date(year: int) -> date:
   target = lichun_jd(year)
   if not isfinite(target):
     raise ValueError("立春UT1日数须为有限数")
-  y, month, day, _ = _jd_to_civil(target + 8 / 24)
-  selected = date(y, month, day)
+  selected = date(year, 2, 4)
   while target < _midnight_ut1(selected):
     selected -= timedelta(days=1)
   while target >= _midnight_ut1(selected + timedelta(days=1)):

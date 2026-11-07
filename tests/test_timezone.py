@@ -32,9 +32,42 @@ def test_historical_china_summer_time_and_versions() -> None:
   assert result.utc == datetime(1988, 7, 1, 3, tzinfo=UTC)
   assert result.data is not None
   assert result.data.package_version == version("tzdata")
-  assert result.data.iana_version == "2026e"
+  assert result.data.iana_version == "2026f"
   winter = resolve_civil_time(datetime(1988, 1, 1, 12), IanaTimezone("Asia/Shanghai"))
   assert winter.offset == timedelta(hours=8)
+
+
+@pytest.mark.parametrize("key", ["America/Havana", "Cuba"])
+@pytest.mark.parametrize("wall", [datetime(2026, 11, 1, 0, 30), datetime(2027, 1, 15, 12)])
+def test_cuba_keeps_minus_four_after_cancelled_2026_fall_back(key: str, wall: datetime) -> None:
+  # IANA 2026f：古巴取消2026-11-01回拨，维持UTC-04至2027-11-07。
+  # https://github.com/eggert/tz/blob/2026f/NEWS
+  result = resolve_civil_time(wall, IanaTimezone(key))
+  assert result.offset == timedelta(hours=-4)
+  assert result.utc == (wall + timedelta(hours=4)).replace(tzinfo=UTC)
+  assert result.fold == 0
+
+
+@pytest.mark.parametrize("key", ["America/Havana", "Cuba"])
+def test_cuba_resumes_fall_back_in_2027(key: str) -> None:
+  # IANA 2026f northamerica：2027年起11月首个周日00:00标准时恢复UTC-05。
+  # https://github.com/eggert/tz/blob/2026f/northamerica
+  for wall, hours in (
+    (datetime(2027, 11, 6, 23, 59, 59, 999999), -4),
+    (datetime(2027, 11, 7, 1), -5),
+  ):
+    result = resolve_civil_time(wall, IanaTimezone(key))
+    assert result.offset == timedelta(hours=hours)
+    assert result.utc == (wall - timedelta(hours=hours)).replace(tzinfo=UTC)
+    assert result.fold == 0
+  for wall in (datetime(2027, 11, 7), datetime(2027, 11, 7, 0, 59, 59, 999999)):
+    with pytest.raises(AmbiguousTimeError):
+      resolve_civil_time(wall, IanaTimezone(key))
+    for fold, hours in ((0, -4), (1, -5)):
+      result = resolve_civil_time(wall, IanaTimezone(key, fold))
+      assert result.offset == timedelta(hours=hours)
+      assert result.utc == (wall - timedelta(hours=hours)).replace(tzinfo=UTC)
+      assert result.fold == fold
 
 
 def test_both_real_shanghai_overlap_instants() -> None:
