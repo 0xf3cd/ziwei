@@ -913,6 +913,19 @@ def test_knowledge_chinese_alias_is_the_canonical_member(member: Any, alias: str
   assert getattr(type(member), alias) is member
 
 
+@pytest.mark.parametrize(
+  "identifier",
+  ["concept.policy.liunian-year-boundary", "concept.policy.tongxian-boundary"],
+)
+def test_luck_period_query_concepts_belong_to_luck_periods(identifier: str) -> None:
+  catalog = load_catalog()
+  concept = catalog.get(identifier)
+  assert isinstance(concept, Concept)
+  assert concept.options == ()
+  assert concept in catalog.list_concepts(kind=ConceptKind.运限)
+  assert concept not in catalog.list_concepts(kind=ConceptKind.口径)
+
+
 def test_source_urls_are_percent_encoded() -> None:
   """未编码的中文路径或查询参数在部分客户端（如维基文库）会得到 HTTP 400。"""
   raw = [source.id for source in load_catalog().sources if not source.url.isascii()]

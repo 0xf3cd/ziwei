@@ -115,7 +115,7 @@ CONCEPTS = (
   Concept(
     id="concept.policy.liunian-year-boundary",
     name="流年日期换年",
-    kind=ConceptKind.口径,
+    kind=ConceptKind.运限,
     related_ids=("concept.liunian", "concept.policy.year-boundary"),
   ),
   Concept(
@@ -150,7 +150,7 @@ CONCEPTS = (
   Concept(
     id="concept.policy.tongxian-boundary",
     name="童限与大限起运衔接",
-    kind=ConceptKind.口径,
+    kind=ConceptKind.运限,
     related_ids=("concept.tongxian", "concept.decades", "concept.xiaoxian"),
   ),
 )
