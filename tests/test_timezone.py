@@ -48,6 +48,28 @@ def test_cuba_keeps_minus_four_after_cancelled_2026_fall_back(key: str, wall: da
   assert result.fold == 0
 
 
+@pytest.mark.parametrize("key", ["America/Havana", "Cuba"])
+def test_cuba_resumes_fall_back_in_2027(key: str) -> None:
+  # IANA 2026f northamerica：2027年起11月首个周日00:00标准时恢复UTC-05。
+  # https://github.com/eggert/tz/blob/2026f/northamerica
+  for wall, hours in (
+    (datetime(2027, 11, 6, 23, 59, 59, 999999), -4),
+    (datetime(2027, 11, 7, 1), -5),
+  ):
+    result = resolve_civil_time(wall, IanaTimezone(key))
+    assert result.offset == timedelta(hours=hours)
+    assert result.utc == (wall - timedelta(hours=hours)).replace(tzinfo=UTC)
+    assert result.fold == 0
+  for wall in (datetime(2027, 11, 7), datetime(2027, 11, 7, 0, 59, 59, 999999)):
+    with pytest.raises(AmbiguousTimeError):
+      resolve_civil_time(wall, IanaTimezone(key))
+    for fold, hours in ((0, -4), (1, -5)):
+      result = resolve_civil_time(wall, IanaTimezone(key, fold))
+      assert result.offset == timedelta(hours=hours)
+      assert result.utc == (wall - timedelta(hours=hours)).replace(tzinfo=UTC)
+      assert result.fold == fold
+
+
 def test_both_real_shanghai_overlap_instants() -> None:
   wall = datetime(1988, 9, 11, 1, 30)
   with pytest.raises(AmbiguousTimeError):

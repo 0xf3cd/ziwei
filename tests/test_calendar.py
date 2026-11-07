@@ -1,6 +1,6 @@
 """celestial 适配与时标合同的测试。"""
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from importlib.metadata import version
 from pathlib import Path
 from typing import Never
@@ -68,7 +68,7 @@ def test_each_leap_second_effective_boundary(
   offset: int,
   seconds: int,
 ) -> None:
-  """独立历史偏移核公开UTC转UT1；ΔT复算不作实测UT1。"""
+  """用独立闰秒记录核对UTC转UT1；ΔT复算不代表实测UT1。"""
   boundary = date.fromisoformat(label)
   assert (boundary - date(1858, 11, 17)).days == mjd
   instant = datetime.combine(boundary, datetime.min.time(), UTC) + timedelta(seconds=seconds)
@@ -117,6 +117,33 @@ def test_time_conversion_internal_failures_propagate_unchanged(
   assert caught.value is injected
 
 
+@pytest.mark.parametrize("offset_hours", [0, 8])
+@pytest.mark.parametrize("microsecond", [1, 123456, 500000, 999999])
+def test_time_chain_forwards_fractional_utc(
+  monkeypatch: pytest.MonkeyPatch, offset_hours: int, microsecond: int
+) -> None:
+  import celestial_calendar as celestial
+
+  instant = datetime(2024, 2, 4, 8, 0, 59, microsecond, timezone(timedelta(hours=offset_hours)))
+  utc = instant.astimezone(UTC)
+  midnight = utc.replace(hour=0, minute=0, second=0, microsecond=0)
+  expected_fraction = (utc - midnight) / timedelta(days=1)
+  original = celestial.utc_to_jde
+  received: list[tuple[int, int, int, float]] = []
+
+  def record(value: celestial.CivilDateTime) -> float:
+    received.append((value.year, value.month, value.day, value.fraction))
+    return original(value)
+
+  monkeypatch.setattr(celestial, "utc_to_jde", record)
+  actual = utc_to_ut1_jd(instant)
+  assert len(received) == 1
+  assert received[0][:3] == (utc.year, utc.month, utc.day)
+  assert received[0][3] == pytest.approx(expected_fraction, rel=0, abs=1e-16)
+  tt = original(celestial.CivilDateTime(utc.year, utc.month, utc.day, expected_fraction))
+  assert actual == celestial.ut1_to_jd(celestial.jde_to_ut1(tt))
+
+
 @pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
 def test_lunar_year_out_of_range_is_value_error(algorithm: LunarAlgorithm) -> None:
   first, last = supported_lunar_year_range(algorithm)
@@ -126,8 +153,6 @@ def test_lunar_year_out_of_range_is_value_error(algorithm: LunarAlgorithm) -> No
 
 
 def test_utc_lower_bound_compares_instants_not_local_date() -> None:
-  from datetime import timezone
-
   with pytest.raises(ValueError, match="1972"):
     utc_to_ut1_jd(datetime(1972, 1, 1, 0, 30, tzinfo=timezone(timedelta(hours=8))))
 
@@ -354,7 +379,7 @@ def test_ut1_conversion_matches_chart_snapshot() -> None:
       celestial.CivilScale.UTC,
       location,
       celestial.HouseSystem.WHOLE_SIGN,
-      celestial.DeltaTModel.DEFAULT,
+      celestial.DeltaTModel.ALGO5,
     )
     worst_seconds = max(worst_seconds, abs(mine - snapshot.times.jd_ut1) * 86400.0)
   assert worst_seconds < 0.01  # 八个选定时刻的模型回归阈值，不是全域精度保证。
