@@ -5,6 +5,20 @@
 本页记录各版本源码的功能与兼容变化。是否已经公开发行，以
 [PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
+## 0.5.0（未发行）
+
+### 兼容变化
+
+- 精确依赖升级为`celestial-calendar==1.1.1`与`tzdata==2026.6`；解析结果记录实际使用的新版历法与时区版本。
+- tzdata 2026.6（IANA 2026f）采用古巴取消2026-11-01回拨的安排。例如，`America/Havana`的2027-01-15 12:00
+  从UTC−05改为UTC−04，对应UTC从17:00改为16:00；`Cuba`别名相同。数据变化见
+  [IANA 2026f说明](https://github.com/eggert/tz/blob/2026f/NEWS)。
+- macOS arm64的最低版本从14升至15。Linux仍要求x86_64 glibc 2.26或aarch64 glibc 2.24，Windows仍为amd64。
+- 上游将原生层识别的输入越界统一为`ValueError`；本仓既有的日期范围校验继续拒绝越界输入。
+  计算、资源及内部故障仍以`celestial_calendar.CelestialError`原样传播。调用方应按异常类处理，不匹配上游消息文本。
+- UTC换算改用上游时间接口，删除本仓自持闰秒表与儒略日换算。需要UTC瞬间的入口仍拒绝1972年前输入，
+  三种农历算法的范围与流年日期政策不变。
+
 ## 0.4.1
 
 - 新增同版安装与导入别名`doushu`。它精确依赖`ziwei==0.4.1`，转发对应公开子模块中的原对象，

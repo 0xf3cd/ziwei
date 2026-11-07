@@ -21,8 +21,8 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "celestial-calendar==0.8.0",
-  "tzdata==2026.5",
+  "celestial-calendar==1.1.1",
+  "tzdata==2026.6",
 ]
 
 [project.urls]

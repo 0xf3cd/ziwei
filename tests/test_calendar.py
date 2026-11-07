@@ -7,7 +7,6 @@ from typing import Never
 
 import pytest
 
-from ziwei import calendar as implementation
 from ziwei.calendar import (
   LunarAlgorithm,
   apparent_solar,
@@ -61,11 +60,6 @@ LEAP_SECOND_REFERENCE = (
 )
 
 
-def test_leap_second_table_matches_independent_history() -> None:
-  expected = tuple((date.fromisoformat(day), offset) for day, _, offset in LEAP_SECOND_REFERENCE)
-  assert expected == implementation._LEAP_SECOND_TABLE
-
-
 @pytest.mark.parametrize("label, mjd, offset", LEAP_SECOND_REFERENCE)
 @pytest.mark.parametrize("seconds", [-1, 0, 1])
 def test_each_leap_second_effective_boundary(
@@ -74,7 +68,7 @@ def test_each_leap_second_effective_boundary(
   offset: int,
   seconds: int,
 ) -> None:
-  """独立历史值核TAI-UTC偏移，再核公开UTC转UT1使用该值；模型复算不作实测UT1。"""
+  """独立历史偏移核公开UTC转UT1；ΔT复算不作实测UT1。"""
   boundary = date.fromisoformat(label)
   assert (boundary - date(1858, 11, 17)).days == mjd
   instant = datetime.combine(boundary, datetime.min.time(), UTC) + timedelta(seconds=seconds)
@@ -83,20 +77,52 @@ def test_each_leap_second_effective_boundary(
       utc_to_ut1_jd(instant)
     return
   expected_offset = offset - 1 if seconds < 0 else offset
-  assert implementation._delta_at(instant.date()) == expected_offset
   import celestial_calendar as celestial
 
   tt = instant + timedelta(seconds=expected_offset + 32.184)
   start = datetime(tt.year, 1, 1, tzinfo=UTC)
   end = datetime(tt.year + 1, 1, 1, tzinfo=UTC)
   decimal_year = tt.year + (tt - start) / (end - start)
-  delta_t = celestial.delta_t(decimal_year, celestial.DeltaTModel.DEFAULT)
+  delta_t = celestial.delta_t(decimal_year, celestial.DeltaTModel.ALGO5)
   expected = mjd + 2400000.5 + (seconds + expected_offset + 32.184 - delta_t) / 86400
   assert abs(utc_to_ut1_jd(instant) - expected) * 86400 < 0.0001
 
 
 def test_future_offset_uses_last_known_value_not_a_prediction() -> None:
-  assert implementation._delta_at(date(2099, 6, 30)) == 37
+  import celestial_calendar as celestial
+
+  tt = datetime(2099, 6, 30, tzinfo=UTC) + timedelta(seconds=37 + 32.184)
+  start = datetime(tt.year, 1, 1, tzinfo=UTC)
+  end = datetime(tt.year + 1, 1, 1, tzinfo=UTC)
+  delta_t = celestial.delta_t(tt.year + (tt - start) / (end - start), celestial.DeltaTModel.ALGO5)
+  jd_utc = (date(2099, 6, 30) - date(1858, 11, 17)).days + 2400000.5
+  expected = jd_utc + (37 + 32.184 - delta_t) / 86400
+  assert abs(utc_to_ut1_jd(datetime(2099, 6, 30, tzinfo=UTC)) - expected) * 86400 < 0.0001
+
+
+@pytest.mark.parametrize("operation", ["utc_to_jde", "jde_to_ut1", "ut1_to_jd"])
+def test_time_conversion_internal_failures_propagate_unchanged(
+  monkeypatch: pytest.MonkeyPatch, operation: str
+) -> None:
+  import celestial_calendar as celestial
+
+  injected = celestial.CelestialError(operation, "synthetic internal failure", recorded=True)
+
+  def fail(*args: object) -> Never:
+    raise injected
+
+  monkeypatch.setattr(celestial, operation, fail)
+  with pytest.raises(celestial.CelestialError) as caught:
+    utc_to_ut1_jd(datetime(2024, 2, 4, 8, tzinfo=UTC))
+  assert caught.value is injected
+
+
+@pytest.mark.parametrize("algorithm", list(LunarAlgorithm))
+def test_lunar_year_out_of_range_is_value_error(algorithm: LunarAlgorithm) -> None:
+  first, last = supported_lunar_year_range(algorithm)
+  for outside in (first - 1, last + 1):
+    with pytest.raises(ValueError):
+      lunar_year_info(algorithm, outside)
 
 
 def test_utc_lower_bound_compares_instants_not_local_date() -> None:
