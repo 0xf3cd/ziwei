@@ -42,7 +42,7 @@ True
 
 ## 所选表与校异
 
-依据是维基文库[卷二固定修订1963110](https://zh.wikisource.org/w/index.php?title=紫微斗數全書/卷二&oldid=1963110)
+依据是维基文库[卷二固定修订1963110](https://zh.wikisource.org/w/index.php?title=%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8%E5%85%A8%E6%9B%B8/%E5%8D%B7%E4%BA%8C&oldid=1963110)
 中“一 命宫”之前的七级成表。逐格定位使用地支行、等级列及星曜缩写。
 
 以下差异用于检查是否混表，不能用来修改所选表：

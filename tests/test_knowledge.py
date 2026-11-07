@@ -1,5 +1,6 @@
 """知识记录、状态分离、引用与独立查询。合成夹具不作为规则来源。"""
 
+import re
 from dataclasses import FrozenInstanceError, asdict, replace
 from datetime import date, datetime
 from typing import Any, cast
@@ -910,3 +911,23 @@ def test_source_and_citation_text_layers_are_independent(catalog: Catalog) -> No
 )
 def test_knowledge_chinese_alias_is_the_canonical_member(member: Any, alias: str) -> None:
   assert getattr(type(member), alias) is member
+
+
+def test_source_urls_are_percent_encoded() -> None:
+  """未编码的中文路径或查询参数在部分客户端（如维基文库）会得到 HTTP 400。"""
+  raw = [source.id for source in load_catalog().sources if not source.url.isascii()]
+  assert raw == []
+
+
+def test_jielan_citations_belong_to_the_chapter_their_source_records() -> None:
+  catalog = load_catalog()
+  checked = 0
+  for citation in catalog.citations:
+    source = catalog.get(citation.source_id)
+    assert isinstance(source, Source)
+    chapter = re.search(r"第(\d+)章", citation.locator)
+    if source.lineage_id != "lineage.jielan-tianji" or chapter is None:
+      continue
+    assert source.url.endswith(f"/{chapter[1]}"), citation.id
+    checked += 1
+  assert checked >= 5
