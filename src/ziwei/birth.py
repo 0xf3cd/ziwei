@@ -261,3 +261,54 @@ class CalculationInput:
     """拒绝未知时辰或性别，供完整命盘入口调用；本方法不排盘。"""
     if self.shichen is None or self.gender is Gender.未知:
       raise ValueError("完整命盘需要已知时辰与性别")
+
+  @property
+  def 原始记录(self) -> BirthRecord:
+    return self.record
+
+  @property
+  def 农历年(self) -> int:
+    return self.lunar_year
+
+  @property
+  def 农历月(self) -> int:
+    return self.month
+
+  @property
+  def 农历日(self) -> int:
+    return self.day
+
+  @property
+  def 闰月(self) -> bool:
+    return self.is_leap_month
+
+  @property
+  def 时辰(self) -> Dizhi | None:
+    return self.shichen
+
+  @property
+  def 纪年(self) -> int:
+    return self.ganzhi_year
+
+  @property
+  def 命盘配置(self) -> ChartConfig:
+    return self.config
+
+  @property
+  def 性别(self) -> Gender:
+    return self.gender
+
+  @property
+  def 年干支(self) -> Ganzhi:
+    return self.year_ganzhi
+
+  @property
+  def 年干阴阳(self) -> Yinyang:
+    return self.yinyang
+
+
+性别: TypeAlias = Gender
+公历出生记录: TypeAlias = GregorianBirthRecord
+农历出生记录: TypeAlias = LunarBirthRecord
+出生记录: TypeAlias = BirthRecord
+计算输入: TypeAlias = CalculationInput

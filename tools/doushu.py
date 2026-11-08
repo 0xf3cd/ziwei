@@ -379,6 +379,15 @@ def check_alias_typing(directory: Path) -> None:
     "entry: Record = catalog.get('concept.star.ziwei')\n"
     "record = LunarBirthRecord(year=2024, month=1, day=1, is_leap_month=False, "
     "shichen=Dizhi.子, gender=Gender.女)\n"
+    "from doushu.birth import 出生记录, 农历出生记录\n"
+    "from doushu.ganzhi import 地支\n"
+    "from doushu.liunian import 流年星曜\n"
+    "from ziwei.liunian import LiunianStars\n"
+    "def annual(value: LiunianStars) -> 流年星曜:\n  return value\n"
+    "reading: 流年星曜 = 流年星曜(2024)\n"
+    "position: 地支 = reading.陀罗\n"
+    "chinese_record: 出生记录 = 农历出生记录(year=2024, month=1, day=1, "
+    "is_leap_month=False, shichen=地支.子, gender=Gender.未知)\n"
   )
   env = {k: v for k, v in os.environ.items() if k not in {"MYPYPATH", "PYTHONPATH"}}
   command = (
@@ -392,11 +401,18 @@ def check_alias_typing(directory: Path) -> None:
     str(python),
     str(source),
   )
-  for text, code in ((positive, 0), (positive.replace("year=2024", "year='bad'"), 1)):
+  for text, code, diagnostic in (
+    (positive, 0, ""),
+    (positive.replace("year=2024", "year='bad'"), 1, "[arg-type]"),
+    (positive + "reading.陁罗\n", 1, "[attr-defined]"),
+    (positive + "reading.陀罗 = 地支.子\n", 1, "[misc]"),
+    (positive + "地支.不存在\n", 1, "[attr-defined]"),
+    (positive + "流年星曜(纪年=2024)\n", 1, "[call-arg]"),
+  ):
     source.write_text(text, encoding="utf-8")
     result = subprocess.run(command, cwd=directory, env=env, capture_output=True, text=True)
     print(result.stdout, result.stderr, flush=True)
-    if result.returncode != code or (code == 1 and "[arg-type]" not in result.stdout):
+    if result.returncode != code or (code == 1 and diagnostic not in result.stdout):
       raise ValueError(
         "Installed alias typing did not accept valid use and reject a wrong argument"
       )

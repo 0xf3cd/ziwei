@@ -33,6 +33,7 @@ from ziwei.liunian import (
   LiunianBoundary,
   liunian_on_date,
   liunian_stars,
+  流年星曜,
 )
 from ziwei.palaces import PalaceName
 from ziwei.render import render_svg, render_text
@@ -41,6 +42,23 @@ from ziwei.timezone import TimezoneData
 from ziwei.tongxian import TongxianBoundary, tongxian_at_age
 
 pytestmark = pytest.mark.usefixtures("unload_celestial")
+
+
+@pytest.mark.parametrize("member,result", [("纪年", 2025), ("年干支", "甲子"), ("陀罗", Dizhi.子)])
+def test_chinese_primary_consumer_rejects_wrong_readings(
+  monkeypatch: pytest.MonkeyPatch, member: str, result: object
+) -> None:
+  monkeypatch.setattr(流年星曜, member, property(lambda _: result))
+  with pytest.raises(ValueError, match="Chinese query differs"):
+    installed_check.check_inputs()
+
+
+def test_chinese_primary_consumer_rejects_a_replaced_type_alias(
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  monkeypatch.setattr(installed_check, "LiunianStars", object)
+  with pytest.raises(ValueError, match="Chinese query differs"):
+    installed_check.check_inputs()
 
 
 @pytest.mark.parametrize("defect", ["position", "boundary", "source"])

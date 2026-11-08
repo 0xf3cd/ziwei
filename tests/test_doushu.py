@@ -355,6 +355,8 @@ def runtime_aliases(
     ("knowledge-query", "knowledge query differs"),
     ("chart-type", "chart differs"),
     ("chart-output", "chart differs"),
+    ("chinese-query", "Chinese query differs"),
+    ("chinese-native", "Chinese query initialized"),
   ],
 )
 def test_runtime_consumer_rejects_invalid_contracts(
@@ -414,6 +416,19 @@ def test_runtime_consumer_rejects_invalid_contracts(
     case "chart-output":
       monkeypatch.setattr(modules["ziwei.render"], "render_text", lambda chart: "wrong")
       modules["doushu.render"].render_text = modules["ziwei.render"].render_text
+    case "chinese-query":
+      monkeypatch.setattr(
+        modules["ziwei.liunian"].LiunianStars,
+        "陀罗",
+        property(lambda _: modules["ziwei.ganzhi"].Dizhi.子),
+      )
+    case "chinese-native":
+
+      def year_ganzhi(value: Any) -> Any:
+        monkeypatch.setitem(sys.modules, "celestial_calendar", ModuleType("celestial_calendar"))
+        return value.year_ganzhi
+
+      monkeypatch.setattr(modules["ziwei.liunian"].LiunianStars, "年干支", property(year_ganzhi))
   if message is None:
     doushu_installed_check.main(version, expectations, first)
   else:
@@ -421,13 +436,25 @@ def test_runtime_consumer_rejects_invalid_contracts(
       doushu_installed_check.main(version, expectations, first)
 
 
+TYPING_RESULTS = [
+  (0, ""),
+  (1, "error [arg-type]"),
+  (1, "error [attr-defined]"),
+  (1, "error [misc]"),
+  (1, "error [attr-defined]"),
+  (1, "error [call-arg]"),
+]
+
+
 @pytest.mark.parametrize(
   "results",
   [
-    [(0, ""), (1, "error [arg-type]")],
+    TYPING_RESULTS,
     [(1, "error [arg-type]")],
     [(0, ""), (0, "")],
     [(0, ""), (1, "unrelated error")],
+    *[[*TYPING_RESULTS[:index], (0, "")] for index in range(2, len(TYPING_RESULTS))],
+    *[[*TYPING_RESULTS[:index], (1, "unrelated error")] for index in range(2, len(TYPING_RESULTS))],
   ],
 )
 def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
@@ -446,7 +473,7 @@ def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
   monkeypatch.setattr(subprocess, "run", fake_run)
   monkeypatch.setenv("MYPYPATH", "untrusted")
   monkeypatch.setenv("PYTHONPATH", "untrusted")
-  valid = results == [(0, ""), (1, "error [arg-type]")]
+  valid = results == TYPING_RESULTS
   if valid:
     doushu.check_alias_typing(tmp_path)
   else:

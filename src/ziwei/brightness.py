@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Final
+from typing import Final, TypeAlias
 
 from ziwei.ganzhi import Dizhi
 from ziwei.stars import MAJOR_STARS, Star
@@ -112,6 +112,22 @@ class BrightnessReading:
     """所选表的知识标识，不复用StarPlacement.rule_id。"""
     return self.table.table_id
 
+  @property
+  def 星曜(self) -> Star:
+    return self.star
+
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
+
+  @property
+  def 亮度表(self) -> BrightnessTable:
+    return self.table
+
+  @property
+  def 等级(self) -> BrightnessLevel | None:
+    return self.level
+
 
 def star_brightness(star: Star, dizhi: Dizhi, *, table: BrightnessTable) -> BrightnessReading:
   """显式选择表，按星曜与地支取只读亮度；非主星的level为None。
@@ -120,3 +136,8 @@ def star_brightness(star: Star, dizhi: Dizhi, *, table: BrightnessTable) -> Brig
   本表仅为固定录文的十四主星子集，不采用原表的辅星格，也不随同书条目修正成表。
   """
   return BrightnessReading(star, dizhi, table, _brightness_level(star, dizhi, table))
+
+
+亮度等级: TypeAlias = BrightnessLevel
+亮度表: TypeAlias = BrightnessTable
+亮度读数: TypeAlias = BrightnessReading

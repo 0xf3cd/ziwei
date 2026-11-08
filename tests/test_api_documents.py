@@ -2,12 +2,22 @@
 
 import re
 import shutil
+import zlib
 from pathlib import Path
 
 import pytest
 
 from tools import check
 from tools.check import check_api_reference
+
+
+def write_inventory(root: Path, locations: dict[str, str], role: str = "py:class") -> None:
+  header = (
+    b"# Sphinx inventory version 2\n# Project: test\n# Version: 0\n"
+    b"# The remainder of this file is compressed using zlib.\n"
+  )
+  entries = "".join(f"{name} {role} 1 {location} -\n" for name, location in locations.items())
+  (root / "objects.inv").write_bytes(header + zlib.compress(entries.encode()))
 
 
 @pytest.fixture
@@ -18,6 +28,13 @@ def api_tree(tmp_path: Path) -> Path:
     "class Value:\n  def check(self):\n    pass\ndef resolve():\n  pass\n", encoding="utf-8"
   )
   (tmp_path / "docs").mkdir()
+  write_inventory(
+    tmp_path,
+    {
+      name: f"docs/api.html#{name}"
+      for name in ("ziwei.sample.Value", "ziwei.sample.Value.check", "ziwei.sample.resolve")
+    },
+  )
   return tmp_path
 
 
@@ -67,6 +84,18 @@ def test_init_api_is_required_without_another_nested_module(
   page.write_text(base, encoding="utf-8")
   with pytest.raises(ValueError, match=re.escape(namespace)):
     check_api_reference(api_tree, api_tree)
+  write_inventory(
+    api_tree,
+    {
+      name: f"docs/api.html#{name}"
+      for name in (
+        "ziwei.sample.Value",
+        "ziwei.sample.Value.check",
+        "ziwei.sample.resolve",
+        f"{namespace}.lookup",
+      )
+    },
+  )
   page.write_text(base + f'<dt id="{namespace}.lookup"></dt>', encoding="utf-8")
   check_api_reference(api_tree, api_tree)
 
@@ -79,6 +108,7 @@ def test_explicit_type_alias_has_a_real_api_signature(api_tree: Path, annotation
     encoding="utf-8",
   )
   page = api_tree / "docs/api.html"
+  write_inventory(api_tree, {"ziwei.sample.Public": "docs/api.html#ziwei.sample.Public"}, "py:data")
   page.write_text('<p>id="ziwei.sample.Public"</p>', encoding="utf-8")
   with pytest.raises(ValueError, match=r"ziwei\.sample\.Public"):
     check_api_reference(api_tree, api_tree)
@@ -109,6 +139,11 @@ def test_documented_final_is_public_but_unmarked_assignments_are_not(
     encoding="utf-8",
   )
   page = api_tree / "docs/api.html"
+  write_inventory(
+    api_tree,
+    {name: f"docs/api.html#{name}" for name in ("ziwei.sample.Public", "ziwei.sample.resolve")},
+    "py:data",
+  )
   page.write_text(
     '<dt id="ziwei.sample.resolve"></dt><p id="ziwei.sample.Public"></p>', encoding="utf-8"
   )
@@ -197,4 +232,92 @@ def test_private_modules_are_not_required_in_the_api(api_tree: Path) -> None:
   check_api_reference(api_tree, api_tree)
   (api_tree / "src/ziwei/frame.py").write_text("def chart_frame():\n  pass\n", encoding="utf-8")
   with pytest.raises(ValueError, match=re.escape("ziwei.frame.chart_frame")):
+    check_api_reference(api_tree, api_tree)
+
+
+@pytest.mark.parametrize("role", ["py:data", "py:class", "py:property", "py:function", "py:method"])
+def test_unicode_names_follow_inventory_instead_of_guessing_anchors(
+  api_tree: Path, role: str
+) -> None:
+  (api_tree / "src/ziwei/sample.py").write_text(
+    "from typing import TypeAlias\n流年星曜: TypeAlias = str\n星曜: TypeAlias = int\n",
+    encoding="utf-8",
+  )
+  (api_tree / "docs/api.html").write_text(
+    '<dt id="ziwei.sample."></dt><dt id="generated-second-anchor"></dt>', encoding="utf-8"
+  )
+  write_inventory(
+    api_tree,
+    {
+      "ziwei.sample.流年星曜": "docs/api.html#ziwei.sample.",
+      "ziwei.sample.星曜": "docs/api.html#generated-second-anchor",
+    },
+    role,
+  )
+  check_api_reference(api_tree, api_tree)
+
+
+@pytest.mark.parametrize(
+  "location",
+  [
+    "docs/api.html#missing",
+    "docs/other.html#ziwei.sample.Value",
+    "https://example.com/docs/api.html#ziwei.sample.Value",
+    "//example.com/docs/api.html#ziwei.sample.Value",
+    "docs/api.html?wrong=1#ziwei.sample.Value",
+    "docs/api.html#ziwei.sample.resolve",
+  ],
+)
+def test_inventory_cannot_replace_a_real_distinct_local_signature(
+  api_tree: Path, location: str
+) -> None:
+  (api_tree / "docs/api.html").write_text(
+    '<dt id="ziwei.sample.Value"></dt><dt id="ziwei.sample.Value.check"></dt>'
+    '<dt id="ziwei.sample.resolve"></dt>',
+    encoding="utf-8",
+  )
+  write_inventory(
+    api_tree,
+    {
+      "ziwei.sample.Value": location,
+      "ziwei.sample.Value.check": "docs/api.html#ziwei.sample.Value.check",
+      "ziwei.sample.resolve": "docs/api.html#ziwei.sample.resolve",
+    },
+  )
+  with pytest.raises(ValueError, match="missing signatures"):
+    check_api_reference(api_tree, api_tree)
+
+
+@pytest.mark.parametrize("role", ["std:doc", "std:label"])
+def test_non_python_inventory_objects_do_not_count_as_api_signatures(
+  api_tree: Path, role: str
+) -> None:
+  (api_tree / "docs/api.html").write_text(
+    '<dt id="ziwei.sample.Value"></dt><dt id="ziwei.sample.Value.check"></dt>'
+    '<dt id="ziwei.sample.resolve"></dt>',
+    encoding="utf-8",
+  )
+  write_inventory(
+    api_tree,
+    {
+      name: f"docs/api.html#{name}"
+      for name in ("ziwei.sample.Value", "ziwei.sample.Value.check", "ziwei.sample.resolve")
+    },
+    role,
+  )
+  with pytest.raises(ValueError, match="missing signatures"):
+    check_api_reference(api_tree, api_tree)
+
+
+def test_same_name_in_multiple_python_roles_is_ambiguous(api_tree: Path) -> None:
+  (api_tree / "docs/api.html").write_text(
+    '<dt id="ziwei.sample.Value"></dt><dt id="ziwei.sample.Value.check"></dt>'
+    '<dt id="ziwei.sample.resolve"></dt>',
+    encoding="utf-8",
+  )
+  path = api_tree / "objects.inv"
+  *header, payload = path.read_bytes().split(b"\n", 4)
+  entries = zlib.decompress(payload) + b"ziwei.sample.Value py:data 1 docs/api.html#other -\n"
+  path.write_bytes(b"\n".join(header) + b"\n" + zlib.compress(entries))
+  with pytest.raises(ValueError, match="missing signatures"):
     check_api_reference(api_tree, api_tree)

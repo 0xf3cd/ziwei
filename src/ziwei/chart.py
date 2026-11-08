@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime, time
 from math import isfinite
-from typing import TypeVar, cast
+from typing import TypeAlias, TypeVar, cast
 
 from ziwei._frame import chart_frame
 from ziwei.birth import BirthRecord, CalculationInput, LunarBirthRecord
@@ -135,6 +135,34 @@ class ZiweiChart:
       raise ValueError(f"四化与解析后的生年干及规则不符：应为{sihua!r}，实际为{self.sihua!r}")
     _check_component_sequence(self.decades, place_decades(value), "大限")
 
+  @property
+  def 计算输入(self) -> CalculationInput:
+    return self.calculation
+
+  @property
+  def 十二宫(self) -> tuple[Palace, ...]:
+    return self.palaces
+
+  @property
+  def 身宫(self) -> Dizhi:
+    return self.shengong
+
+  @property
+  def 五行局(self) -> WuxingJu:
+    return self.bureau
+
+  @property
+  def 星位(self) -> tuple[StarPlacement, ...]:
+    return self.stars
+
+  @property
+  def 生年四化(self) -> SihuaResult:
+    return self.sihua
+
+  @property
+  def 大限(self) -> tuple[Decade, ...]:
+    return self.decades
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PalaceView:
@@ -174,6 +202,34 @@ class PalaceView:
     if len(set(marks)) != len(marks):
       raise ValueError("同一颗星不能有多个生年四化标记")
     object.__setattr__(self, "stars", stars)
+
+  @property
+  def 宫位(self) -> Palace:
+    return self.palace
+
+  @property
+  def 星位(self) -> tuple[StarPlacement, ...]:
+    return self.stars
+
+  @property
+  def 化禄(self) -> Star | None:
+    return self.lu
+
+  @property
+  def 化权(self) -> Star | None:
+    return self.quan
+
+  @property
+  def 化科(self) -> Star | None:
+    return self.ke
+
+  @property
+  def 化忌(self) -> Star | None:
+    return self.ji
+
+  @property
+  def 是否身宫(self) -> bool:
+    return self.is_shengong
 
 
 def palace_view(chart: ZiweiChart, palace: PalaceName | Dizhi) -> PalaceView:
@@ -216,6 +272,14 @@ class LiunianView:
     if self.natal.palace.dizhi is not liunian_minggong(self.liunian.ganzhi_year):
       raise ValueError("本命宫支须与流年命宫一致")
 
+  @property
+  def 流年(self) -> LiunianStars:
+    return self.liunian
+
+  @property
+  def 本命宫(self) -> PalaceView:
+    return self.natal
+
 
 def liunian_view(chart: ZiweiChart, ganzhi_year: int) -> LiunianView:
   """读取年度禄羊陀及流年命宫所在宫的本命内容，纪年须已确定。"""
@@ -253,3 +317,8 @@ def create_chart(
     sihua=shengnian_sihua(value, sihua_variant),
     decades=place_decades(value),
   )
+
+
+紫微命盘: TypeAlias = ZiweiChart
+宫位视图: TypeAlias = PalaceView
+流年叠读: TypeAlias = LiunianView

@@ -30,6 +30,180 @@ assert LunarBirthRecord.__module__ == "ziwei.birth"
 从别名路径取得的`LunarBirthRecord`，repr与pickle也保持原样。包入口不会自动加载所有子模块。
 `ziwei.knowledge.data`不在本页的公开模块列表中，不提供别名路径。
 
+## 中文领域入口
+
+下表的中文类型名与原名指向同一对象；中文结果属性读取原字段或property。构造关键字、函数名、
+规则标识及知识查询方法仍用原名。下表中的模块都可将`ziwei.`换成`doushu.`。
+
+| 模块 | 中文类型名 → 原类型名 |
+|---|---|
+| `birth` | `性别 → Gender`、`公历出生记录 → GregorianBirthRecord`、`农历出生记录 → LunarBirthRecord`、`出生记录 → BirthRecord`、`计算输入 → CalculationInput` |
+| `config` | `闰月归属 → LeapMonthPolicy`、`子时换日 → DayRollover`、`换年界线 → YearBoundary`、`天马规则 → TianmaRule`、`命盘配置 → ChartConfig`、`口径选项 → PolicyOption` |
+| `ganzhi` | `阴阳 → Yinyang`、`天干 → Tiangan`、`地支 → Dizhi`、`干支 → Ganzhi`、`五行 → Wuxing` |
+| `palaces` | `宫名 → PalaceName`、`宫位 → Palace` |
+| `bureau` | `五行局 → WuxingJu` |
+| `stars` | `星曜 → Star`、`安星规则 → StarRule`、`星位 → StarPlacement` |
+| `brightness` | `亮度等级 → BrightnessLevel`、`亮度表 → BrightnessTable`、`亮度读数 → BrightnessReading` |
+| `sihua` | `四化变体 → SihuaVariant`、`四化表 → SihuaTable`、`四化结果 → SihuaResult` |
+| `decades` | `行运方向 → Direction`、`大限 → Decade` |
+| `liunian` | `流年星曜 → LiunianStars`、`流年年界 → LiunianBoundary`、`流年区间 → LiunianYear` |
+| `xiaoxian` | `小限 → Xiaoxian` |
+| `tongxian` | `童限边界 → TongxianBoundary`、`童限 → Tongxian` |
+| `yunxian` | `运限 → Yunxian` |
+| `chart` | `紫微命盘 → ZiweiChart`、`宫位视图 → PalaceView`、`流年叠读 → LiunianView` |
+
+### 只读属性
+
+箭头左侧是中文读取名，右侧是原读取名。返回类型见下方各类的生成签名；例如宫位视图的四化可能为`None`，
+完整四化结果中的四颗星则均有值。`纪年`是整数，`年干支`是`Ganzhi`对象，`农历年`是解析后的农历年。
+年度`禄存`返回地支，`化禄`返回星曜，二者不能混用。
+
+| 所属类型 | 中文属性 → 原属性 |
+|---|---|
+| `CalculationInput` | `原始记录 → record`、`农历年 → lunar_year`、`农历月 → month`、`农历日 → day`、`闰月 → is_leap_month`、`时辰 → shichen`、`纪年 → ganzhi_year`、`命盘配置 → config`、`性别 → gender`、`年干支 → year_ganzhi`、`年干阴阳 → yinyang` |
+| `Tiangan` | `阴阳 → yinyang` |
+| `Ganzhi` | `天干 → tiangan`、`地支 → dizhi` |
+| `Palace` | `地支 → dizhi`、`天干 → tiangan`、`宫名 → name`、`干支 → ganzhi` |
+| `WuxingJu` | `局数 → number` |
+| `StarPlacement` | `星曜 → star`、`地支 → dizhi` |
+| `BrightnessReading` | `星曜 → star`、`地支 → dizhi`、`亮度表 → table`、`等级 → level` |
+| `SihuaResult` | `年干 → year_tiangan`、`变体 → variant`、`化禄 → lu`、`化权 → quan`、`化科 → ke`、`化忌 → ji` |
+| `Decade` | `地支 → dizhi`、`行运方向 → direction`、`起始虚岁 → start_age`、`终止虚岁 → end_age` |
+| `LiunianStars` | `纪年 → ganzhi_year`、`禄存 → lucun`、`擎羊 → qingyang`、`陀罗 → tuoluo`、`年干支 → year_ganzhi` |
+| `LiunianYear` | `纪年 → ganzhi_year`、`年界 → boundary`、`起始日期 → start`、`终止日期 → end`、`年干支 → year_ganzhi`、`命宫 → minggong` |
+| `Xiaoxian` | `生年支 → year_dizhi`、`性别 → gender`、`虚岁 → age`、`地支 → dizhi` |
+| `Tongxian` | `命宫 → minggong`、`五行局 → ju`、`虚岁 → age`、`边界 → boundary`、`宫名 → palace_name`、`地支 → dizhi` |
+| `Yunxian` | `小限 → xiaoxian`、`童限 → tongxian`、`大限 → decade` |
+| `ZiweiChart` | `计算输入 → calculation`、`十二宫 → palaces`、`身宫 → shengong`、`五行局 → bureau`、`星位 → stars`、`生年四化 → sihua`、`大限 → decades` |
+| `PalaceView` | `宫位 → palace`、`星位 → stars`、`化禄 → lu`、`化权 → quan`、`化科 → ke`、`化忌 → ji`、`是否身宫 → is_shengong` |
+| `LiunianView` | `流年 → liunian`、`本命宫 → natal` |
+
+大限的起止虚岁首尾包含；流年区间的起始日期包含、终止日期不含。`命宫`和`身宫`仍是地支，
+完整宫位从`宫位视图.宫位`读取。原始出生记录、配置字段、通用时间与错误类型、知识记录结构保留原名。
+
+### 从出生记录读取年度结果与出处
+
+以下使用合成的2024年农历正月初一子时女命。先按明确的出生口径排盘，再把已确定纪年的年度星曜与本命宫并读。
+
+```{doctest}
+>>> from ziwei.birth import 农历出生记录, 性别
+>>> from ziwei.chart import create_chart, liunian_view
+>>> from ziwei.config import 命盘配置, 子时换日, 换年界线, 闰月归属
+>>> from ziwei.ganzhi import 地支
+>>> from ziwei.knowledge import load_catalog
+>>> from ziwei.liunian import LiunianStars, 流年星曜
+>>> from ziwei.sihua import 四化变体
+>>> 记录 = 农历出生记录(
+...   year=2024, month=1, day=1, is_leap_month=False, shichen=地支.子, gender=性别.女,
+... )
+>>> 口径 = 命盘配置(
+...   leap_month_policy=闰月归属.全月归本月,
+...   day_rollover=子时换日.早晚子时同日,
+...   year_boundary=换年界线.农历正月初一,
+... )
+>>> 命盘 = create_chart(记录, 口径, sihua_variant=四化变体.排命盘口诀转录)
+>>> 流年星曜 is LiunianStars
+True
+>>> 年曜 = 流年星曜(2024)
+>>> 年曜.纪年, str(年曜.年干支), 年曜.禄存.value, 年曜.擎羊.value, 年曜.陀罗.value
+(2024, '甲辰', '寅', '卯', '丑')
+>>> 年曜.陀罗 is 年曜.tuoluo is 地支.丑
+True
+>>> 叠读 = liunian_view(命盘, 年曜.纪年)
+>>> 叠读.本命宫.宫位.宫名.value, 叠读.本命宫.宫位.地支.value
+('福德', '辰')
+>>> load_catalog().get(叠读.流年.rule_id).id
+'variant.liunian.lucun-yangtuo'
+```
+
+构造与调用参数仍用`year=`、`gender=`等原名；`rule_id`仍是查询出处的稳定标识。
+若从日期确定流年纪年，先按[流年指南](liunian.md)显式选择日期年界。
+
+### 中文类型签名
+
+```{eval-rst}
+.. autodata:: ziwei.birth.性别
+   :no-value:
+.. autodata:: ziwei.birth.公历出生记录
+   :no-value:
+.. autodata:: ziwei.birth.农历出生记录
+   :no-value:
+.. autodata:: ziwei.birth.出生记录
+   :no-value:
+.. autodata:: ziwei.birth.计算输入
+   :no-value:
+.. autodata:: ziwei.config.闰月归属
+   :no-value:
+.. autodata:: ziwei.config.子时换日
+   :no-value:
+.. autodata:: ziwei.config.换年界线
+   :no-value:
+.. autodata:: ziwei.config.天马规则
+   :no-value:
+.. autodata:: ziwei.config.命盘配置
+   :no-value:
+.. autodata:: ziwei.config.口径选项
+   :no-value:
+.. autodata:: ziwei.ganzhi.阴阳
+   :no-value:
+.. autodata:: ziwei.ganzhi.天干
+   :no-value:
+.. autodata:: ziwei.ganzhi.地支
+   :no-value:
+.. autodata:: ziwei.ganzhi.干支
+   :no-value:
+.. autodata:: ziwei.ganzhi.五行
+   :no-value:
+.. autodata:: ziwei.palaces.宫名
+   :no-value:
+.. autodata:: ziwei.palaces.宫位
+   :no-value:
+.. autodata:: ziwei.bureau.五行局
+   :no-value:
+.. autodata:: ziwei.stars.星曜
+   :no-value:
+.. autodata:: ziwei.stars.安星规则
+   :no-value:
+.. autodata:: ziwei.stars.星位
+   :no-value:
+.. autodata:: ziwei.brightness.亮度等级
+   :no-value:
+.. autodata:: ziwei.brightness.亮度表
+   :no-value:
+.. autodata:: ziwei.brightness.亮度读数
+   :no-value:
+.. autodata:: ziwei.sihua.四化变体
+   :no-value:
+.. autodata:: ziwei.sihua.四化表
+   :no-value:
+.. autodata:: ziwei.sihua.四化结果
+   :no-value:
+.. autodata:: ziwei.decades.行运方向
+   :no-value:
+.. autodata:: ziwei.decades.大限
+   :no-value:
+.. autodata:: ziwei.liunian.流年星曜
+   :no-value:
+.. autodata:: ziwei.liunian.流年年界
+   :no-value:
+.. autodata:: ziwei.liunian.流年区间
+   :no-value:
+.. autodata:: ziwei.xiaoxian.小限
+   :no-value:
+.. autodata:: ziwei.tongxian.童限边界
+   :no-value:
+.. autodata:: ziwei.tongxian.童限
+   :no-value:
+.. autodata:: ziwei.yunxian.运限
+   :no-value:
+.. autodata:: ziwei.chart.紫微命盘
+   :no-value:
+.. autodata:: ziwei.chart.宫位视图
+   :no-value:
+.. autodata:: ziwei.chart.流年叠读
+   :no-value:
+```
+
 ## 出生记录与计算输入
 
 ```{eval-rst}

@@ -7,6 +7,7 @@
 """
 
 from enum import StrEnum
+from typing import TypeAlias
 
 from ziwei.ganzhi import Ganzhi, Wuxing, nayin
 
@@ -30,6 +31,10 @@ class WuxingJu(StrEnum):
     """局数（水二木三金四土五火六），即大限首限起始虚岁。"""
     return tuple(WuxingJu).index(self) + 2
 
+  @property
+  def 局数(self) -> int:
+    return self.number
+
 
 _BUREAU_BY_ELEMENT: dict[Wuxing, WuxingJu] = {
   Wuxing.水: WuxingJu.SHUI_ER,
@@ -52,3 +57,6 @@ def bureau_number(ju: WuxingJu) -> int:
   if not isinstance(ju, WuxingJu):
     raise TypeError("五行局须为 WuxingJu 成员")
   return ju.number
+
+
+五行局: TypeAlias = WuxingJu

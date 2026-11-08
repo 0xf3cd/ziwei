@@ -56,6 +56,21 @@ def main(version: str, expectations: Path, first: str) -> None:
     raise ValueError("Alias independent knowledge query differs")
   if any(n == "celestial_calendar" or n.startswith("celestial_calendar.") for n in sys.modules):
     raise ValueError("Alias import or knowledge query initialized the native calendar")
+  for namespace in ("ziwei", "doushu"):
+    annual_api = import_module(f"{namespace}.liunian")
+    branches = import_module(f"{namespace}.ganzhi")
+    annual = annual_api.流年星曜(2024)
+    if (
+      annual_api.流年星曜 is not annual_api.LiunianStars
+      or annual.纪年 != 2024
+      or str(annual.年干支) != "甲辰"
+      or annual.陀罗 is not annual.tuoluo
+      or annual.陀罗 is not branches.地支.丑
+      or knowledge.load_catalog().get(annual.rule_id).id != "variant.liunian.lucun-yangtuo"
+    ):
+      raise ValueError("Installed Chinese query differs from the original API")
+  if any(n == "celestial_calendar" or n.startswith("celestial_calendar.") for n in sys.modules):
+    raise ValueError("Chinese query initialized the native calendar")
   record = birth.LunarBirthRecord(
     year=2024, month=1, day=1, is_leap_month=False, shichen=ganzhi.Dizhi.子, gender=birth.Gender.女
   )
