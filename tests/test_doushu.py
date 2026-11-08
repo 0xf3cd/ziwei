@@ -505,6 +505,28 @@ def test_typing_gate_identifies_checker_crashes(
     doushu.check_alias_typing(tmp_path)
 
 
+def test_typing_gate_logs_chinese_diagnostics_on_a_narrow_output_stream(
+  tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  pending = iter(TYPING_RESULTS)
+
+  def fake_run(command: tuple[str, ...], **kwargs: Any) -> SimpleNamespace:
+    assert kwargs["encoding"] == "utf-8"
+    code, output = next(pending)
+    return SimpleNamespace(returncode=code, stdout=output + (" 陀罗" if code else ""), stderr="")
+
+  buffer = io.BytesIO()
+  stream = io.TextIOWrapper(buffer, encoding="cp1252", errors="strict")
+  with monkeypatch.context() as patch:
+    patch.setattr(subprocess, "run", fake_run)
+    patch.setattr(sys, "stdout", stream)
+    doushu.check_alias_typing(tmp_path)
+  stream.flush()
+  output = buffer.getvalue().decode("cp1252")
+  assert r"\u9640\u7f57" in output and "[attr-defined]" in output
+  assert next(pending, None) is None
+
+
 def test_alias_installs_by_file_without_resolving_another_primary(
   alias_wheel: Path,
   tmp_path: Path,

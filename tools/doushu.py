@@ -414,7 +414,8 @@ def check_alias_typing(directory: Path) -> None:
   ):
     source.write_text(text, encoding="utf-8")
     result = subprocess.run(command, cwd=directory, env=env, capture_output=True, encoding="utf-8")
-    print(result.stdout, result.stderr, flush=True)
+    for output in (result.stdout, result.stderr):
+      print(output.encode("ascii", errors="backslashreplace").decode("ascii"), flush=True)
     if result.returncode not in (0, 1) or "INTERNAL ERROR" in result.stdout + result.stderr:
       raise ValueError("Installed alias typing failed: mypy crashed")
     if result.returncode != code or (code == 1 and diagnostic not in result.stdout):
