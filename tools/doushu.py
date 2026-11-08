@@ -390,6 +390,8 @@ def check_alias_typing(directory: Path) -> None:
     "is_leap_month=False, shichen=地支.子, gender=Gender.未知)\n"
   )
   env = {k: v for k, v in os.environ.items() if k not in {"MYPYPATH", "PYTHONPATH"}}
+  env["PYTHONUTF8"] = "1"
+  env["PYTHONIOENCODING"] = "utf-8"
   command = (
     sys.executable,
     "-m",
@@ -411,8 +413,10 @@ def check_alias_typing(directory: Path) -> None:
     (positive + "流年星曜(纪年=2024)\n", 1, "[call-arg]"),
   ):
     source.write_text(text, encoding="utf-8")
-    result = subprocess.run(command, cwd=directory, env=env, capture_output=True, text=True)
+    result = subprocess.run(command, cwd=directory, env=env, capture_output=True, encoding="utf-8")
     print(result.stdout, result.stderr, flush=True)
+    if result.returncode not in (0, 1) or "INTERNAL ERROR" in result.stdout + result.stderr:
+      raise ValueError("Installed alias typing failed: mypy crashed")
     if result.returncode != code or (code == 1 and diagnostic not in result.stdout):
       raise ValueError(
         "Installed alias typing did not accept valid use and reject a wrong argument"

@@ -473,6 +473,8 @@ def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
   monkeypatch.setattr(subprocess, "run", fake_run)
   monkeypatch.setenv("MYPYPATH", "untrusted")
   monkeypatch.setenv("PYTHONPATH", "untrusted")
+  monkeypatch.setenv("PYTHONUTF8", "0")
+  monkeypatch.setenv("PYTHONIOENCODING", "cp1252")
   valid = results == TYPING_RESULTS
   if valid:
     doushu.check_alias_typing(tmp_path)
@@ -482,8 +484,25 @@ def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
   assert calls
   for command, env in calls:
     assert "MYPYPATH" not in env and "PYTHONPATH" not in env
+    assert env["PYTHONUTF8"] == "1" and env["PYTHONIOENCODING"] == "utf-8"
     assert "--no-incremental" in command and "--python-executable" in command
     assert command[command.index("--python-executable") + 1].startswith(str(tmp_path / "consumer"))
+
+
+@pytest.mark.parametrize(
+  "code,stdout,stderr",
+  [(2, "", "INTERNAL ERROR"), (1, "[arg-type]", "INTERNAL ERROR"), (2, "", "")],
+)
+def test_typing_gate_identifies_checker_crashes(
+  tmp_path: Path, monkeypatch: pytest.MonkeyPatch, code: int, stdout: str, stderr: str
+) -> None:
+  monkeypatch.setattr(
+    subprocess,
+    "run",
+    lambda *args, **kwargs: SimpleNamespace(returncode=code, stdout=stdout, stderr=stderr),
+  )
+  with pytest.raises(ValueError, match="mypy crashed"):
+    doushu.check_alias_typing(tmp_path)
 
 
 def test_alias_installs_by_file_without_resolving_another_primary(

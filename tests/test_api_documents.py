@@ -1,9 +1,11 @@
 """拒绝被渲染成正文的 API 指令及缺失的签名。"""
 
+import ast
 import re
 import shutil
 import zlib
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 import pytest
 
@@ -321,3 +323,85 @@ def test_same_name_in_multiple_python_roles_is_ambiguous(api_tree: Path) -> None
   path.write_bytes(b"\n".join(header) + b"\n" + zlib.compress(entries))
   with pytest.raises(ValueError, match="missing signatures"):
     check_api_reference(api_tree, api_tree)
+
+
+@pytest.mark.parametrize("content", [None, b"", b"invalid inventory"])
+def test_api_gate_rejects_missing_or_corrupt_inventory(
+  api_tree: Path, content: bytes | None
+) -> None:
+  (api_tree / "docs/api.html").write_text("", encoding="utf-8")
+  inventory = api_tree / "objects.inv"
+  if content is None:
+    inventory.unlink()
+  else:
+    inventory.write_bytes(content)
+  with pytest.raises(FileNotFoundError if content is None else ValueError):
+    check_api_reference(api_tree, api_tree)
+
+
+def test_readme_chinese_entry_resolves_in_real_html(rendered_api: tuple[Path, Path]) -> None:
+  source, output = rendered_api
+  document = (source / "README.md").read_text(encoding="utf-8")
+  target = re.search(r"\[中文读取入口\]\(([^)]+)\)", document)
+  assert target is not None
+  location = urlsplit(target[1])
+  assert location.path == "/ziwei/docs/api.html"
+  page = (output / "docs/api.html").read_text(encoding="utf-8")
+  assert unquote(location.fragment) in re.findall(r'\bid="([^"]+)"', page)
+
+
+def check_chinese_mapping_tables(document: str) -> None:
+  root = Path(__file__).resolve().parents[1]
+  expected: dict[tuple[str, str], str] = {}
+  for source in (root / "src/ziwei").glob("*.py"):
+    if source.stem.startswith("_"):
+      continue
+    for node in ast.parse(source.read_text(encoding="utf-8")).body:
+      if (
+        isinstance(node, ast.AnnAssign)
+        and isinstance(node.target, ast.Name)
+        and not node.target.id.isascii()
+        and isinstance(node.annotation, ast.Name)
+        and node.annotation.id == "TypeAlias"
+        and node.value is not None
+      ):
+        expected[(source.stem, node.target.id)] = ast.unparse(node.value)
+      if isinstance(node, ast.ClassDef):
+        for member in node.body:
+          if isinstance(member, ast.FunctionDef) and not member.name.isascii():
+            assert len(member.body) == 1 and isinstance(member.body[0], ast.Return)
+            target = member.body[0].value
+            assert isinstance(target, ast.Attribute)
+            expected[(node.name, member.name)] = target.attr
+  actual: dict[tuple[str, str], str] = {}
+  for line in document.splitlines():
+    if not line.startswith("| `") or " → " not in line:
+      continue
+    owner = line.split("`", 2)[1]
+    for chinese, original in re.findall(r"`([^`]+) → ([^`]+)`", line):
+      key = (owner, chinese)
+      assert key not in actual, f"Duplicate Chinese mapping: {key}"
+      actual[key] = original
+  assert actual == expected, "Chinese mapping tables differ from the source"
+
+
+def test_chinese_mapping_tables_match_source_declarations() -> None:
+  document = (Path(__file__).resolve().parents[1] / "docs/api.md").read_text(encoding="utf-8")
+  check_chinese_mapping_tables(document)
+
+
+@pytest.mark.parametrize(
+  "before,after",
+  [
+    ("纪年 → ganzhi_year", "纪年 → year"),
+    ("陀罗 → tuoluo", "陀罗 → tuoluo_typo"),
+    ("地支 → Dizhi", "地支 → Ganzhi"),
+    ("`阴阳 → Yinyang`、", ""),
+    ("`阴阳 → Yinyang`", "`阴阳 → Yinyang`、`阴阳 → Yinyang`"),
+  ],
+)
+def test_chinese_mapping_guard_rejects_drift(before: str, after: str) -> None:
+  document = (Path(__file__).resolve().parents[1] / "docs/api.md").read_text(encoding="utf-8")
+  assert before in document
+  with pytest.raises(AssertionError):
+    check_chinese_mapping_tables(document.replace(before, after, 1))

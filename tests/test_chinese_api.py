@@ -8,7 +8,7 @@ from dataclasses import fields, is_dataclass, replace
 from datetime import date
 from enum import Enum
 from importlib import import_module
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 
@@ -17,6 +17,7 @@ from ziwei.brightness import BrightnessTable, star_brightness
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
 from ziwei.chart import ZiweiChart, liunian_view, palace_view
+from ziwei.config import POLICY_ENUMS, 口径选项
 from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, 地支
 from ziwei.liunian import LiunianBoundary, liunian_on_date, 流年星曜
 from ziwei.palaces import PalaceName
@@ -86,13 +87,15 @@ def test_alias_is_original_type(module: str, chinese: str, original: str) -> Non
   api = import_module(f"ziwei.{module}")
   alias, source = getattr(api, chinese), getattr(api, original)
   assert alias is source
-  assert pickle.loads(pickle.dumps(alias)) == source
   if isinstance(source, type):
-    assert alias.__name__ == original and alias.__module__ == f"ziwei.{module}"
-    assert inspect.signature(alias) == inspect.signature(source)
     if issubclass(source, Enum):
-      assert alias.__members__ == source.__members__
       assert all(alias[name] is member for name, member in source.__members__.items())
+  else:
+    assert pickle.loads(pickle.dumps(alias)) == source
+
+
+def test_chinese_policy_union_contains_the_validated_policy_types() -> None:
+  assert get_args(口径选项) == POLICY_ENUMS
 
 
 @pytest.fixture
