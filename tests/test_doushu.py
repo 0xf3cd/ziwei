@@ -479,7 +479,7 @@ def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
   if valid:
     doushu.check_alias_typing(tmp_path)
   else:
-    with pytest.raises(ValueError, match="did not accept"):
+    with pytest.raises(ValueError, match="unexpected exit code or diagnostic"):
       doushu.check_alias_typing(tmp_path)
   assert calls
   for command, env in calls:

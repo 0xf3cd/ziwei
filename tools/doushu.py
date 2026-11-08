@@ -357,7 +357,7 @@ def consume_alias(wheel: Path, version: str, directory: Path, *, root: Path = RO
 
 
 def check_alias_typing(directory: Path) -> None:
-  """用锁定mypy读取仓外安装的类型，要求混用通过、错误参数失败。"""
+  """用锁定mypy检查仓外安装的类型，要求正例通过、误用按预期诊断拒绝。"""
   python = directory / "consumer" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
   config = directory / "mypy.ini"
   config.write_text("[mypy]\nstrict = true\n", encoding="utf-8")
@@ -419,9 +419,7 @@ def check_alias_typing(directory: Path) -> None:
     if result.returncode not in (0, 1) or "INTERNAL ERROR" in result.stdout + result.stderr:
       raise ValueError("Installed alias typing failed: mypy crashed")
     if result.returncode != code or (code == 1 and diagnostic not in result.stdout):
-      raise ValueError(
-        "Installed alias typing did not accept valid use and reject a wrong argument"
-      )
+      raise ValueError("Installed alias typing returned an unexpected exit code or diagnostic")
 
 
 def main() -> None:
