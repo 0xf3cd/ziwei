@@ -47,11 +47,11 @@ assert LunarBirthRecord.__module__ == "ziwei.birth"
 | `brightness` | `亮度等级 → BrightnessLevel`、`亮度表 → BrightnessTable`、`亮度读数 → BrightnessReading` |
 | `sihua` | `四化变体 → SihuaVariant`、`四化表 → SihuaTable`、`四化结果 → SihuaResult` |
 | `decades` | `行运方向 → Direction`、`大限 → Decade` |
-| `liunian` | `流年星曜 → LiunianStars`、`流年年界 → LiunianBoundary`、`流年区间 → LiunianYear` |
+| `liunian` | `流年星曜 → LiunianStars`、`流年年界 → LiunianBoundary`、`流年区间 → LiunianYear`、`流年四化 → LiunianSihua` |
 | `xiaoxian` | `小限 → Xiaoxian` |
 | `tongxian` | `童限边界 → TongxianBoundary`、`童限 → Tongxian` |
 | `yunxian` | `运限 → Yunxian` |
-| `chart` | `紫微命盘 → ZiweiChart`、`宫位视图 → PalaceView`、`流年叠读 → LiunianView` |
+| `chart` | `紫微命盘 → ZiweiChart`、`宫位视图 → PalaceView`、`流年叠读 → LiunianView`、`流年宫位 → LiunianPalaceView` |
 
 ### 只读属性
 
@@ -73,12 +73,14 @@ assert LunarBirthRecord.__module__ == "ziwei.birth"
 | `Decade` | `地支 → dizhi`、`行运方向 → direction`、`起始虚岁 → start_age`、`终止虚岁 → end_age` |
 | `LiunianStars` | `纪年 → ganzhi_year`、`禄存 → lucun`、`擎羊 → qingyang`、`陀罗 → tuoluo`、`年干支 → year_ganzhi` |
 | `LiunianYear` | `纪年 → ganzhi_year`、`年界 → boundary`、`起始日期 → start`、`终止日期 → end`、`年干支 → year_ganzhi`、`命宫 → minggong` |
+| `LiunianSihua` | `纪年 → ganzhi_year`、`年干支 → year_ganzhi`、`年干 → year_tiangan`、`变体 → variant`、`化禄 → lu`、`化权 → quan`、`化科 → ke`、`化忌 → ji` |
 | `Xiaoxian` | `生年支 → year_dizhi`、`性别 → gender`、`虚岁 → age`、`地支 → dizhi` |
 | `Tongxian` | `命宫 → minggong`、`五行局 → ju`、`虚岁 → age`、`边界 → boundary`、`宫名 → palace_name`、`地支 → dizhi` |
 | `Yunxian` | `小限 → xiaoxian`、`童限 → tongxian`、`大限 → decade` |
 | `ZiweiChart` | `计算输入 → calculation`、`十二宫 → palaces`、`身宫 → shengong`、`五行局 → bureau`、`星位 → stars`、`生年四化 → sihua`、`大限 → decades` |
 | `PalaceView` | `宫位 → palace`、`星位 → stars`、`化禄 → lu`、`化权 → quan`、`化科 → ke`、`化忌 → ji`、`是否身宫 → is_shengong` |
 | `LiunianView` | `流年 → liunian`、`本命宫 → natal` |
+| `LiunianPalaceView` | `纪年 → ganzhi_year`、`宫名 → name`、`地支 → dizhi`、`本命宫 → natal`、`流年四化 → sihua`、`化禄 → lu`、`化权 → quan`、`化科 → ke`、`化忌 → ji` |
 
 大限的起止虚岁首尾包含；流年区间的起始日期包含、终止日期不含。`命宫`和`身宫`仍是地支，
 完整宫位从`宫位视图.宫位`读取。出生记录与配置增加了中文类型名，字段和构造关键字仍用原名；
@@ -191,6 +193,8 @@ True
    :no-value:
 .. autodata:: ziwei.liunian.流年区间
    :no-value:
+.. autodata:: ziwei.liunian.流年四化
+   :no-value:
 .. autodata:: ziwei.xiaoxian.小限
    :no-value:
 .. autodata:: ziwei.tongxian.童限边界
@@ -204,6 +208,8 @@ True
 .. autodata:: ziwei.chart.宫位视图
    :no-value:
 .. autodata:: ziwei.chart.流年叠读
+   :no-value:
+.. autodata:: ziwei.chart.流年宫位
    :no-value:
 ```
 
@@ -387,7 +393,7 @@ celestial-calendar 的具体适配；导入本模块不初始化 celestial 原�
 
 ```{eval-rst}
 .. automodule:: ziwei.liunian
-   :members: LiunianStars, liunian_stars, LiunianBoundary, LiunianYear, liunian_minggong, liunian_on_date
+   :members: LiunianStars, liunian_stars, LiunianBoundary, LiunianYear, liunian_minggong, liunian_on_date, liunian_palace_dizhi, LiunianSihua, liunian_sihua
    :undoc-members:
    :member-order: bysource
 
@@ -398,6 +404,18 @@ celestial-calendar 的具体适配；导入本模块不初始化 celestial 原�
    :no-value:
 
 .. autodata:: ziwei.liunian.LIUNIAN_STARS_DEFINITION
+   :no-value:
+
+.. autodata:: ziwei.liunian.LIUNIAN_PALACES_RULE_ID
+   :no-value:
+
+.. autodata:: ziwei.liunian.LIUNIAN_PALACES_DEFINITION
+   :no-value:
+
+.. autodata:: ziwei.liunian.LIUNIAN_SIHUA_RULE_ID
+   :no-value:
+
+.. autodata:: ziwei.liunian.LIUNIAN_SIHUA_DEFINITION
    :no-value:
 ```
 
@@ -444,7 +462,7 @@ celestial-calendar 的具体适配；导入本模块不初始化 celestial 原�
 
 ```{eval-rst}
 .. automodule:: ziwei.chart
-   :members: ZiweiChart, PalaceView, palace_view, LiunianView, liunian_view, chart_brightness, create_chart
+   :members: ZiweiChart, PalaceView, palace_view, LiunianView, liunian_view, LiunianPalaceView, liunian_palaces, chart_brightness, create_chart
    :undoc-members:
    :member-order: bysource
 

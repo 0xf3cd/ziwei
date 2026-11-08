@@ -72,6 +72,9 @@ True
 年度禄羊陀沿用三颗星的概念；[年度规则与出处](knowledge-reference.md#entry.liunian.lucun-yangtuo)说明怎样推算位置，并列出文献例子。
 从禄存、擎羊或陀罗的概念查变体时，本命与年度规则分别返回。`find("流禄")`等短名匹配年度规则，
 不把流禄登记为化禄。数值见[年度参考表](knowledge-reference.md#implemented-liunian-stars)。
+年度十二宫使用[独立的太岁起宫规则](knowledge-reference.md#entry.liunian.twelve-palaces)，
+不把旧的命宫落支条目扩成完整十二宫说明。[讲义表的年度四化](knowledge-reference.md#entry.liunian.sihua-wangtingzhi-lecture)
+分别关联完整表、年度查法与直接例；查询用法及六列文本表示例见[流年指南](liunian.md#从出生记录读取年度十二宫)。
 待决条目保存具体复核动作（`recheck`）与跟进讨论入口（`tracking_url`）；issue关闭不表示争议已经解决。
 `RuleVariant.tracking_url`保留实现议题的历史链接；火铃异读、相关称名、归月范围与换年／子时出处等未决事项，由
 [来源研究](https://github.com/0xf3cd/ziwei/issues/43)跟进，不把实现交付当作文献结论。

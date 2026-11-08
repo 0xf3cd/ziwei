@@ -443,6 +443,8 @@ TYPING_RESULTS = [
   (1, "error [misc]"),
   (1, "error [attr-defined]"),
   (1, "error [call-arg]"),
+  (1, "error [call-arg]"),
+  (1, "error [misc]"),
 ]
 
 
@@ -478,6 +480,7 @@ def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
   valid = results == TYPING_RESULTS
   if valid:
     doushu.check_alias_typing(tmp_path)
+    assert len(calls) == len(TYPING_RESULTS)
   else:
     with pytest.raises(ValueError, match="unexpected exit code or diagnostic"):
       doushu.check_alias_typing(tmp_path)

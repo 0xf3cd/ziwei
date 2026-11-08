@@ -13,7 +13,15 @@ from ziwei.calendar import LunarAlgorithm
 from ziwei.config import ChartConfig, DayRollover, YearBoundary
 from ziwei.decades import Decade, place_decades
 from ziwei.ganzhi import Dizhi
-from ziwei.liunian import LiunianStars, liunian_minggong, liunian_stars
+from ziwei.liunian import (
+  LIUNIAN_PALACES_RULE_ID,
+  LiunianSihua,
+  LiunianStars,
+  liunian_minggong,
+  liunian_palace_dizhi,
+  liunian_sihua,
+  liunian_stars,
+)
 from ziwei.palaces import (
   Palace,
   PalaceName,
@@ -287,6 +295,116 @@ def liunian_view(chart: ZiweiChart, ganzhi_year: int) -> LiunianView:
   return LiunianView(liunian=annual, natal=palace_view(chart, liunian_minggong(ganzhi_year)))
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class LiunianPalaceView:
+  """年度一宫与同支本命内容；lu、quan、ke、ji只给本宫的年度标记。
+
+  natal保留生年四化、原星位和身宫标记；sihua为整年的四化结果，None表示未请求年度四化。
+  构造器核宫名与地支对应、四化纪年一致，不认证natal来自哪张完整盘。
+  """
+
+  ganzhi_year: int
+  name: PalaceName
+  natal: PalaceView
+  sihua: LiunianSihua | None = None
+
+  def __post_init__(self) -> None:
+    expected = liunian_palace_dizhi(self.ganzhi_year, self.name)
+    if not isinstance(self.natal, PalaceView):
+      raise TypeError("年度宫位须使用 PalaceView 本命内容")
+    if self.natal.palace.dizhi is not expected:
+      raise ValueError("本命宫支须与指定年度宫名的落支一致")
+    if self.sihua is not None:
+      if not isinstance(self.sihua, LiunianSihua):
+        raise TypeError("年度四化须为 LiunianSihua 或 None")
+      if self.sihua.ganzhi_year != self.ganzhi_year:
+        raise ValueError("年度四化须与宫位查询使用同一纪年")
+
+  @property
+  def dizhi(self) -> Dizhi:
+    return self.natal.palace.dizhi
+
+  @property
+  def rule_id(self) -> str:
+    return LIUNIAN_PALACES_RULE_ID
+
+  def _mark(self, star: Star) -> Star | None:
+    return star if any(position.star is star for position in self.natal.stars) else None
+
+  @property
+  def lu(self) -> Star | None:
+    return self._mark(self.sihua.lu) if self.sihua is not None else None
+
+  @property
+  def quan(self) -> Star | None:
+    return self._mark(self.sihua.quan) if self.sihua is not None else None
+
+  @property
+  def ke(self) -> Star | None:
+    return self._mark(self.sihua.ke) if self.sihua is not None else None
+
+  @property
+  def ji(self) -> Star | None:
+    return self._mark(self.sihua.ji) if self.sihua is not None else None
+
+  @property
+  def 纪年(self) -> int:
+    return self.ganzhi_year
+
+  @property
+  def 宫名(self) -> PalaceName:
+    return self.name
+
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
+
+  @property
+  def 本命宫(self) -> PalaceView:
+    return self.natal
+
+  @property
+  def 流年四化(self) -> LiunianSihua | None:
+    return self.sihua
+
+  @property
+  def 化禄(self) -> Star | None:
+    return self.lu
+
+  @property
+  def 化权(self) -> Star | None:
+    return self.quan
+
+  @property
+  def 化科(self) -> Star | None:
+    return self.ke
+
+  @property
+  def 化忌(self) -> Star | None:
+    return self.ji
+
+
+def liunian_palaces(
+  chart: ZiweiChart, ganzhi_year: int, *, sihua_variant: SihuaVariant | None = None
+) -> tuple[LiunianPalaceView, ...]:
+  """按宫名次序读取年度十二宫；显式传sihua_variant时另查年度四化。
+
+  省略或传None只查宫位，不从本命配置选表。每宫natal保留原本命内容，年度标记另从所选表筛出。
+  """
+  if not isinstance(chart, ZiweiChart):
+    raise TypeError("年度十二宫查询须使用 ZiweiChart")
+  annual = None if sihua_variant is None else liunian_sihua(ganzhi_year, variant=sihua_variant)
+  return tuple(
+    LiunianPalaceView(
+      ganzhi_year=ganzhi_year,
+      name=name,
+      natal=palace_view(chart, liunian_palace_dizhi(ganzhi_year, name)),
+      sihua=annual,
+    )
+    for name in PalaceName
+  )
+
+
 def chart_brightness(chart: ZiweiChart, *, table: BrightnessTable) -> tuple[BrightnessReading, ...]:
   """从已有盘读取30星的亮度，保留星位顺序；非主星的level为None。"""
   if not isinstance(chart, ZiweiChart):
@@ -322,3 +440,4 @@ def create_chart(
 紫微命盘: TypeAlias = ZiweiChart
 宫位视图: TypeAlias = PalaceView
 流年叠读: TypeAlias = LiunianView
+流年宫位: TypeAlias = LiunianPalaceView

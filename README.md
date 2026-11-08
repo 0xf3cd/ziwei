@@ -10,7 +10,7 @@ Python 紫微斗数排盘与知识库。历法与时间由
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
 （公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、30星安星、具名生年四化与大限，
-以及完整命盘组合、十四主星七级亮度、流年命宫与禄羊陀、小限、童限与运限查询、只读按宫查询与宫位关系、文本十二宫格、静态SVG盘面和独立知识目录。
+以及完整命盘组合、十四主星七级亮度、流年十二宫、具名年度四化与禄羊陀、小限、童限与运限查询、只读按宫查询与宫位关系、文本十二宫格、静态SVG盘面和独立知识目录。
 用法见[出生输入](https://0xf3cd.github.io/ziwei/docs/birth.html)、[历法与时间](https://0xf3cd.github.io/ziwei/docs/calendar.html)、
 [解析层](https://0xf3cd.github.io/ziwei/docs/resolver.html)、[命宫身宫与十二宫](https://0xf3cd.github.io/ziwei/docs/palaces.html)、
 [五行局](https://0xf3cd.github.io/ziwei/docs/bureau.html)、[安星](https://0xf3cd.github.io/ziwei/docs/stars.html)、

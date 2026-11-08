@@ -166,7 +166,7 @@ class SihuaResult:
 
 
 def sihua_for_stem(year_tiangan: Tiangan, variant: SihuaVariant) -> SihuaResult:
-  """按生年干取禄权科忌；只需年干，不要求性别、时辰或星位。"""
+  """按年干读取所选完整表；只需年干，不要求性别、时辰或星位。"""
   row = _sihua_row(year_tiangan, variant)
   return SihuaResult(year_tiangan, variant, *row)
 

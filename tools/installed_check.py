@@ -19,7 +19,14 @@ from ziwei.birth import (
 from ziwei.brightness import BrightnessLevel, BrightnessTable, star_brightness
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import ZiweiChart, chart_brightness, create_chart, liunian_view, palace_view
+from ziwei.chart import (
+  ZiweiChart,
+  chart_brightness,
+  create_chart,
+  liunian_palaces,
+  liunian_view,
+  palace_view,
+)
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan, 地支
@@ -31,6 +38,8 @@ from ziwei.liunian import (
   LiunianStars,
   liunian_minggong,
   liunian_on_date,
+  liunian_palace_dizhi,
+  liunian_sihua,
   liunian_stars,
   流年星曜,
 )
@@ -225,7 +234,16 @@ def main(expected_version: str) -> None:
 
 
 def check_liunian() -> None:
-  """消费已安装的年度三曜、纯纪年和两种日期查询。"""
+  """消费已安装的年度宫位、四化、三曜和两种日期查询。"""
+  sihua = liunian_sihua(2030, variant=SihuaVariant.王亭之讲义转录)
+  if (
+    sihua.ke is not Star.天府
+    or sihua.ji is not Star.天同
+    or sihua.table_id != SihuaVariant.王亭之讲义转录.rule_id
+    or not load_catalog().references(sihua.rule_id)
+    or liunian_palace_dizhi(1978, PalaceName.夫妻) is not Dizhi.辰
+  ):
+    raise ValueError("Installed full annual query differs from the named rules")
   annual = liunian_stars(2012)
   if (annual.lucun, annual.qingyang, annual.tuoluo) != (Dizhi.亥, Dizhi.子, Dizhi.戌):
     raise ValueError("Installed liunian annual stars differ from the direct example")
@@ -400,6 +418,15 @@ def check_chart() -> None:
   ):
     raise ValueError("Installed liunian overlay changed annual or natal content")
   print("Installed liunian: annual stars and separate natal palace consumed")
+  rows = liunian_palaces(reference, 2028, sihua_variant=SihuaVariant.王亭之讲义转录)
+  sun = next(row for row in rows if row.ke is Star.太阳)
+  if (
+    len(rows) != 12
+    or sun.natal.ji is not Star.太阳
+    or tuple(row.name for row in rows) != tuple(PalaceName)
+    or sum(len(row.natal.stars) for row in rows) != len(Star)
+  ):
+    raise ValueError("Installed annual palaces lost natal content or separate marks")
   table = BrightnessTable.全书卷二录文
   if star_brightness(Star.紫微, Dizhi.辰, table=table).level is not BrightnessLevel.得地:
     raise ValueError("Installed brightness differs from the named table")

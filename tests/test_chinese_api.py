@@ -16,11 +16,12 @@ from ziwei.birth import 农历出生记录, 性别
 from ziwei.brightness import BrightnessTable, star_brightness
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import ZiweiChart, liunian_view, palace_view
+from ziwei.chart import ZiweiChart, liunian_palaces, liunian_view, palace_view
 from ziwei.config import POLICY_ENUMS, 口径选项
 from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, 地支
-from ziwei.liunian import LiunianBoundary, liunian_on_date, 流年星曜
+from ziwei.liunian import LiunianBoundary, liunian_on_date, liunian_sihua, 流年星曜
 from ziwei.palaces import PalaceName
+from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star
 from ziwei.tongxian import TongxianBoundary, tongxian_at_age
 from ziwei.xiaoxian import xiaoxian_at_age
@@ -40,11 +41,11 @@ ALIASES = {
   "brightness": "亮度等级:BrightnessLevel 亮度表:BrightnessTable 亮度读数:BrightnessReading",
   "sihua": "四化变体:SihuaVariant 四化表:SihuaTable 四化结果:SihuaResult",
   "decades": "行运方向:Direction 大限:Decade",
-  "liunian": "流年星曜:LiunianStars 流年年界:LiunianBoundary 流年区间:LiunianYear",
+  "liunian": "流年星曜:LiunianStars 流年年界:LiunianBoundary 流年区间:LiunianYear 流年四化:LiunianSihua",
   "xiaoxian": "小限:Xiaoxian",
   "tongxian": "童限边界:TongxianBoundary 童限:Tongxian",
   "yunxian": "运限:Yunxian",
-  "chart": "紫微命盘:ZiweiChart 宫位视图:PalaceView 流年叠读:LiunianView",
+  "chart": "紫微命盘:ZiweiChart 宫位视图:PalaceView 流年叠读:LiunianView 流年宫位:LiunianPalaceView",
 }
 PROPERTIES = {
   "birth.CalculationInput": "原始记录:record 农历年:lunar_year 农历月:month 农历日:day "
@@ -61,6 +62,8 @@ PROPERTIES = {
   "liunian.LiunianStars": "纪年:ganzhi_year 禄存:lucun 擎羊:qingyang 陀罗:tuoluo 年干支:year_ganzhi",
   "liunian.LiunianYear": "纪年:ganzhi_year 年界:boundary 起始日期:start 终止日期:end "
   "年干支:year_ganzhi 命宫:minggong",
+  "liunian.LiunianSihua": "纪年:ganzhi_year 年干支:year_ganzhi 年干:year_tiangan 变体:variant "
+  "化禄:lu 化权:quan 化科:ke 化忌:ji",
   "xiaoxian.Xiaoxian": "生年支:year_dizhi 性别:gender 虚岁:age 地支:dizhi",
   "tongxian.Tongxian": "命宫:minggong 五行局:ju 虚岁:age 边界:boundary 宫名:palace_name 地支:dizhi",
   "yunxian.Yunxian": "小限:xiaoxian 童限:tongxian 大限:decade",
@@ -68,6 +71,8 @@ PROPERTIES = {
   "星位:stars 生年四化:sihua 大限:decades",
   "chart.PalaceView": "宫位:palace 星位:stars 化禄:lu 化权:quan 化科:ke 化忌:ji 是否身宫:is_shengong",
   "chart.LiunianView": "流年:liunian 本命宫:natal",
+  "chart.LiunianPalaceView": "纪年:ganzhi_year 宫名:name 地支:dizhi 本命宫:natal 流年四化:sihua "
+  "化禄:lu 化权:quan 化科:ke 化忌:ji",
 }
 
 
@@ -121,6 +126,9 @@ def result_samples(lunar_chart: ZiweiChart) -> dict[str, tuple[Any, ...]]:
     "sihua.SihuaResult": (chart.sihua,),
     "decades.Decade": chart.decades,
     "liunian.LiunianStars": (流年星曜(2024), 流年星曜(2012)),
+    "liunian.LiunianSihua": tuple(
+      liunian_sihua(year, variant=SihuaVariant.王亭之讲义转录) for year in (2024, 2030)
+    ),
     "liunian.LiunianYear": (
       liunian_on_date(date(2024, 2, 4), boundary=LiunianBoundary.立春日期),
       liunian_on_date(
@@ -139,6 +147,10 @@ def result_samples(lunar_chart: ZiweiChart) -> dict[str, tuple[Any, ...]]:
     "chart.ZiweiChart": (chart,),
     "chart.PalaceView": tuple(palace_view(chart, name) for name in PalaceName),
     "chart.LiunianView": (liunian_view(chart, 2024),),
+    "chart.LiunianPalaceView": (
+      *liunian_palaces(chart, 2030),
+      *liunian_palaces(chart, 2028, sihua_variant=SihuaVariant.王亭之讲义转录),
+    ),
   }
 
 
@@ -189,8 +201,8 @@ def test_type_and_property_mapping_has_no_unplanned_chinese_exports() -> None:
   for module, exports in actual.items():
     chinese = {name for name in exports if not name.isascii()}
     assert chinese == {name for name, _ in pairs(ALIASES.get(module.removeprefix("ziwei."), ""))}
-  assert sum(len(pairs(names)) for names in ALIASES.values()) == 40
-  assert sum(len(pairs(names)) for names in PROPERTIES.values()) == 75
+  assert sum(len(pairs(names)) for names in ALIASES.values()) == 42
+  assert sum(len(pairs(names)) for names in PROPERTIES.values()) == 92
 
 
 def test_existing_constructor_and_error_contracts_keep_their_names() -> None:
