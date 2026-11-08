@@ -397,6 +397,7 @@ def check_alias_typing(directory: Path) -> None:
     "--config-file",
     str(config),
     "--no-incremental",
+    "--show-traceback",
     "--python-executable",
     str(python),
     str(source),
