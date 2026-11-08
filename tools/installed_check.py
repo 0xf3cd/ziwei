@@ -22,15 +22,17 @@ from ziwei.calendar import LunarAlgorithm
 from ziwei.chart import ZiweiChart, chart_brightness, create_chart, liunian_view, palace_view
 from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
-from ziwei.ganzhi import Dizhi, Tiangan
+from ziwei.ganzhi import Dizhi, Tiangan, 地支
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import EvidenceAspect, KnowledgeEntry, PremiseStatus, Source
 from ziwei.liunian import (
   LIUNIAN_STARS_RULE_ID,
   LiunianBoundary,
+  LiunianStars,
   liunian_minggong,
   liunian_on_date,
   liunian_stars,
+  流年星曜,
 )
 from ziwei.palaces import Palace, PalaceName, effective_month
 from ziwei.render import render_svg, render_text
@@ -113,6 +115,16 @@ def check_inputs() -> None:
   else:
     raise ValueError("Installed effective_month accepted day 31")
   check_sihua_decades()
+  annual = 流年星曜(2024)
+  if (
+    流年星曜 is not LiunianStars
+    or annual.纪年 != 2024
+    or str(annual.年干支) != "甲辰"
+    or annual.陀罗 is not annual.tuoluo
+    or annual.陀罗 is not 地支.丑
+    or load_catalog().get(annual.rule_id).id != LIUNIAN_STARS_RULE_ID
+  ):
+    raise ValueError("Installed Chinese query differs from the original API")
 
 
 def check_sihua_decades() -> None:

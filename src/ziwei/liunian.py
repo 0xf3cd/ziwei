@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 from ziwei.ganzhi import Dizhi, Ganzhi, year_ganzhi
 from ziwei.stars import lucun_yangtuo_dizhi
@@ -48,6 +48,26 @@ class LiunianStars:
   def rule_id(self) -> str:
     """年度禄羊陀实际使用的规则标识。"""
     return LIUNIAN_STARS_RULE_ID
+
+  @property
+  def 纪年(self) -> int:
+    return self.ganzhi_year
+
+  @property
+  def 禄存(self) -> Dizhi:
+    return self.lucun
+
+  @property
+  def 擎羊(self) -> Dizhi:
+    return self.qingyang
+
+  @property
+  def 陀罗(self) -> Dizhi:
+    return self.tuoluo
+
+  @property
+  def 年干支(self) -> Ganzhi:
+    return self.year_ganzhi
 
 
 def liunian_stars(ganzhi_year: int) -> LiunianStars:
@@ -159,6 +179,30 @@ class LiunianYear:
       return "UTC+08"
     return "所选农历算法日期标签"
 
+  @property
+  def 纪年(self) -> int:
+    return self.ganzhi_year
+
+  @property
+  def 年界(self) -> LiunianBoundary:
+    return self.boundary
+
+  @property
+  def 起始日期(self) -> datetime.date:
+    return self.start
+
+  @property
+  def 终止日期(self) -> datetime.date:
+    return self.end
+
+  @property
+  def 年干支(self) -> Ganzhi:
+    return self.year_ganzhi
+
+  @property
+  def 命宫(self) -> Dizhi:
+    return self.minggong
+
 
 def liunian_on_date(
   day: datetime.date,
@@ -203,3 +247,8 @@ def liunian_on_date(
     lunar_algorithm=algorithm,
     celestial_version=celestial_version(),
   )
+
+
+流年星曜: TypeAlias = LiunianStars
+流年年界: TypeAlias = LiunianBoundary
+流年区间: TypeAlias = LiunianYear

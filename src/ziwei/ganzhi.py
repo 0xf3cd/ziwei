@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Final
+from typing import Final, TypeAlias
 
 
 class Yinyang(StrEnum):
@@ -42,6 +42,10 @@ class Tiangan(StrEnum):
   def yinyang(self) -> Yinyang:
     """天干序号奇阳偶阴（甲的序号为一）。"""
     return Yinyang.阳 if tuple(Tiangan).index(self) % 2 == 0 else Yinyang.阴
+
+  @property
+  def 阴阳(self) -> Yinyang:
+    return self.yinyang
 
 
 class Dizhi(StrEnum):
@@ -97,6 +101,14 @@ class Ganzhi:
     if len(value) != 2:
       raise ValueError("干支须为两个字")
     return cls(Tiangan(value[0]), Dizhi(value[1]))
+
+  @property
+  def 天干(self) -> Tiangan:
+    return self.tiangan
+
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
 
 
 class Wuxing(StrEnum):
@@ -290,3 +302,10 @@ def palace_stems(year_tiangan: Tiangan) -> tuple[Tiangan, ...]:
   stems = tuple(Tiangan)
   start = tuple(stems).index(yin_stem(year_tiangan))
   return tuple(stems[(start + offset) % 10] for offset in range(12))
+
+
+阴阳: TypeAlias = Yinyang
+天干: TypeAlias = Tiangan
+地支: TypeAlias = Dizhi
+干支: TypeAlias = Ganzhi
+五行: TypeAlias = Wuxing

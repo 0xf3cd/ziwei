@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 from ziwei.ganzhi import Dizhi
 
@@ -58,7 +58,26 @@ class Xiaoxian:
     """本读数使用的定位规则标识。"""
     return XIAOXIAN_RULE_ID
 
+  @property
+  def 生年支(self) -> Dizhi:
+    return self.year_dizhi
+
+  @property
+  def 性别(self) -> Gender:
+    return self.gender
+
+  @property
+  def 虚岁(self) -> int:
+    return self.age
+
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
+
 
 def xiaoxian_at_age(year_dizhi: Dizhi, gender: Gender, age: int) -> Xiaoxian:
   """按生年支、已知性别和正整数虚岁查询小限。"""
   return Xiaoxian(year_dizhi=year_dizhi, gender=gender, age=age)
+
+
+小限: TypeAlias = Xiaoxian

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from ziwei.decades import Decade
 from ziwei.tongxian import Tongxian, TongxianBoundary, tongxian_at_age
@@ -42,6 +42,18 @@ class Yunxian:
     ):
       raise ValueError("大限区间须与虚岁及五行局一致")
 
+  @property
+  def 小限(self) -> Xiaoxian:
+    return self.xiaoxian
+
+  @property
+  def 童限(self) -> Tongxian:
+    return self.tongxian
+
+  @property
+  def 大限(self) -> Decade | None:
+    return self.decade
+
 
 def yunxian_at_age(chart: ZiweiChart, age: int, *, tongxian_boundary: TongxianBoundary) -> Yunxian:
   """查询已有命盘在指定虚岁的三套运限读数。
@@ -60,3 +72,6 @@ def yunxian_at_age(chart: ZiweiChart, age: int, *, tongxian_boundary: TongxianBo
     (period for period in chart.decades if period.start_age <= age <= period.end_age), None
   )
   return Yunxian(xiaoxian=small, tongxian=child, decade=decade)
+
+
+运限: TypeAlias = Yunxian

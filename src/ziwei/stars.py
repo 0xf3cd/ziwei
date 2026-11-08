@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 from ziwei._frame import chart_frame
 from ziwei.bureau import WuxingJu
@@ -350,6 +350,14 @@ class StarPlacement:
     if not any(rule.id == self.rule_id and self.star in rule.stars for rule in STAR_RULES):
       raise ValueError("安星规则标识须属于该星的已实现规则")
 
+  @property
+  def 星曜(self) -> Star:
+    return self.star
+
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
+
 
 def _move(start: Dizhi, offset: int) -> Dizhi:
   return tuple(Dizhi)[(tuple(Dizhi).index(start) + offset) % 12]
@@ -515,3 +523,8 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
   if len(positions) != len(Star) or {item.star for item in positions} != set(Star):
     raise ValueError("安星结果须覆盖全部星曜且每颗只出现一次")
   return tuple(sorted(positions, key=lambda item: tuple(Star).index(item.star)))
+
+
+星曜: TypeAlias = Star
+安星规则: TypeAlias = StarRule
+星位: TypeAlias = StarPlacement

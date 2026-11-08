@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias
 
 from ziwei._frame import chart_frame
 from ziwei.bureau import WuxingJu
@@ -64,6 +64,22 @@ class Decade:
     ):
       raise ValueError("大限须为五行局起算的十二限之一，首尾包含共十年")
 
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
+
+  @property
+  def 行运方向(self) -> Direction:
+    return self.direction
+
+  @property
+  def 起始虚岁(self) -> int:
+    return self.start_age
+
+  @property
+  def 终止虚岁(self) -> int:
+    return self.end_age
+
 
 def decade_direction(year_tiangan: Tiangan, gender: Gender) -> Direction:
   """由生年干阴阳和已知性别定顺逆；未知性别显式失败。"""
@@ -112,3 +128,7 @@ def place_decades(value: CalculationInput) -> tuple[Decade, ...]:
     raise ValueError("起大限需要已知时辰")
   frame = chart_frame(value)
   return decade_periods(frame.minggong, frame.bureau, value.year_ganzhi.tiangan, value.gender)
+
+
+行运方向: TypeAlias = Direction
+大限: TypeAlias = Decade

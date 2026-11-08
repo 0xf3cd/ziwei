@@ -100,7 +100,10 @@ uv run --locked python tools/check.py --docs-dir build/docs
 ## 维护API文档
 
 公开类型别名以`TypeAlias`声明；公开常量以`Final`声明，并用紧随赋值的字符串或紧邻赋值之前的`#:`注释说明。
-修改声明时同步维护[API参考](api.md)的生成指令；检查要求这些公开数据在实际HTML中都有签名。
+修改声明时同步维护[API参考](api.md)的生成指令；检查通过Sphinx对象清单定位实际HTML签名，
+不根据中文名称猜测锚点。中文类型别名归所属领域模块，只读结果名用带返回注解的`@property`读取原成员；
+新增时同步维护`docs/api.md`的双名映射及生成指令、`tools/doushu.py`的`check_alias_typing`正反例，
+以及`tools/installed_check.py`和`tools/doushu_installed_check.py`的安装消费。
 
 ## 准备PR
 

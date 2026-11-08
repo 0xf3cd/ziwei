@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Final
+from typing import Final, TypeAlias
 
 from ziwei.config import LeapMonthPolicy
 from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, palace_stems, year_ganzhi
@@ -135,6 +135,22 @@ class Palace:
     """该宫干支。"""
     return Ganzhi(self.tiangan, self.dizhi)
 
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
+
+  @property
+  def 天干(self) -> Tiangan:
+    return self.tiangan
+
+  @property
+  def 宫名(self) -> PalaceName:
+    return self.name
+
+  @property
+  def 干支(self) -> Ganzhi:
+    return self.ganzhi
+
 
 def month_palace_index(month: int) -> int:
   """农历生月对应的地支下标（子为0、寅为2，正月返回2）；只接受1至12。"""
@@ -197,3 +213,7 @@ def palace_ganzhi(minggong: Dizhi, ganzhi_year: int) -> Ganzhi:
     raise TypeError("命宫须为 Dizhi 成员")
   year = year_ganzhi(ganzhi_year)
   return Ganzhi(_stem_for(palace_stems(year.tiangan), minggong), minggong)
+
+
+宫名: TypeAlias = PalaceName
+宫位: TypeAlias = Palace

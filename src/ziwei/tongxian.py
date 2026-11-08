@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Final
+from typing import Final, TypeAlias
 
 from ziwei.bureau import WuxingJu
 from ziwei.ganzhi import Dizhi
@@ -97,6 +97,30 @@ class Tongxian:
     """六宫定位的规则标识；衔接解释另见boundary.rule_id。"""
     return TONGXIAN_RULE_ID
 
+  @property
+  def 命宫(self) -> Dizhi:
+    return self.minggong
+
+  @property
+  def 五行局(self) -> WuxingJu:
+    return self.ju
+
+  @property
+  def 虚岁(self) -> int:
+    return self.age
+
+  @property
+  def 边界(self) -> TongxianBoundary:
+    return self.boundary
+
+  @property
+  def 宫名(self) -> PalaceName | None:
+    return self.palace_name
+
+  @property
+  def 地支(self) -> Dizhi | None:
+    return self.dizhi
+
 
 def tongxian_at_age(
   minggong: Dizhi, ju: WuxingJu, age: int, *, boundary: TongxianBoundary
@@ -106,3 +130,7 @@ def tongxian_at_age(
   超过所选边界的适用年龄时，返回的宫名与地支均为None。
   """
   return Tongxian(minggong=minggong, ju=ju, age=age, boundary=boundary)
+
+
+童限边界: TypeAlias = TongxianBoundary
+童限: TypeAlias = Tongxian

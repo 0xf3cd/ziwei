@@ -84,3 +84,11 @@ class ChartConfig:
     ):
       if not isinstance(value, expected):
         raise TypeError(f"口径须为 {expected.__name__} 成员")
+
+
+闰月归属: TypeAlias = LeapMonthPolicy
+子时换日: TypeAlias = DayRollover
+换年界线: TypeAlias = YearBoundary
+天马规则: TypeAlias = TianmaRule
+命盘配置: TypeAlias = ChartConfig
+口径选项: TypeAlias = PolicyOption

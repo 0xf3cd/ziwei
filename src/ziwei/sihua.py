@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 from ziwei.ganzhi import Tiangan
 from ziwei.stars import Star
@@ -140,6 +140,30 @@ class SihuaResult:
     """此次所选完整表在知识目录中的标识。"""
     return self.variant.rule_id
 
+  @property
+  def 年干(self) -> Tiangan:
+    return self.year_tiangan
+
+  @property
+  def 变体(self) -> SihuaVariant:
+    return self.variant
+
+  @property
+  def 化禄(self) -> Star:
+    return self.lu
+
+  @property
+  def 化权(self) -> Star:
+    return self.quan
+
+  @property
+  def 化科(self) -> Star:
+    return self.ke
+
+  @property
+  def 化忌(self) -> Star:
+    return self.ji
+
 
 def sihua_for_stem(year_tiangan: Tiangan, variant: SihuaVariant) -> SihuaResult:
   """按生年干取禄权科忌；只需年干，不要求性别、时辰或星位。"""
@@ -154,3 +178,8 @@ def shengnian_sihua(value: CalculationInput, variant: SihuaVariant) -> SihuaResu
   if not isinstance(value, CalculationInput):
     raise TypeError("生年四化须使用 CalculationInput")
   return sihua_for_stem(value.year_ganzhi.tiangan, variant)
+
+
+四化变体: TypeAlias = SihuaVariant
+四化表: TypeAlias = SihuaTable
+四化结果: TypeAlias = SihuaResult
