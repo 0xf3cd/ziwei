@@ -315,10 +315,24 @@ def test_new_annual_quotes_keep_original_characters_and_anchor_sentences() -> No
   quotes = {
     "citation.zhongzhou.md-sihua-wu-ji": "戊贪阴阳机，己武贪梁贡，",
     "citation.zhongzhou.md-sihua-geng-ren": "庚阳武府同，辛巨阳曲昌，\n壬梁紫府武，癸破巨阴贪",
+    "citation.zhongzhou.md-flow-sihua-method": "流四化的起法与起星盘的方法相同",
+    "citation.zhongzhou.md-liunian-stem": "流曜则仍依年干起，不用宫干。",
+    "citation.zhongzhou.md-liunian-palaces": (
+      "以流年太岁宫作为本年的命宫，按兄弟，夫妻等十二宫逆行安排"
+    ),
     "citation.zhongzhou.year-1978-palace": "流年夫妻宮(壬辰宮)",
     "citation.zhongzhou.year-1975-minggong": "流年命宮在卯垣",
+    "citation.zhongzhou.year-1975-palace": "流年疾厄宮飛至戌垣",
+    "citation.zhongzhou.year-1978-sihua": ("在一九七八年戊午，流年命宮及流年夫妻宮同會貪狼化祿"),
+    "citation.zhongzhou.year-1980-sihua": ("一九八零庚申年，命宮為武曲(大限化科、流年化權)"),
+    "citation.zhongzhou.year-1981-sihua": "會丑宮文曲(流年化科)及文昌(流年化忌)",
     "citation.108s.year-2025-minggong": "2025年都在命盤的巳位",
+    "citation.108s.year-2025-palaces": "2025年的流年祿存在卯位，坐流年夫妻宮",
+    "citation.108s.year-2025-sihua": "天機化祿",
+    "citation.iluck.sihua-year-stem": "须以流年岁次的年干作为条件，查表得出。",
+    "citation.jingcheng.liunian-palaces": ("也是把小限、流年落宫当作命宫再逆布人事十二宫"),
   }
+  assert len(quotes) == 16
   annual_refs = {citation.id: citation for citation in catalog.references(LIUNIAN_PALACES_RULE_ID)}
   for identifier, quote in quotes.items():
     record = catalog.get(identifier)

@@ -419,9 +419,10 @@ def check_chart() -> None:
     raise ValueError("Installed liunian overlay changed annual or natal content")
   print("Installed liunian: annual stars and separate natal palace consumed")
   rows = liunian_palaces(reference, 2028, sihua_variant=SihuaVariant.王亭之讲义转录)
-  sun = next(row for row in rows if row.ke is Star.太阳)
+  sun = next((row for row in rows if row.ke is Star.太阳), None)
   if (
-    len(rows) != 12
+    sun is None
+    or len(rows) != 12
     or sun.natal.ji is not Star.太阳
     or tuple(row.name for row in rows) != tuple(PalaceName)
     or sum(len(row.natal.stars) for row in rows) != len(Star)

@@ -15,7 +15,14 @@ from ziwei.birth import Gender, GregorianBirthRecord
 from ziwei.brightness import BrightnessLevel, BrightnessTable
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import PalaceView, ZiweiChart, chart_brightness, create_chart, palace_view
+from ziwei.chart import (
+  PalaceView,
+  ZiweiChart,
+  chart_brightness,
+  create_chart,
+  liunian_palaces,
+  palace_view,
+)
 from ziwei.decades import decade_periods
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
@@ -29,14 +36,17 @@ from ziwei.knowledge.model import (
   RuleVariant,
 )
 from ziwei.liunian import (
+  LIUNIAN_SIHUA_RULE_ID,
   LIUNIAN_STARS_RULE_ID,
   LiunianBoundary,
   liunian_on_date,
+  liunian_sihua,
   liunian_stars,
   流年星曜,
 )
 from ziwei.palaces import PalaceName
 from ziwei.render import render_svg, render_text
+from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
 from ziwei.tongxian import TongxianBoundary, tongxian_at_age
@@ -181,6 +191,64 @@ def test_annual_consumer_rejects_star_identity_and_overlay_defects(
     message = "annual stars differ" if defect == "annual-position" else "annual rule or sources"
     with pytest.raises(ValueError, match=f"Installed liunian {message}"):
       installed_check.check_liunian()
+
+
+@pytest.mark.parametrize("defect", ["ke", "ji", "table_id", "source", "palace"])
+def test_full_annual_consumer_rejects_wrong_sihua_and_palace(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  if defect == "palace":
+    monkeypatch.setattr(installed_check, "liunian_palace_dizhi", lambda *args: Dizhi.子)
+  elif defect == "source":
+    original = Catalog.references
+    monkeypatch.setattr(
+      Catalog,
+      "references",
+      lambda self, identifier: (
+        () if identifier == LIUNIAN_SIHUA_RULE_ID else original(self, identifier)
+      ),
+    )
+  else:
+    annual = liunian_sihua(2030, variant=SihuaVariant.王亭之讲义转录)
+    result = SimpleNamespace(
+      ke=annual.ke, ji=annual.ji, table_id=annual.table_id, rule_id=annual.rule_id
+    )
+    setattr(result, defect, {"ke": Star.天同, "ji": Star.武曲, "table_id": "wrong"}[defect])
+    monkeypatch.setattr(installed_check, "liunian_sihua", lambda *args, **kwargs: result)
+  with pytest.raises(ValueError, match="Installed full annual query"):
+    installed_check.check_liunian()
+
+
+@pytest.mark.parametrize("defect", ["missing-sun", "count", "natal-mark", "order", "stars"])
+def test_full_annual_consumer_rejects_wrong_palace_content(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  def reading(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
+    rows = liunian_palaces(*args, **kwargs)
+    if defect == "missing-sun":
+      return ()
+    if defect == "count":
+      removed = next(row for row in rows if row.ke is not Star.太阳)
+      return tuple(row for row in rows if row is not removed)
+    if defect == "order":
+      return rows[::-1]
+    if defect == "natal-mark":
+      selected = next(row for row in rows if row.ke is Star.太阳)
+    else:
+      selected = next(row for row in rows if row.natal.stars)
+    replacement = SimpleNamespace(
+      ke=selected.ke,
+      name=selected.name,
+      natal=SimpleNamespace(
+        ji=Star.天机 if defect == "natal-mark" else selected.natal.ji,
+        stars=selected.natal.stars[:-1] if defect == "stars" else selected.natal.stars,
+      ),
+    )
+    return tuple(replacement if row is selected else row for row in rows)
+
+  monkeypatch.setattr(installed_check, "liunian_palaces", reading)
+  with pytest.raises(ValueError, match="Installed annual palaces"):
+    installed_check.check_chart()
 
 
 @pytest.mark.parametrize("defect", ["value", "count", "position", "text", "svg", "source"])
