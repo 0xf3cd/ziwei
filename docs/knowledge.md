@@ -110,7 +110,9 @@ True
 当前目录的解释来源只有《全书》卷一，因此示例将来源结果解包为`source`：
 
 ```{doctest}
->>> from ziwei.knowledge.model import EvidenceAspect
+>>> from ziwei.knowledge import load_catalog
+>>> from ziwei.knowledge.model import EvidenceAspect, PremiseStatus
+>>> catalog = load_catalog()
 >>> source, = catalog.filter_sources(aspect=EvidenceAspect.解释)
 >>> source.id
 'source.quanshu-juan1-wikisource'
@@ -127,7 +129,8 @@ True
 False
 ```
 
-示例用`entries[1]`读取列表中的辅弼条件条目。将星名改为其他主星，可以读取该星的两条记录。
+示例用`entries[1]`读取列表中的辅弼条件条目。将`catalog.find("紫微")`改为`catalog.find("武曲")`，
+即可读取武曲的星性与同宫条件两条记录。
 也可按稳定标识直接读取条目，例如武曲与天府同宫的解释：
 
 ```{doctest}
@@ -149,7 +152,7 @@ False
 展示资格与出处、前提状态的区别见[状态说明](#状态需要分开表达)。
 
 来源、文本层次与复核动作见[卷一来源记录](knowledge-reference.md#source.quanshu-juan1-wikisource)
-及其关联条目；首批以外的星曜覆盖由[#77](https://github.com/0xf3cd/ziwei/issues/77)追踪。
+及其关联条目；其他星曜的解释覆盖由[#77](https://github.com/0xf3cd/ziwei/issues/77)追踪。
 
 ## 记录与归属
 

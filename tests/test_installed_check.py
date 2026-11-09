@@ -886,6 +886,42 @@ def test_new_interpretation_consumer_rejects_damaged_fields(
     installed_check.check_knowledge()
 
 
+@pytest.mark.parametrize(
+  "star",
+  [
+    "ziwei",
+    "tianfu",
+    "tianji",
+    "taiyang",
+    "wuqu",
+    "tiantong",
+    "lianzhen",
+    "taiyin",
+    "tanlang",
+    "jumen",
+    "tianxiang",
+    "tianliang",
+    "qisha",
+    "pojun",
+  ],
+)
+def test_interpretation_consumer_rejects_changed_nature_quote(
+  star: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  citation_id = f"citation.quanshu-juan1.{star}-nature"
+  catalog = replace(
+    catalog,
+    citations=tuple(
+      replace(item, quote="错误星性") if item.id == citation_id else item
+      for item in catalog.citations
+    ),
+  )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match="interpretation citation changed"):
+    installed_check.check_knowledge()
+
+
 @pytest.mark.parametrize("choice", [False, True])
 def test_knowledge_consumer_rejects_wrong_display_filter(
   choice: bool, monkeypatch: pytest.MonkeyPatch

@@ -15,6 +15,7 @@ from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import (
   Citation,
+  CurationStatus,
   EvidenceAspect,
   KnowledgeEntry,
   PremiseStatus,
@@ -78,6 +79,7 @@ def test_reference_covers_each_major_star_twice(reference: dict[str, Any]) -> No
     assert len(selected) == 2
     assert {row["kind"] for row in selected} == {"nature", "condition"}
     for row in selected:
+      assert (row["kind"] == "nature") == row["id"].endswith("-nature")
       expected = (
         "已明确"
         if row["kind"] == "nature" or row["id"] == "entry.interpretation.wuqu-tianfu"
@@ -100,10 +102,14 @@ def _check_interpretations(catalog: Catalog, reference: dict[str, Any]) -> None:
     assert entry.premises == tuple(expected["premises"])
     assert entry.exceptions == tuple(expected["exceptions"])
     assert entry.premise_status is PremiseStatus[expected["premise_status"]]
+    assert entry.curation is CurationStatus.已整理
     assert entry.show_by_default is False
     assert entry.recheck and entry.tracking_url == reference["tracking_url"]
+    assert entry.recheck == expected["recheck"]
+    assert entry.limits == expected["limits"]
     assert citation.quote == expected["quote"]
     assert citation.locator == expected["locator"]
+    assert citation.limits == expected["citation_limits"]
     assert citation.source_id == reference["source_id"]
     assert citation.layer is TextLayer.原文
     assert citation.aspects == (EvidenceAspect.解释,)
@@ -197,6 +203,38 @@ def test_reference_rejects_lost_adjacent_condition(suffix: str, reference: dict[
     _check_interpretations(catalog, reference)
 
 
+@pytest.mark.parametrize("defect", ["recheck", "entry-limits", "citation-limits", "curation"])
+def test_reference_rejects_incomplete_curation(defect: str, reference: dict[str, Any]) -> None:
+  catalog = load_catalog()
+  identifier = "entry.interpretation.tianji-tianliang"
+  if defect == "citation-limits":
+    catalog = replace(
+      catalog,
+      citations=tuple(
+        replace(item, limits="仅记录天机。")
+        if item.id == "citation.quanshu-juan1.tianji-tianliang"
+        else item
+        for item in catalog.citations
+      ),
+    )
+  else:
+    changes: dict[str, Any]
+    if defect == "curation":
+      changes = {"curation": CurationStatus.待整理}
+    elif defect == "recheck":
+      changes = {"recheck": "以后再研究。"}
+    else:
+      changes = {"limits": "仅记录天机。"}
+    catalog = replace(
+      catalog,
+      entries=tuple(
+        replace(item, **changes) if item.id == identifier else item for item in catalog.entries
+      ),
+    )
+  with pytest.raises(AssertionError):
+    _check_interpretations(catalog, reference)
+
+
 def test_interpretation_aspect_rejects_string(reference: dict[str, Any]) -> None:
   citation = load_catalog().get(reference["entries"][0]["citation_id"])
   assert isinstance(citation, Citation)
@@ -239,5 +277,22 @@ def test_reference_gate_rejects_interpretation_damage(
 def test_interpretation_query_without_calendar(optimized: bool) -> None:
   command = [sys.executable, *(["-O"] if optimized else []), "-I"]
   command.append(str(Path(__file__).parent / "fixtures/interpretation_smoke.py"))
+  command.append(str(Path(__file__).resolve().parents[1] / "src"))
   result = subprocess.run(command, capture_output=True, text=True, check=True)
-  assert result.stdout.strip() == "Interpretation query without celestial: passed"
+  message, checked = result.stdout.splitlines()
+  assert message == "Interpretation query without celestial: passed"
+  identifiers = json.loads(checked)
+  assert len(identifiers) == 14
+  assert set(identifiers) == {concept_id for _, concept_id in MAJOR_STARS}
+
+
+def test_interpretation_query_rejects_wrong_source(tmp_path: Path) -> None:
+  command = [
+    sys.executable,
+    "-I",
+    str(Path(__file__).parent / "fixtures/interpretation_smoke.py"),
+    str(tmp_path),
+  ]
+  result = subprocess.run(command, capture_output=True, text=True, check=False)
+  assert result.returncode == 1
+  assert "imported an unexpected source" in result.stderr

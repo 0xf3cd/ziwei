@@ -338,6 +338,38 @@ def runtime_aliases(
   return modules, expectations
 
 
+def test_runtime_consumer_queries_every_major_star(
+  runtime_aliases: tuple[dict[str, Any], Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+  modules, expectations = runtime_aliases
+  catalog_type = modules["ziwei.knowledge.catalog"].Catalog
+  original = catalog_type.find
+  queried: set[str] = set()
+
+  def find(catalog: Any, name: str) -> Any:
+    queried.add(name)
+    return original(catalog, name)
+
+  monkeypatch.setattr(catalog_type, "find", find)
+  doushu_installed_check.main(VERSION, expectations, "doushu")
+  assert queried == {
+    "紫微",
+    "天府",
+    "天机",
+    "太阳",
+    "武曲",
+    "天同",
+    "廉贞",
+    "太阴",
+    "贪狼",
+    "巨门",
+    "天相",
+    "天梁",
+    "七杀",
+    "破军",
+  }
+
+
 @pytest.mark.parametrize(
   "defect, message",
   [

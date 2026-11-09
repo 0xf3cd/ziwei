@@ -2475,7 +2475,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.taiyang-fubi",
-    statement="《诸星问答论》太阳节的“玉蟾先生曰”一段称，与左右同宫可作贵论。",
+    statement="《诸星问答论》太阳节的“玉蟾先生曰”一段称，与左右同宫则为贵论。",
     concept_ids=(Star.太阳.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.taiyang-fubi",),
@@ -2662,7 +2662,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.jumen-dizuo",
-    statement="《诸星问答论》巨门节的“希夷先生曰”一段称，遇帝座可制其强。",
+    statement="《诸星问答论》巨门节的“希夷先生曰”一段称，遇帝座则制其强。",
     concept_ids=(Star.巨门.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.jumen-dizuo",),
@@ -2693,7 +2693,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.tianxiang-fubi",
-    statement="《诸星问答论》天相节的答曰部分称，临生旺、得左右，即使不逢帝座也可职掌威权。",
+    statement="《诸星问答论》天相节的答曰部分称，临生旺、得左右，则职掌威权，即使不逢帝座也是如此。",
     concept_ids=(Star.天相.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.tianxiang-fubi",),
