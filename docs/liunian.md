@@ -51,7 +51,8 @@
 
 参数同样是1至9999的已确定纪年，拒绝`bool`、字符串和浮点数。`LiunianStars`不可变，
 保存`ganzhi_year`，三位置由纪年派生，不能在构造时另填。此查询不需要本命盘或出生资料。
-流禄与化禄不同。完整十干位置见[年度参考表](knowledge-reference.md#implemented-liunian-stars)。
+流禄给出年度禄存的落宫地支，化禄给出星曜，二者不能混用。
+完整十干位置见[年度参考表](knowledge-reference.md#implemented-liunian-stars)。
 
 ## 具名年度四化
 
