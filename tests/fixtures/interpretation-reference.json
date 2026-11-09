@@ -7,10 +7,12 @@
   "sha256": "9beb8038a8b82154d15d81c8ff822423d4f0c7c006f536a86552adeaa594818a",
   "lineage_id": "lineage.quanshu-wikisource",
   "tracking_url": "https://github.com/0xf3cd/ziwei/issues/11",
-  "scope": "卷一固定电子录文的十四主星28条短引，含完整句、首句段及无尾标点的分句；行号从原始wiki源码首行起算。陈述、前提、例外、限度与复核动作为仓内整理预期，不是独立外部盘例。kind为测试预期的人工内容分组，不是目录字段。retrieved_at记录原件取得时间，与来源checked_on复核日期分开。",
+  "scope": "卷一固定电子录文的十四主星28条短引，含完整句、首句段及无尾标点的分句；行号从原始wiki源码首行起算，quote_start与quote_end为该行Unicode字符的零基半开区间。陈述、前提、例外、限度与复核动作为仓内整理预期，不是独立外部盘例。kind为测试预期的人工内容分组，不是目录字段。retrieved_at记录原件取得时间，与来源checked_on复核日期分开。",
   "entries": [
     {
       "id": "entry.interpretation.ziwei-nature",
+      "quote_start": 3,
+      "quote_end": 30,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.ziwei-nature",
       "concept_id": "concept.star.ziwei",
@@ -27,6 +29,8 @@
     },
     {
       "id": "entry.interpretation.ziwei-fubi",
+      "quote_start": 0,
+      "quote_end": 16,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.ziwei-fubi",
       "concept_id": "concept.star.ziwei",
@@ -43,6 +47,8 @@
     },
     {
       "id": "entry.interpretation.tianfu-nature",
+      "quote_start": 3,
+      "quote_end": 17,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.tianfu-nature",
       "concept_id": "concept.star.tianfu",
@@ -59,6 +65,8 @@
     },
     {
       "id": "entry.interpretation.tianfu-kongwang",
+      "quote_start": 184,
+      "quote_end": 209,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.tianfu-kongwang",
       "concept_id": "concept.star.tianfu",
@@ -75,6 +83,8 @@
     },
     {
       "id": "entry.interpretation.tianji-nature",
+      "quote_start": 3,
+      "quote_end": 19,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.tianji-nature",
       "concept_id": "concept.star.tianji",
@@ -91,6 +101,8 @@
     },
     {
       "id": "entry.interpretation.tianji-tianliang",
+      "quote_start": 121,
+      "quote_end": 138,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.tianji-tianliang",
       "concept_id": "concept.star.tianji",
@@ -107,6 +119,8 @@
     },
     {
       "id": "entry.interpretation.taiyang-nature",
+      "quote_start": 3,
+      "quote_end": 14,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.taiyang-nature",
       "concept_id": "concept.star.taiyang",
@@ -123,6 +137,8 @@
     },
     {
       "id": "entry.interpretation.taiyang-fubi",
+      "quote_start": 146,
+      "quote_end": 157,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.taiyang-fubi",
       "concept_id": "concept.star.taiyang",
@@ -139,6 +155,8 @@
     },
     {
       "id": "entry.interpretation.wuqu-nature",
+      "quote_start": 3,
+      "quote_end": 20,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.wuqu-nature",
       "concept_id": "concept.star.wuqu",
@@ -155,6 +173,8 @@
     },
     {
       "id": "entry.interpretation.wuqu-tianfu",
+      "quote_start": 20,
+      "quote_end": 27,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.wuqu-tianfu",
       "concept_id": "concept.star.wuqu",
@@ -171,6 +191,8 @@
     },
     {
       "id": "entry.interpretation.tiantong-nature",
+      "quote_start": 3,
+      "quote_end": 25,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.tiantong-nature",
       "concept_id": "concept.star.tiantong",
@@ -187,6 +209,8 @@
     },
     {
       "id": "entry.interpretation.tiantong-fuzuo-birth",
+      "quote_start": 83,
+      "quote_end": 103,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.tiantong-fuzuo-birth",
       "concept_id": "concept.star.tiantong",
@@ -203,6 +227,8 @@
     },
     {
       "id": "entry.interpretation.lianzhen-nature",
+      "quote_start": 3,
+      "quote_end": 15,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.lianzhen-nature",
       "concept_id": "concept.star.lianzhen",
@@ -219,6 +245,8 @@
     },
     {
       "id": "entry.interpretation.lianzhen-jumen-limit",
+      "quote_start": 129,
+      "quote_end": 145,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.lianzhen-jumen-limit",
       "concept_id": "concept.star.lianzhen",
@@ -235,6 +263,8 @@
     },
     {
       "id": "entry.interpretation.taiyin-nature",
+      "quote_start": 3,
+      "quote_end": 23,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.taiyin-nature",
       "concept_id": "concept.star.taiyin",
@@ -251,6 +281,8 @@
     },
     {
       "id": "entry.interpretation.taiyin-shenming-jiji",
+      "quote_start": 122,
+      "quote_end": 135,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.taiyin-shenming-jiji",
       "concept_id": "concept.star.taiyin",
@@ -267,6 +299,8 @@
     },
     {
       "id": "entry.interpretation.tanlang-nature",
+      "quote_start": 3,
+      "quote_end": 37,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.tanlang-nature",
       "concept_id": "concept.star.tanlang",
@@ -283,6 +317,8 @@
     },
     {
       "id": "entry.interpretation.tanlang-kongwang",
+      "quote_start": 275,
+      "quote_end": 285,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.tanlang-kongwang",
       "concept_id": "concept.star.tanlang",
@@ -299,6 +335,8 @@
     },
     {
       "id": "entry.interpretation.jumen-nature",
+      "quote_start": 3,
+      "quote_end": 28,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.jumen-nature",
       "concept_id": "concept.star.jumen",
@@ -315,6 +353,8 @@
     },
     {
       "id": "entry.interpretation.jumen-dizuo",
+      "quote_start": 126,
+      "quote_end": 134,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.jumen-dizuo",
       "concept_id": "concept.star.jumen",
@@ -331,6 +371,8 @@
     },
     {
       "id": "entry.interpretation.tianxiang-nature",
+      "quote_start": 3,
+      "quote_end": 15,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.tianxiang-nature",
       "concept_id": "concept.star.tianxiang",
@@ -347,6 +389,8 @@
     },
     {
       "id": "entry.interpretation.tianxiang-fubi",
+      "quote_start": 157,
+      "quote_end": 183,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.tianxiang-fubi",
       "concept_id": "concept.star.tianxiang",
@@ -363,6 +407,8 @@
     },
     {
       "id": "entry.interpretation.tianliang-nature",
+      "quote_start": 3,
+      "quote_end": 15,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.tianliang-nature",
       "concept_id": "concept.star.tianliang",
@@ -379,6 +425,8 @@
     },
     {
       "id": "entry.interpretation.tianliang-changqu-fubi",
+      "quote_start": 56,
+      "quote_end": 69,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.tianliang-changqu-fubi",
       "concept_id": "concept.star.tianliang",
@@ -395,6 +443,8 @@
     },
     {
       "id": "entry.interpretation.qisha-nature",
+      "quote_start": 3,
+      "quote_end": 17,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.qisha-nature",
       "concept_id": "concept.star.qisha",
@@ -411,6 +461,8 @@
     },
     {
       "id": "entry.interpretation.qisha-changqu-fubi",
+      "quote_start": 119,
+      "quote_end": 139,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.qisha-changqu-fubi",
       "concept_id": "concept.star.qisha",
@@ -427,6 +479,8 @@
     },
     {
       "id": "entry.interpretation.pojun-nature",
+      "quote_start": 3,
+      "quote_end": 27,
       "kind": "nature",
       "citation_id": "citation.quanshu-juan1.pojun-nature",
       "concept_id": "concept.star.pojun",
@@ -443,6 +497,8 @@
     },
     {
       "id": "entry.interpretation.pojun-jumen",
+      "quote_start": 184,
+      "quote_end": 194,
       "kind": "condition",
       "citation_id": "citation.quanshu-juan1.pojun-jumen",
       "concept_id": "concept.star.pojun",

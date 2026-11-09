@@ -92,6 +92,8 @@ def _check_interpretations(catalog: Catalog, reference: dict[str, Any]) -> None:
   selected = catalog.filter_entries(source_id=reference["source_id"])
   assert {entry.id for entry in selected} == {item["id"] for item in reference["entries"]}
   for expected in reference["entries"]:
+    assert 0 <= expected["quote_start"] < expected["quote_end"]
+    assert len(expected["quote"]) == expected["quote_end"] - expected["quote_start"]
     entry = catalog.get(expected["id"])
     citation = catalog.get(expected["citation_id"])
     assert isinstance(entry, KnowledgeEntry) and isinstance(citation, Citation)
@@ -203,7 +205,22 @@ def test_reference_rejects_lost_adjacent_condition(suffix: str, reference: dict[
     _check_interpretations(catalog, reference)
 
 
-@pytest.mark.parametrize("defect", ["recheck", "entry-limits", "citation-limits", "curation"])
+@pytest.mark.parametrize("index", range(28))
+def test_reference_rejects_placeholder_recheck(index: int, reference: dict[str, Any]) -> None:
+  catalog = load_catalog()
+  identifier = reference["entries"][index]["id"]
+  catalog = replace(
+    catalog,
+    entries=tuple(
+      replace(item, recheck="以后再研究。") if item.id == identifier else item
+      for item in catalog.entries
+    ),
+  )
+  with pytest.raises(AssertionError):
+    _check_interpretations(catalog, reference)
+
+
+@pytest.mark.parametrize("defect", ["entry-limits", "citation-limits", "curation"])
 def test_reference_rejects_incomplete_curation(defect: str, reference: dict[str, Any]) -> None:
   catalog = load_catalog()
   identifier = "entry.interpretation.tianji-tianliang"
@@ -221,8 +238,6 @@ def test_reference_rejects_incomplete_curation(defect: str, reference: dict[str,
     changes: dict[str, Any]
     if defect == "curation":
       changes = {"curation": CurationStatus.待整理}
-    elif defect == "recheck":
-      changes = {"recheck": "以后再研究。"}
     else:
       changes = {"limits": "仅记录天机。"}
     catalog = replace(
