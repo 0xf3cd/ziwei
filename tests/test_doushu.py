@@ -357,6 +357,9 @@ def runtime_aliases(
     ("chart-output", "chart differs"),
     ("chinese-query", "Chinese query differs"),
     ("chinese-native", "Chinese query initialized"),
+    ("annual-sihua", "Installed annual Chinese sihua differs"),
+    ("annual-native", "Annual sihua initialized"),
+    ("annual-palace", "Installed alias annual palace query differs"),
   ],
 )
 def test_runtime_consumer_rejects_invalid_contracts(
@@ -429,6 +432,23 @@ def test_runtime_consumer_rejects_invalid_contracts(
         return value.year_ganzhi
 
       monkeypatch.setattr(modules["ziwei.liunian"].LiunianStars, "年干支", property(year_ganzhi))
+    case "annual-sihua":
+      monkeypatch.setattr(
+        modules["ziwei.liunian"].LiunianSihua,
+        "化科",
+        property(lambda _: modules["ziwei.stars"].Star.天同),
+      )
+    case "annual-native":
+
+      def annual_ke(value: Any) -> Any:
+        monkeypatch.setitem(sys.modules, "celestial_calendar", ModuleType("celestial_calendar"))
+        return value.ke
+
+      monkeypatch.setattr(modules["ziwei.liunian"].LiunianSihua, "化科", property(annual_ke))
+    case "annual-palace":
+      monkeypatch.setattr(
+        modules["ziwei.chart"].LiunianPalaceView, "流年四化", property(lambda _: None)
+      )
   if message is None:
     doushu_installed_check.main(version, expectations, first)
   else:
@@ -443,6 +463,8 @@ TYPING_RESULTS = [
   (1, "error [misc]"),
   (1, "error [attr-defined]"),
   (1, "error [call-arg]"),
+  (1, "error [call-arg]"),
+  (1, "error [misc]"),
 ]
 
 
@@ -478,6 +500,7 @@ def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
   valid = results == TYPING_RESULTS
   if valid:
     doushu.check_alias_typing(tmp_path)
+    assert len(calls) == len(TYPING_RESULTS)
   else:
     with pytest.raises(ValueError, match="unexpected exit code or diagnostic"):
       doushu.check_alias_typing(tmp_path)

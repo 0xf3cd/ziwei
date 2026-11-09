@@ -69,6 +69,15 @@ def main(version: str, expectations: Path, first: str) -> None:
     raise ValueError("Installed Chinese query differs from the original API")
   if any(n == "celestial_calendar" or n.startswith("celestial_calendar.") for n in sys.modules):
     raise ValueError("Chinese query initialized the native calendar")
+  annual_sihua = annual_api.流年四化(2030, variant=sihua.SihuaVariant.王亭之讲义转录)
+  if (
+    annual_api.流年四化 is not annual_api.LiunianSihua
+    or annual_sihua.化科.value != "天府"
+    or not knowledge.load_catalog().references(annual_sihua.rule_id)
+  ):
+    raise ValueError("Installed annual Chinese sihua differs")
+  if any(n == "celestial_calendar" or n.startswith("celestial_calendar.") for n in sys.modules):
+    raise ValueError("Annual sihua initialized the native calendar")
   record = birth.LunarBirthRecord(
     year=2024, month=1, day=1, is_leap_month=False, shichen=ganzhi.Dizhi.子, gender=birth.Gender.女
   )
@@ -88,6 +97,15 @@ def main(version: str, expectations: Path, first: str) -> None:
     or render.render_text(chart).splitlines()[0] != "火六局 · 大限逆行 · 虚岁首尾包含"
   ):
     raise ValueError("Alias chart differs from the documented input")
+  rows = chart_api.liunian_palaces(chart, 2030, sihua_variant=sihua.SihuaVariant.王亭之讲义转录)
+  if (
+    len(rows) != 12
+    or chart_api.流年宫位 is not chart_api.LiunianPalaceView
+    or not all(isinstance(row, import_module("ziwei.chart").LiunianPalaceView) for row in rows)
+    or not all(row.流年四化 == annual_sihua for row in rows)
+    or sum(len(row.本命宫.星位) for row in rows) != 30
+  ):
+    raise ValueError("Installed alias annual palace query differs")
   print(
     f"Installed doushu {version}; {len(names)} modules/{count} original objects; first={first}; optimized={sys.flags.optimize}"
   )

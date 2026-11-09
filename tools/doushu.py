@@ -388,6 +388,15 @@ def check_alias_typing(directory: Path) -> None:
     "position: 地支 = reading.陀罗\n"
     "chinese_record: 出生记录 = 农历出生记录(year=2024, month=1, day=1, "
     "is_leap_month=False, shichen=地支.子, gender=Gender.未知)\n"
+    "from doushu.chart import liunian_palaces, 流年宫位\n"
+    "from doushu.liunian import 流年四化\n"
+    "from doushu.stars import Star\n"
+    "from ziwei.chart import LiunianPalaceView\n"
+    "annual_marks: 流年四化 = 流年四化(2030, variant=SihuaVariant.王亭之讲义转录)\n"
+    "annual_ke: Star = annual_marks.化科\n"
+    "def annual_rows(value: PrimaryChart) -> tuple[流年宫位, ...]:\n"
+    "  return liunian_palaces(value, 2030, sihua_variant=SihuaVariant.王亭之讲义转录)\n"
+    "def annual_row(value: 流年宫位) -> LiunianPalaceView:\n  return value\n"
   )
   env = {k: v for k, v in os.environ.items() if k not in {"MYPYPATH", "PYTHONPATH"}}
   env["PYTHONUTF8"] = "1"
@@ -411,6 +420,8 @@ def check_alias_typing(directory: Path) -> None:
     (positive + "reading.陀罗 = 地支.子\n", 1, "[misc]"),
     (positive + "地支.不存在\n", 1, "[attr-defined]"),
     (positive + "流年星曜(纪年=2024)\n", 1, "[call-arg]"),
+    (positive + "流年四化(2030)\n", 1, "[call-arg]"),
+    (positive + "annual_marks.化科 = Star.天府\n", 1, "[misc]"),
   ):
     source.write_text(text, encoding="utf-8")
     result = subprocess.run(command, cwd=directory, env=env, capture_output=True, encoding="utf-8")

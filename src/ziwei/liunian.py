@@ -1,7 +1,7 @@
-"""查询流年命宫与禄羊陀，并按初一或立春日期确定纪年。
+"""查询流年十二宫、禄羊陀与具名四化，并按初一或立春日期确定纪年。
 
 纯纪年查询不加载历法适配；日期计算及日期结果构造按需导入。
-年度规则出处见知识条目entry.liunian.lucun-yangtuo。
+禄羊陀出处见知识条目entry.liunian.lucun-yangtuo。
 """
 
 from __future__ import annotations
@@ -11,8 +11,10 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final, TypeAlias
 
-from ziwei.ganzhi import Dizhi, Ganzhi, year_ganzhi
-from ziwei.stars import lucun_yangtuo_dizhi
+from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, year_ganzhi
+from ziwei.palaces import PalaceName, palace_dizhi
+from ziwei.sihua import SihuaVariant, sihua_for_stem
+from ziwei.stars import Star, lucun_yangtuo_dizhi
 
 if TYPE_CHECKING:
   from ziwei.calendar import LunarAlgorithm
@@ -23,6 +25,16 @@ LIUNIAN_STARS_RULE_ID: Final = "variant.liunian.lucun-yangtuo"
 """按流年干安禄存、擎羊与陀罗的规则标识。"""
 LIUNIAN_STARS_DEFINITION: Final = "以已确定流年的年干查禄存，禄存顺一宫为流羊、逆一宫为流陀。"
 """年度禄羊陀的安置方法。"""
+LIUNIAN_PALACES_RULE_ID: Final = "variant.liunian.twelve-palaces"
+"""太岁宫起年度十二宫的规则标识。"""
+LIUNIAN_PALACES_DEFINITION: Final = "以目标纪年的太岁年支为流年命宫，按人事十二宫次序逆布。"
+"""年度十二宫的定位方法。"""
+LIUNIAN_SIHUA_RULE_ID: Final = "variant.liunian.sihua-wangtingzhi-lecture"
+"""讲义表用于年度四化的规则标识，与原完整表标识分开。"""
+LIUNIAN_SIHUA_DEFINITION: Final = (
+  "按目标流年干读取王亭之讲义转录完整表，依次取得年度禄、权、科、忌。"
+)
+"""具名年度四化的查法。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +107,90 @@ class LiunianBoundary(StrEnum):
 def liunian_minggong(ganzhi_year: int) -> Dizhi:
   """已确定纪年1至9999的流年命宫地支。"""
   return year_ganzhi(ganzhi_year).dizhi
+
+
+def liunian_palace_dizhi(ganzhi_year: int, name: PalaceName) -> Dizhi:
+  """从已确定纪年的太岁命宫逆排，查询指定年度宫名的地支。"""
+  return palace_dizhi(liunian_minggong(ganzhi_year), name)
+
+
+@dataclass(frozen=True, slots=True)
+class LiunianSihua:
+  """已确定纪年的具名年度四化，四星由目标年干和显式选择的表派生。"""
+
+  ganzhi_year: int
+  variant: SihuaVariant = field(kw_only=True)
+  lu: Star = field(init=False)
+  quan: Star = field(init=False)
+  ke: Star = field(init=False)
+  ji: Star = field(init=False)
+
+  def __post_init__(self) -> None:
+    stem = self.year_tiangan
+    if not isinstance(self.variant, SihuaVariant):
+      raise TypeError("年度四化变体须为 SihuaVariant 成员")
+    if self.variant is not SihuaVariant.WANGTINGZHI_LECTURE:
+      raise ValueError("此四化表尚不支持年度查询")
+    result = sihua_for_stem(stem, self.variant)
+    for name, star in zip(
+      ("lu", "quan", "ke", "ji"), (result.lu, result.quan, result.ke, result.ji), strict=True
+    ):
+      object.__setattr__(self, name, star)
+
+  @property
+  def year_ganzhi(self) -> Ganzhi:
+    return year_ganzhi(self.ganzhi_year)
+
+  @property
+  def year_tiangan(self) -> Tiangan:
+    return self.year_ganzhi.tiangan
+
+  @property
+  def rule_id(self) -> str:
+    """年度查法的知识标识。"""
+    return LIUNIAN_SIHUA_RULE_ID
+
+  @property
+  def table_id(self) -> str:
+    """所用完整四化表的知识标识。"""
+    return self.variant.rule_id
+
+  @property
+  def 纪年(self) -> int:
+    return self.ganzhi_year
+
+  @property
+  def 年干支(self) -> Ganzhi:
+    return self.year_ganzhi
+
+  @property
+  def 年干(self) -> Tiangan:
+    return self.year_tiangan
+
+  @property
+  def 变体(self) -> SihuaVariant:
+    return self.variant
+
+  @property
+  def 化禄(self) -> Star:
+    return self.lu
+
+  @property
+  def 化权(self) -> Star:
+    return self.quan
+
+  @property
+  def 化科(self) -> Star:
+    return self.ke
+
+  @property
+  def 化忌(self) -> Star:
+    return self.ji
+
+
+def liunian_sihua(ganzhi_year: int, *, variant: SihuaVariant) -> LiunianSihua:
+  """查询1至9999纪年的年度四化；须显式选表，不支持的年度变体抛ValueError。"""
+  return LiunianSihua(ganzhi_year, variant=variant)
 
 
 def _checked_algorithm(
@@ -252,3 +348,4 @@ def liunian_on_date(
 流年星曜: TypeAlias = LiunianStars
 流年年界: TypeAlias = LiunianBoundary
 流年区间: TypeAlias = LiunianYear
+流年四化: TypeAlias = LiunianSihua

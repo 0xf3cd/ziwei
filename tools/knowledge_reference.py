@@ -13,7 +13,7 @@ from ziwei.bureau import WuxingJu
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
-from ziwei.palaces import month_palace_index
+from ziwei.palaces import PalaceName, month_palace_index
 
 
 def _sihua_rows() -> list[tuple[str, ...]]:
@@ -117,6 +117,33 @@ def _liunian_star_rows() -> list[tuple[str, ...]]:
     )
     for stem in Tiangan
   ]
+
+
+def _liunian_palace_rows() -> list[tuple[str, ...]]:
+  return [
+    (
+      str(year),
+      *(liunian.liunian_palace_dizhi(year, name).value for name in PalaceName),
+      liunian.LIUNIAN_PALACES_RULE_ID,
+    )
+    for year in range(2020, 2032)
+  ]
+
+
+def _liunian_sihua_rows() -> list[tuple[str, ...]]:
+  rows = []
+  for year in range(2024, 2034):
+    result = liunian.liunian_sihua(year, variant=sihua.SihuaVariant.王亭之讲义转录)
+    rows.append(
+      (
+        str(year),
+        result.year_tiangan.value,
+        *(star.value for star in (result.lu, result.quan, result.ke, result.ji)),
+        result.rule_id,
+        result.table_id,
+      )
+    )
+  return rows
 
 
 def _xiaoxian_rows() -> list[tuple[str, ...]]:
@@ -225,6 +252,18 @@ def render_catalog(catalog: Catalog) -> str:
     parts.append("<tr>" + "".join(f"<td>{_value(value, ids)}</td>" for value in row) + "</tr>")
   parts.append("</table></section>")
   for identifier, title, headers, rows in (
+    (
+      "implemented-liunian-palaces",
+      "流年十二宫（十二起点）",
+      ("纪年", *(name.value for name in PalaceName), "规则标识"),
+      _liunian_palace_rows(),
+    ),
+    (
+      "implemented-liunian-sihua",
+      "讲义表的年度四化（甲至癸）",
+      ("纪年", "流年干", "禄", "权", "科", "忌", "年度规则", "完整表"),
+      _liunian_sihua_rows(),
+    ),
     (
       "implemented-liunian-stars",
       "流年禄存、擎羊与陀罗",
@@ -407,6 +446,8 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
   if missing := expected_stars - numeric_stars:
     raise ValueError(f"Star reference missing numeric coverage: {sorted(missing)}")
   for section, rows in (
+    ("implemented-liunian-palaces", _liunian_palace_rows()),
+    ("implemented-liunian-sihua", _liunian_sihua_rows()),
     ("implemented-liunian-stars", _liunian_star_rows()),
     ("implemented-brightness", _brightness_rows()),
     ("implemented-sihua", _sihua_rows()),

@@ -49,6 +49,8 @@ def test_actual_html_and_relative_stable_links(html: Path) -> None:
 @pytest.mark.parametrize(
   "section",
   [
+    "implemented-liunian-palaces",
+    "implemented-liunian-sihua",
     "implemented-liunian-stars",
     "implemented-xiaoxian",
     "implemented-tongxian",
