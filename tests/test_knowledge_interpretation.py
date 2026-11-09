@@ -12,6 +12,7 @@ import pytest
 
 from tools.knowledge_reference import check_knowledge_reference, render_catalog
 from ziwei.knowledge import load_catalog
+from ziwei.knowledge.catalog import Catalog
 from ziwei.knowledge.model import (
   Citation,
   EvidenceAspect,
@@ -20,6 +21,23 @@ from ziwei.knowledge.model import (
   Source,
   SourceStatus,
   TextLayer,
+)
+
+MAJOR_STARS = (
+  ("紫微", "concept.star.ziwei"),
+  ("天府", "concept.star.tianfu"),
+  ("天机", "concept.star.tianji"),
+  ("太阳", "concept.star.taiyang"),
+  ("武曲", "concept.star.wuqu"),
+  ("天同", "concept.star.tiantong"),
+  ("廉贞", "concept.star.lianzhen"),
+  ("太阴", "concept.star.taiyin"),
+  ("贪狼", "concept.star.tanlang"),
+  ("巨门", "concept.star.jumen"),
+  ("天相", "concept.star.tianxiang"),
+  ("天梁", "concept.star.tianliang"),
+  ("七杀", "concept.star.qisha"),
+  ("破军", "concept.star.pojun"),
 )
 
 
@@ -50,8 +68,25 @@ def test_interpretation_source_and_shared_lineage(reference: dict[str, Any]) -> 
   }
 
 
-def test_interpretation_quotes_conditions_and_display(reference: dict[str, Any]) -> None:
-  catalog = load_catalog()
+def test_reference_covers_each_major_star_twice(reference: dict[str, Any]) -> None:
+  rows = reference["entries"]
+  assert len(rows) == len({row["id"] for row in rows}) == 28
+  assert len({row["citation_id"] for row in rows}) == 28
+  assert {row["concept_id"] for row in rows} == {concept_id for _, concept_id in MAJOR_STARS}
+  for _, concept_id in MAJOR_STARS:
+    selected = [row for row in rows if row["concept_id"] == concept_id]
+    assert len(selected) == 2
+    assert {row["kind"] for row in selected} == {"nature", "condition"}
+    for row in selected:
+      expected = (
+        "已明确"
+        if row["kind"] == "nature" or row["id"] == "entry.interpretation.wuqu-tianfu"
+        else "待定"
+      )
+      assert row["premise_status"] == expected
+
+
+def _check_interpretations(catalog: Catalog, reference: dict[str, Any]) -> None:
   selected = catalog.filter_entries(source_id=reference["source_id"])
   assert {entry.id for entry in selected} == {item["id"] for item in reference["entries"]}
   for expected in reference["entries"]:
@@ -76,9 +111,11 @@ def test_interpretation_quotes_conditions_and_display(reference: dict[str, Any])
     assert entry not in catalog.filter_entries(show_by_default=True)
 
 
-@pytest.mark.parametrize(
-  "name,concept_id", [("紫微", "concept.star.ziwei"), ("天府", "concept.star.tianfu")]
-)
+def test_interpretation_quotes_conditions_and_display(reference: dict[str, Any]) -> None:
+  _check_interpretations(load_catalog(), reference)
+
+
+@pytest.mark.parametrize("name,concept_id", MAJOR_STARS)
 def test_star_query_retains_placement_and_interpretation(
   name: str, concept_id: str, reference: dict[str, Any]
 ) -> None:
@@ -89,6 +126,75 @@ def test_star_query_retains_placement_and_interpretation(
   selected = catalog.filter_entries(concept_id=concept_id, source_id=reference["source_id"])
   assert {entry.id for entry in selected} == expected
   assert len(catalog.filter_entries(concept_id=concept_id)) > len(selected)
+
+
+@pytest.mark.parametrize("name,concept_id", MAJOR_STARS[2:])
+@pytest.mark.parametrize("defect", ["quote", "concept", "premise", "status", "display", "missing"])
+def test_reference_rejects_new_star_damage(
+  name: str, concept_id: str, defect: str, reference: dict[str, Any]
+) -> None:
+  catalog = load_catalog()
+  row = next(
+    row
+    for row in reference["entries"]
+    if row["concept_id"] == concept_id and row["kind"] == "condition"
+  )
+  entry = catalog.get(row["id"])
+  assert isinstance(entry, KnowledgeEntry)
+  if defect == "quote":
+    catalog = replace(
+      catalog,
+      citations=tuple(
+        replace(item, quote="错误原文") if item.id == row["citation_id"] else item
+        for item in catalog.citations
+      ),
+    )
+  elif defect == "missing":
+    catalog = replace(catalog, entries=tuple(item for item in catalog.entries if item != entry))
+  else:
+    identifier = entry.id
+    changes: dict[str, Any]
+    if defect == "concept":
+      changes = {"concept_ids": ("concept.star.ziwei",)}
+    elif defect == "premise":
+      changes = {"premises": entry.premises[:-1]}
+    elif defect == "status":
+      changes = {
+        "premise_status": (
+          PremiseStatus.待定
+          if entry.premise_status is PremiseStatus.已明确
+          else PremiseStatus.已明确
+        )
+      }
+    else:
+      identifier = next(
+        row["id"]
+        for row in reference["entries"]
+        if row["concept_id"] == concept_id and row["kind"] == "nature"
+      )
+      changes = {"show_by_default": True}
+    catalog = replace(
+      catalog,
+      entries=tuple(
+        replace(item, **changes) if item.id == identifier else item for item in catalog.entries
+      ),
+    )
+  with pytest.raises(AssertionError):
+    _check_interpretations(catalog, reference)
+
+
+@pytest.mark.parametrize("suffix", ["taiyang-fubi", "tiantong-fuzuo-birth", "qisha-changqu-fubi"])
+def test_reference_rejects_lost_adjacent_condition(suffix: str, reference: dict[str, Any]) -> None:
+  catalog = load_catalog()
+  identifier = f"entry.interpretation.{suffix}"
+  catalog = replace(
+    catalog,
+    entries=tuple(
+      replace(item, exceptions=()) if item.id == identifier else item for item in catalog.entries
+    ),
+  )
+  with pytest.raises(AssertionError):
+    _check_interpretations(catalog, reference)
 
 
 def test_interpretation_aspect_rejects_string(reference: dict[str, Any]) -> None:
@@ -104,19 +210,24 @@ def test_interpretation_reference_contains_quotes_and_conditions(reference: dict
     assert html.count(f'<section id="{item["id"]}">') == 1
     assert html.count(f"<pre>{escape(item['quote'])}</pre>") == 1
     assert all(escape(premise) in html for premise in item["premises"])
+    assert all(escape(exception) in html for exception in item["exceptions"])
 
 
-@pytest.mark.parametrize("defect", ["quote", "premise", "missing"])
+@pytest.mark.parametrize("defect", ["quote", "premise", "exception", "missing"])
 def test_reference_gate_rejects_interpretation_damage(
   tmp_path: Path, reference: dict[str, Any], defect: str
 ) -> None:
   (tmp_path / "docs").mkdir()
   html = render_catalog(load_catalog())
-  item = reference["entries"][-1]
+  item = next(
+    row for row in reference["entries"] if row["id"] == "entry.interpretation.tiantong-fuzuo-birth"
+  )
   if defect == "quote":
     html = html.replace(escape(item["quote"]), "伪引文", 1)
   elif defect == "premise":
     html = html.replace(escape(item["premises"][-1]), "漏掉条件", 1)
+  elif defect == "exception":
+    html = html.replace(escape(item["exceptions"][0]), "漏掉例外", 1)
   else:
     html = html.replace(f'id="{item["id"]}"', 'id="missing"', 1)
   (tmp_path / "docs/knowledge-reference.html").write_text(html, encoding="utf-8")

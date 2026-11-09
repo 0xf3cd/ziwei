@@ -52,8 +52,31 @@ def main(version: str, expectations: Path, first: str) -> None:
 
   if pickle.loads(pickle.dumps(birth.Gender.女)) is not birth.Gender.女:
     raise ValueError("Alias enum identity did not survive pickle")
-  if knowledge.load_catalog().get("concept.star.ziwei").id != "concept.star.ziwei":
+  catalog = knowledge.load_catalog()
+  if catalog.get("concept.star.ziwei").id != "concept.star.ziwei":
     raise ValueError("Alias independent knowledge query differs")
+  for name in (
+    "紫微",
+    "天府",
+    "天机",
+    "太阳",
+    "武曲",
+    "天同",
+    "廉贞",
+    "太阴",
+    "贪狼",
+    "巨门",
+    "天相",
+    "天梁",
+    "七杀",
+    "破军",
+  ):
+    (concept,) = catalog.find(name)
+    entries = catalog.filter_entries(
+      concept_id=concept.id, source_id="source.quanshu-juan1-wikisource"
+    )
+    if len(entries) != 2 or any(entry.show_by_default for entry in entries):
+      raise ValueError("Alias major-star interpretation query differs")
   if any(n == "celestial_calendar" or n.startswith("celestial_calendar.") for n in sys.modules):
     raise ValueError("Alias import or knowledge query initialized the native calendar")
   annual_api = import_module("doushu.liunian")

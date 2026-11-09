@@ -19,7 +19,22 @@ catalog = load_catalog()
 sources = catalog.filter_sources(aspect=EvidenceAspect.解释)
 if len(sources) != 1 or sources[0].id != "source.quanshu-juan1-wikisource":
   raise ValueError("Interpretation source query failed")
-for name in ("紫微", "天府"):
+for name in (
+  "紫微",
+  "天府",
+  "天机",
+  "太阳",
+  "武曲",
+  "天同",
+  "廉贞",
+  "太阴",
+  "贪狼",
+  "巨门",
+  "天相",
+  "天梁",
+  "七杀",
+  "破军",
+):
   (concept,) = catalog.find(name)
   entries = catalog.filter_entries(concept_id=concept.id, source_id=sources[0].id)
   if len(entries) != 2 or any(entry.show_by_default for entry in entries):
