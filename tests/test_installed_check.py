@@ -784,6 +784,144 @@ def test_interpretation_consumer_rejects_changed_corpus(
     installed_check.check_knowledge()
 
 
+@pytest.mark.parametrize(
+  "suffix",
+  [
+    "tianji-tianliang",
+    "taiyang-fubi",
+    "wuqu-tianfu",
+    "tiantong-fuzuo-birth",
+    "lianzhen-jumen-limit",
+    "taiyin-shenming-jiji",
+    "tanlang-kongwang",
+    "jumen-dizuo",
+    "tianxiang-fubi",
+    "tianliang-changqu-fubi",
+    "qisha-changqu-fubi",
+    "pojun-jumen",
+  ],
+)
+def test_new_interpretation_consumer_rejects_wrong_display(
+  suffix: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  entry = next(item for item in catalog.entries if item.id == f"entry.interpretation.{suffix}")
+  nature = f"entry.interpretation.{entry.concept_ids[0].rsplit('.', 1)[1]}-nature"
+  catalog = replace(
+    catalog,
+    entries=tuple(
+      replace(item, show_by_default=True) if item.id == nature else item for item in catalog.entries
+    ),
+  )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match="interpretation entries or default display"):
+    installed_check.check_knowledge()
+
+
+@pytest.mark.parametrize(
+  "suffix",
+  [
+    "tianji-tianliang",
+    "taiyang-fubi",
+    "wuqu-tianfu",
+    "tiantong-fuzuo-birth",
+    "lianzhen-jumen-limit",
+    "taiyin-shenming-jiji",
+    "tanlang-kongwang",
+    "jumen-dizuo",
+    "tianxiang-fubi",
+    "tianliang-changqu-fubi",
+    "qisha-changqu-fubi",
+    "pojun-jumen",
+  ],
+)
+@pytest.mark.parametrize(
+  "defect", ["quote", "concept", "condition", "identity", "status", "references"]
+)
+def test_new_interpretation_consumer_rejects_damaged_fields(
+  suffix: str, defect: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  identifier = f"entry.interpretation.{suffix}"
+  entry = next(item for item in catalog.entries if item.id == identifier)
+  if defect == "quote":
+    citation_id = entry.citation_ids[0]
+    catalog = replace(
+      catalog,
+      citations=tuple(
+        replace(item, quote="错误原文") if item.id == citation_id else item
+        for item in catalog.citations
+      ),
+    )
+    message = "interpretation citation changed"
+  else:
+    changes: dict[str, Any]
+    message = "interpretation concept or condition changed"
+    if defect == "concept":
+      changes = {"concept_ids": ("concept.star.ziwei",)}
+    elif defect == "condition":
+      changes = {"premises": entry.premises[:-1]}
+    elif defect == "identity":
+      changes = {"id": "entry.synthetic-renamed-interpretation"}
+    elif defect == "status":
+      changes = {
+        "premise_status": (
+          PremiseStatus.待定
+          if entry.premise_status is PremiseStatus.已明确
+          else PremiseStatus.已明确
+        )
+      }
+      message = "interpretation premise status changed"
+    else:
+      changes = {"citation_ids": (*entry.citation_ids, "citation.quanshu-juan1.ziwei-nature")}
+      message = "interpretation citation changed"
+    catalog = replace(
+      catalog,
+      entries=tuple(
+        replace(item, **changes) if item.id == identifier else item for item in catalog.entries
+      ),
+    )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match=message):
+    installed_check.check_knowledge()
+
+
+@pytest.mark.parametrize(
+  "star",
+  [
+    "ziwei",
+    "tianfu",
+    "tianji",
+    "taiyang",
+    "wuqu",
+    "tiantong",
+    "lianzhen",
+    "taiyin",
+    "tanlang",
+    "jumen",
+    "tianxiang",
+    "tianliang",
+    "qisha",
+    "pojun",
+  ],
+)
+def test_interpretation_consumer_rejects_changed_nature_quote(
+  star: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  citation_id = f"citation.quanshu-juan1.{star}-nature"
+  catalog = replace(
+    catalog,
+    citations=tuple(
+      replace(item, quote="错误星性") if item.id == citation_id else item
+      for item in catalog.citations
+    ),
+  )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match="interpretation citation changed"):
+    installed_check.check_knowledge()
+
+
 @pytest.mark.parametrize("choice", [False, True])
 def test_knowledge_consumer_rejects_wrong_display_filter(
   choice: bool, monkeypatch: pytest.MonkeyPatch

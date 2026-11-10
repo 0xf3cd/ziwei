@@ -105,12 +105,14 @@ True
 
 ### 按星曜和来源查解释
 
-《诸星问答论》首批提供紫微、天府各一条星性描述（书中如何称述星曜）和一条带条件解释。
+《诸星问答论》提供十四主星各一条星性描述（书中如何称述星曜）和一条带条件解释，共28条。
 用概念与来源一起筛选，可以将这本书的解释和已有安星条目分开读取。
-当前目录的解释来源只有《全书》卷一，因此示例将来源结果解包为`source`：
+当前目录的解释来源只有《紫微斗数全书》卷一，因此示例将来源结果解包为`source`：
 
 ```{doctest}
->>> from ziwei.knowledge.model import EvidenceAspect
+>>> from ziwei.knowledge import load_catalog
+>>> from ziwei.knowledge.model import EvidenceAspect, PremiseStatus
+>>> catalog = load_catalog()
 >>> source, = catalog.filter_sources(aspect=EvidenceAspect.解释)
 >>> source.id
 'source.quanshu-juan1-wikisource'
@@ -127,14 +129,31 @@ True
 False
 ```
 
-示例用`entries[1]`读取列表中的辅弼条件条目。改为`catalog.find("天府")`可读取另一颗星，
-此时第二条为空亡条件条目。`statement`是仓内归纳，`references()`给出逐字原引，
+示例用`entries[1]`读取列表中的辅弼条件条目。将`catalog.find("紫微")`改为`catalog.find("武曲")`，
+即可读取武曲的星性与同宫条件两条记录。
+星性与条件解释共用`KnowledgeEntry`，没有单独的类别字段；筛选后通过陈述与前提区分内容。
+也可按稳定标识直接读取条目，例如武曲与天府同宫的解释：
+
+```{doctest}
+>>> wuqu = catalog.get("entry.interpretation.wuqu-tianfu")
+>>> print(catalog.references(wuqu.id)[0].quote)
+與天府同宮有壽
+>>> wuqu.premises[-1]
+'武曲与天府同宫。'
+>>> wuqu.premise_status is PremiseStatus.已明确
+True
+>>> wuqu.show_by_default
+False
+```
+
+`statement`是仓内归纳，`references()`给出逐字原引，
 `premises`、`exceptions`与`limits`分别保存条件、例外和解释范围。这些记录说明书中如何称述星曜，
-查询不会检查某张命盘是否满足条件。首批四条均可检索，但不进入默认展示；
+查询不会检查某张命盘是否满足条件。上例的“已明确”只说明条目前提表达明确，武曲条目仍不默认展示。
+全部28条均可检索，但不进入默认展示；
 展示资格与出处、前提状态的区别见[状态说明](#状态需要分开表达)。
 
 来源、文本层次与复核动作见[卷一来源记录](knowledge-reference.md#source.quanshu-juan1-wikisource)
-及其关联条目；首批以外的星曜覆盖由[#77](https://github.com/0xf3cd/ziwei/issues/77)追踪。
+及其关联条目；其他星曜的解释覆盖由[#77](https://github.com/0xf3cd/ziwei/issues/77)追踪。
 
 ## 记录与归属
 

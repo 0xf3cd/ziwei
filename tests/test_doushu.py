@@ -10,6 +10,7 @@ import pickle
 import shutil
 import subprocess
 import sys
+from dataclasses import replace
 from importlib import import_module
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -337,6 +338,38 @@ def runtime_aliases(
   return modules, expectations
 
 
+def test_runtime_consumer_queries_every_major_star(
+  runtime_aliases: tuple[dict[str, Any], Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+  modules, expectations = runtime_aliases
+  catalog_type = modules["ziwei.knowledge.catalog"].Catalog
+  original = catalog_type.find
+  queried: set[str] = set()
+
+  def find(catalog: Any, name: str) -> Any:
+    queried.add(name)
+    return original(catalog, name)
+
+  monkeypatch.setattr(catalog_type, "find", find)
+  doushu_installed_check.main(VERSION, expectations, "doushu")
+  assert queried == {
+    "紫微",
+    "天府",
+    "天机",
+    "太阳",
+    "武曲",
+    "天同",
+    "廉贞",
+    "太阴",
+    "贪狼",
+    "巨门",
+    "天相",
+    "天梁",
+    "七杀",
+    "破军",
+  }
+
+
 @pytest.mark.parametrize(
   "defect, message",
   [
@@ -353,6 +386,8 @@ def runtime_aliases(
     ("enum-pickle", "enum identity"),
     ("record-pickle", "record did not retain"),
     ("knowledge-query", "knowledge query differs"),
+    ("interpretation-missing", "major-star interpretation query differs"),
+    ("interpretation-display", "major-star interpretation query differs"),
     ("chart-type", "chart differs"),
     ("chart-output", "chart differs"),
     ("chinese-query", "Chinese query differs"),
@@ -391,13 +426,26 @@ def test_runtime_consumer_rejects_invalid_contracts(
       modules["doushu"].__file__ = str(ROOT / "src/doushu/__init__.py")
     case "missing-file":
       modules["doushu"].__file__ = None
-    case "native-query" | "knowledge-query":
+    case "native-query" | "knowledge-query" | "interpretation-missing" | "interpretation-display":
       original = modules["ziwei.knowledge"].load_catalog
 
       def load_catalog() -> Any:
         if defect == "native-query":
           monkeypatch.setitem(sys.modules, "celestial_calendar", ModuleType("celestial_calendar"))
           return original()
+        if defect in ("interpretation-missing", "interpretation-display"):
+          catalog = original()
+          return replace(
+            catalog,
+            entries=tuple(
+              replace(item, show_by_default=True)
+              if defect == "interpretation-display"
+              and item.id == "entry.interpretation.pojun-nature"
+              else item
+              for item in catalog.entries
+              if defect != "interpretation-missing" or item.id != "entry.interpretation.pojun-jumen"
+            ),
+          )
         return SimpleNamespace(get=lambda name: SimpleNamespace(id="wrong"))
 
       monkeypatch.setattr(modules["ziwei.knowledge"], "load_catalog", load_catalog)
