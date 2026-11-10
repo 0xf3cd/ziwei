@@ -50,6 +50,7 @@ EXPECTED_RULE_STARS = {
   "variant.tianma.year-branch": (stars.Star.天马,),
   "variant.tianma.month-branch": (stars.Star.天马,),
   "variant.star.hongluan-tianxi-year-branch": (stars.Star.红鸾, stars.Star.天喜),
+  "variant.star.tianxing-tianyao-month": (stars.Star.天刑, stars.Star.天姚),
 }
 
 

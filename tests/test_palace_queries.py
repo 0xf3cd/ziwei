@@ -126,7 +126,7 @@ def test_hand_derived_empty_and_multiple_stars(chart_choices: ChartConfig) -> No
 
 
 def test_hongluan_shengong_is_not_minggong(chart_choices: ChartConfig) -> None:
-  """合成甲午正月初一未时：命未、身酉叠福德；原28星不落酉，新增红鸾在酉。"""
+  """合成甲午正月初一未时：命未、身酉叠福德，红鸾与天刑同宫。"""
   result = create_chart(
     LunarBirthRecord(
       year=1954, month=1, day=1, is_leap_month=False, shichen=Dizhi.未, gender=Gender.女
@@ -138,7 +138,7 @@ def test_hongluan_shengong_is_not_minggong(chart_choices: ChartConfig) -> None:
   assert ming.palace.dizhi is Dizhi.未 and ming.is_shengong is False
   shen = palace_view(result, PalaceName.福德)
   assert shen.palace.dizhi is Dizhi.酉 and shen.is_shengong is True
-  assert tuple(p.star for p in shen.stars) == (Star.红鸾,)
+  assert tuple(p.star for p in shen.stars) == (Star.红鸾, Star.天刑)
   assert (shen.lu, shen.quan, shen.ke, shen.ji) == (None, None, None, None)
   for palace in result.palaces:
     view = palace_view(result, palace.name)

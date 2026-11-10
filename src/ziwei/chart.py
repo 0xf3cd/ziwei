@@ -406,7 +406,7 @@ def liunian_palaces(
 
 
 def chart_brightness(chart: ZiweiChart, *, table: BrightnessTable) -> tuple[BrightnessReading, ...]:
-  """从已有盘读取30星的亮度，保留星位顺序；非主星的level为None。"""
+  """从已有盘读取星曜亮度，保留星位顺序；非主星的level为None。"""
   if not isinstance(chart, ZiweiChart):
     raise TypeError("命盘亮度查询须使用 ZiweiChart")
   return tuple(

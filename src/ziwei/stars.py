@@ -1,4 +1,4 @@
-"""十四主星、六吉六煞、禄存、天马与红鸾天喜的纯函数安星。
+"""本命主星、辅星与杂曜的纯函数安星。
 
 《紫微斗數全書》卷二固定修订1963110给出五局逐日紫微宫格、天府对应及各系安星规则。
 另以王亭之《中州派紫微斗数初级讲义》与《紫微斗數精成》网页转录作对照。
@@ -9,7 +9,7 @@
 本项目采用子时起数、两星顺数到生时的查法，依据讲义例解、《精成》及论坛明文，不归作古籍明文。
 本模块的地空按出生时辰安星；《全书》虽称它为天空，本项目不设这个全局别名，以免与另一颗
 按年支安置的天空混淆。
-辅弼、月马采用所选闰月归属规则，是本项目的组合方式，不代表完整采用某部著作的历法规则。
+辅弼、月马与刑姚使用配置中的月系月份，组合依据见entry.star.month-policy-composition。
 """
 
 from __future__ import annotations
@@ -22,14 +22,14 @@ from ziwei._frame import chart_frame
 from ziwei.bureau import WuxingJu
 from ziwei.config import TianmaRule
 from ziwei.ganzhi import Dizhi, Tiangan
-from ziwei.palaces import month_palace_index, opposite_dizhi
+from ziwei.palaces import effective_month, month_palace_index, opposite_dizhi
 
 if TYPE_CHECKING:
   from ziwei.birth import CalculationInput
 
 
 class Star(StrEnum):
-  """30颗星的名称与中文别名；选择不同的安星规则，不会把同一颗星变成另一颗星。"""
+  """星曜名称与中文别名；选择不同的安星规则，不会把同一颗星变成另一颗星。"""
 
   _concept_id: str
 
@@ -71,6 +71,8 @@ class Star(StrEnum):
   TIANMA = "天马", "concept.star.tianma"
   HONGLUAN = "红鸾", "concept.star.hongluan"
   TIANXI = "天喜", "concept.star.tianxi"
+  TIANXING = "天刑", "concept.star.tianxing"
+  TIANYAO = "天姚", "concept.star.tianyao"
   紫微 = ZIWEI
   天机 = TIANJI
   太阳 = TAIYANG
@@ -101,6 +103,8 @@ class Star(StrEnum):
   天马 = TIANMA
   红鸾 = HONGLUAN
   天喜 = TIANXI
+  天刑 = TIANXING
+  天姚 = TIANYAO
 
   @property
   def concept_id(self) -> str:
@@ -176,10 +180,15 @@ TIANFU_OFFSETS: Final[tuple[tuple[Star, int], ...]] = (
 MAJOR_STARS: Final[tuple[Star, ...]] = tuple(star for star, _ in ZIWEI_OFFSETS + TIANFU_OFFSETS)
 """紫微系六星与天府系八星，次序与主星安星结果相同。"""
 
-_MONTH_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
+_FUBI_MONTH_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
   (Star.左辅, Dizhi.辰, 1),
   (Star.右弼, Dizhi.戌, -1),
 )
+_XINGYAO_MONTH_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
+  (Star.天刑, Dizhi.酉, 1),
+  (Star.天姚, Dizhi.丑, 1),
+)
+_MONTH_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = _FUBI_MONTH_STARS + _XINGYAO_MONTH_STARS
 _HOUR_STARS: Final[tuple[tuple[Star, Dizhi, int], ...]] = (
   (Star.文昌, Dizhi.戌, -1),
   (Star.文曲, Dizhi.辰, 1),
@@ -236,11 +245,19 @@ _TIANFU_SERIES = StarRule(
 _FUBI = StarRule(
   "variant.star.fubi-effective-month",
   "辅弼按有效生月",
-  tuple(star for star, _, _ in _MONTH_STARS),
+  tuple(star for star, _, _ in _FUBI_MONTH_STARS),
   "左辅从辰宫起正月，顺数到生月；右弼从戌宫起正月，逆数到生月。"
   "闰月按所选的闰月归属规则确定安星用的月份。",
   "ziwei.stars.place_month_stars",
   conditions=("月参数须已按所选闰月归属规则确定，不能直接传入尚未处理的闰月月份",),
+)
+_XINGYAO = StarRule(
+  "variant.star.tianxing-tianyao-month",
+  "天刑天姚按生月",
+  tuple(star for star, _, _ in _XINGYAO_MONTH_STARS),
+  "天刑从酉宫起正月，天姚从丑宫起正月，两星均顺数至生月。",
+  "ziwei.stars.place_month_stars",
+  conditions=("月参数须已按所选月系闰月归属规则确定，范围为1至12",),
 )
 _WEN = StarRule(
   "variant.star.wenchang-wenqu-hour",
@@ -330,6 +347,7 @@ STAR_RULES: Final[tuple[StarRule, ...]] = (
   _YEAR_MA,
   _MONTH_MA,
   _HONGLUAN_TIANXI,
+  _XINGYAO,
 )
 """计算、知识目录与参考页共用的规则记录；实现路径只存为字符串，不据此导入或调用函数。"""
 
@@ -404,7 +422,7 @@ def place_major_stars(ju: WuxingJu, day: int) -> tuple[StarPlacement, ...]:
 
 
 def place_month_stars(month: int) -> tuple[StarPlacement, ...]:
-  """按安星用的月份安左辅、右弼，month须在1至12之间。
+  """按月系月份依次安左辅、右弼、天刑与天姚，month须在1至12之间。
 
   闰月须先用effective_month按所选规则确定月份，不能直接把原始闰月月份传入。
   """
@@ -488,11 +506,11 @@ def place_hongluan_tianxi(year_dizhi: Dizhi) -> tuple[StarPlacement, ...]:
 
 
 def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
-  """从解析结果安30星，按Star枚举顺序返回；要求时辰已知，允许性别未知。
+  """从解析结果安星，按Star枚举顺序返回；要求时辰已知，允许性别未知。
 
-  命宫、左辅右弼和月马使用同一个安星月份，
-  由effective_month按所选闰月归属规则确定。选择按前后半月分别归属时，用解析后的农历日
-  判断：初一至十五按本月，十六日起按下月；不把前一个月的天数加到生日上。
+  命身使用leap_month_policy，辅弼、月马与刑姚使用month_star_policy；
+  月系未另指定时跟随命身。两者均由effective_month按解析后的农历日确定月份，
+  半月法初一至十五按本月、十六日起按下月，不累加前月天数。
   闰十二月需要按下月安星等无法处理的组合会抛错，不返回部分结果。
   每颗星只返回一个位置；天马的rule_id保存此次实际使用的规则，不靠日后的默认值还原。
   """
@@ -504,16 +522,19 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
   if value.shichen is None:
     raise ValueError("安星需要已知时辰")
   frame = chart_frame(value)
+  month = effective_month(
+    value.month, value.day, value.is_leap_month, value.config.month_star_policy
+  )
   year = value.year_ganzhi
   if value.config.tianma_rule is TianmaRule.YEAR_BRANCH:
     ma_branch = year.dizhi
   elif value.config.tianma_rule is TianmaRule.MONTH_BRANCH:
-    ma_branch = tuple(Dizhi)[month_palace_index(frame.month)]
+    ma_branch = tuple(Dizhi)[month_palace_index(month)]
   else:
     raise ValueError("不支持的天马查法选择")
   positions = (
     *place_major_stars(frame.bureau, value.day),
-    *place_month_stars(frame.month),
+    *place_month_stars(month),
     *place_hour_stars(value.shichen),
     *place_stem_stars(year.tiangan),
     *place_fire_bell(year.dizhi, value.shichen),

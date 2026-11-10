@@ -4,7 +4,7 @@
 
 在线文档随`main`更新，不固定于某次发行；查阅时请核对安装版本。
 
-`create_chart()`接收原始出生记录和显式口径，先解析，再用同一份计算输入组合十二宫、身宫标记、五行局、30星、生年四化和十二个大限。
+`create_chart()`接收原始出生记录和显式口径，先解析，再用同一份计算输入组合十二宫、身宫标记、五行局、32星、生年四化和十二个大限。
 时辰与性别必须已知；三个口径须显式选择，四化表另由具名参数选择。请求无法完成时整次失败，
 不返回缺星或缺限的部分盘。各组件的规则和来源仍归[安星](stars.md)、[四化与大限](sihua-decades.md)。
 
@@ -25,7 +25,7 @@
 ...   year=2024, month=1, day=1, is_leap_month=False, shichen=Dizhi.子, gender=Gender.女,
 ... )
 >>> choices = ChartConfig(
-...   leap_month_policy=LeapMonthPolicy.全月归本月,
+...   leap_month_policy=LeapMonthPolicy.上半月归本月下半月归下月,
 ...   day_rollover=DayRollover.早晚子时同日,
 ...   year_boundary=YearBoundary.农历正月初一,
 ... )
@@ -42,8 +42,8 @@
 | 福德 戊辰        |                  |                  | 疾厄 癸酉        |
 | 天同             |                  |                  | 紫微             |
 | 左辅             |                  |                  | 贪狼             |
-| 文曲             |                  |                  | 大限 56-65虚岁   |
-| 大限 106-115虚岁 |                  |                  |                  |
+| 文曲             |                  |                  | 天刑             |
+| 大限 106-115虚岁 |                  |                  | 大限 56-65虚岁   |
 +------------------+------------------+------------------+------------------+
 | 父母 丁卯        |                  |                  | 财帛 甲戌        |
 | 擎羊             |                  |                  | 巨门             |
@@ -57,7 +57,8 @@
 | 禄存             | 七杀             | 大限 26-35虚岁   | 地空             |
 | 天马             | 天魁             |                  | 地劫             |
 | 大限 6-15虚岁    | 陀罗             |                  | 红鸾             |
-|                  | 大限 16-25虚岁   |                  | 大限 36-45虚岁   |
+|                  | 天姚             |                  | 大限 36-45虚岁   |
+|                  | 大限 16-25虚岁   |                  |                  |
 +------------------+------------------+------------------+------------------+
 ```
 
@@ -93,7 +94,7 @@
 >>> table = BrightnessTable.全书卷二录文
 >>> readings = chart_brightness(chart, table=table)
 >>> len(readings), sum(item.level is not None for item in readings)
-(30, 14)
+(32, 14)
 >>> text = render_text(chart, brightness_table=table)
 >>> print(text.splitlines()[0])
 火六局 · 大限逆行 · 虚岁首尾包含 · 全书卷二固定录文
@@ -105,7 +106,7 @@ True
 True
 ```
 
-读数顺序与`chart.stars`相同：14颗主星有等级，其余16颗星的`level`为`None`，表示不适用。
+读数顺序与`chart.stars`相同：14颗主星有等级，其余18颗星的`level`为`None`，表示不适用。
 按宫查询仍返回原来的星位，可逐条调用`star_brightness()`，不借入对宫星。
 文本首行与SVG中央标明表名；SVG把等级放在星名下一行，并增加行距，避免与四化标记叠字。
 两种显示省略`brightness_table`或传`None`时都不查询亮度，保留原有输出。
@@ -163,7 +164,7 @@ from pathlib import Path
 Path("chart.svg").write_text(svg, encoding="utf-8")
 ```
 
-SVG沿用外围十二宫布局，显示宫名、干支、现有30星、生年四化、身宫标记与大限虚岁。
+SVG沿用外围十二宫布局，显示宫名、干支、现有32星、生年四化、身宫标记与大限虚岁。
 星曜按原盘顺序从左到右、从上到下排列。所有宫格等高，高度由星数最多的一宫决定。
 空宫保留宫位信息，不借入对宫星曜。
 中央给出五行局、大限方向与岁数约定。选宫时以文字和边框配合颜色区分本宫、两个三合宫和对宫，
@@ -181,6 +182,8 @@ SVG沿用外围十二宫布局，显示宫名、干支、现有30星、生年四
 ## 计算输入与来源信息
 
 `chart.calculation`保留原始出生记录、口径、解析后的农历年月日时与干支纪年，以及此次使用的农历算法和celestial版本。
+`chart.calculation.config.leap_month_policy`和`month_star_policy`分别读取实际命身与月系归月；
+`month_star_leap_month_policy`保留是否显式覆盖，配置方法见[安星指南](stars.md#归月与失败边界)。
 构造`CalculationInput`时，`supported_lunar_year_range`从所选算法取得，结果保存这次支持范围，不接受调用方传入范围。
 星位、四化与大限保留各自的规则标识；规则的定义与来源见所属领域模块和知识目录。
 

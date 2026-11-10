@@ -444,6 +444,28 @@ def check_chart() -> None:
   if table.value not in bright_text.splitlines()[0] or len(grades) != 14:
     raise ValueError("Installed brightness displays are incomplete")
   print("Installed brightness: named table queried; text and SVG consumed")
+  mixed = create_chart(
+    LunarBirthRecord(
+      year=2023, month=2, day=16, is_leap_month=True, shichen=Dizhi.子, gender=Gender.女
+    ),
+    replace(
+      choices,
+      year_boundary=YearBoundary.农历正月初一,
+      month_star_leap_month_policy=LeapMonthPolicy.上半月归本月下半月归下月,
+    ),
+    sihua_variant=SihuaVariant.排命盘口诀转录,
+  )
+  if (
+    mixed.calculation.config.month_star_policy is not LeapMonthPolicy.上半月归本月下半月归下月
+    or mixed.palaces[0].dizhi is not Dizhi.卯
+    or tuple((p.star, p.dizhi, p.rule_id) for p in mixed.stars[-2:])
+    != (
+      (Star.天刑, Dizhi.亥, "variant.star.tianxing-tianyao-month"),
+      (Star.天姚, Dizhi.卯, "variant.star.tianxing-tianyao-month"),
+    )
+    or not all(name in render_text(mixed) for name in ("天刑", "天姚"))
+  ):
+    raise ValueError("Installed xingyao or separate month policy differs")
   print("Installed full chart: calculated, rendered; independent positions and decades checked")
 
 

@@ -689,17 +689,17 @@ SOURCES = (
     id="source.jingcheng-pdf",
     title="紫微斗数精成（PDF下载件）",
     authors=("大德山人（下载件署名）",),
-    edition="SHA256 cec405b5b6f253360dccfb40c939148cf3d7df6f195de6c91045fb051e9ee1cc；物理页与印刷页均为24、32、33、507，版次未核",
+    edition="SHA256 cec405b5b6f253360dccfb40c939148cf3d7df6f195de6c91045fb051e9ee1cc；物理页与页内页码15、16、20、24、32、33、507，版次未核",
     url="https://www.ziweicn.com/book/dade_jc.pdf",
     layer=TextLayer.今人说明,
     lineage_id="lineage.jingcheng-golla",
     provenance="直接核下载件页图和文字；与既有同名网页转录保守归组，载体版本关系尚未校定。",
-    claims="小限起一岁、男顺女逆；童限六宫、进入大限后不再看童限、期间参看小限。",
+    claims="本命闰月归下月总则、含刑姚的月系表；小限起一岁、男顺女逆；童限六宫、进入大限后不再看童限、期间参看小限。",
     limits="只核列明下载件，不认证纸本版次或转载许可。现代停止说法只有一路；当岁包含性未明。第24页女命四岁亥宫与同页规则不符，第32至33页重复该例，仍写四岁亥宫，均不作正确期望。"
     "所载完整四化表在戊、庚、壬的科星与讲义表不同，不能替讲义表认证年度用途。",
     rights="仅收定位所需短引与仓内说明，不转载现代书文或页图。",
     status=SourceStatus.已核,
-    checked_on=date(2026, 10, 31),
+    checked_on=date(2026, 11, 10),
   ),
   Source(
     id="source.quanshu-juan3-wikisource",
@@ -933,6 +933,81 @@ SOURCES = (
     rights="仅必要短引，原书与转载许可未确认，不收全文。",
     status=SourceStatus.待核,
     checked_on=date(2026, 10, 19),
+  ),
+  Source(
+    id="source.jielan-xingyao-tianji",
+    title="紫微斗数捷览：安天姚天刑星诀（天机电子录文）",
+    edition="第30章；2026-11-05取得HTML，SHA256 "
+    "296a595b0e873c772bf5844057225bee5b423be7b219d9d211200190540e6f01",
+    url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/30",
+    layer=TextLayer.原文,
+    lineage_id="lineage.jielan-tianji",
+    provenance="完整章节正文由原HTML流式组件数据提取；与《全书》有共同传统，不计独立传承。",
+    claims="刑姚正月起宫、顺行与正月、二月直接定位例。",
+    limits="纸本版次与录文忠实度未校；本章刑姚段没有闰月定位例。",
+    rights="只收必要古籍短引，不转载完整网页。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 10),
+  ),
+  Source(
+    id="source.iluck-month-stars",
+    title="iLuck紫微斗数命盘排法：月星系",
+    edition="2026-11-05取得HTML，SHA256 "
+    "38eff2a05ecd19a1cdcc6e069b48e28656797c5a311ea62410f1f909702f0afb",
+    url="https://iluck7.com/ZWDS_GB/Tutorial/PaiPan/11-0_YueXi.php",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.iluck-month-stars",
+    provenance="独立成文的现代教学页；不据此认证与古籍源流完全独立。",
+    claims="按出生农历月份查月系星；九月刑巳姚酉直接例与十二个月的完整对照表。",
+    limits="没有规定本项目三种闰月政策；不以普通月表证明闰月选择。",
+    rights="仅必要短引和表中位置事实，不转载现代全文或人物资料。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 10),
+  ),
+  Source(
+    id="source.iztro-leap-month",
+    title="iztro刑姚闰月修正（固定发布源码）",
+    authors=("SylarLong",),
+    edition="npm 2.6.5，gitHead 992fa9d6cc81419b2953aa1bf06840401efd5077",
+    url="https://github.com/SylarLong/iztro/blob/992fa9d6cc81419b2953aa1bf06840401efd5077/src/utils/index.ts",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.iztro-lunar-lite",
+    provenance="核固定源码调用链及同版发布包的合成闰月输出；软件行为与古籍主张分开。",
+    claims="默认fixLeap=true，闰月十六日起加月，修正月实际传到天刑、天姚。",
+    limits="只支持该软件版本的行为；其天马按年支，不能为月马取月作直接例，不证明市场使用份额。",
+    rights="MIT源码，仅收必要一行短引与定位，不复制实现。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 10),
+  ),
+  Source(
+    id="source.destiny-core-month-config",
+    title="destiny-core命身与月系取月配置（固定源码）",
+    authors=("destinynet",),
+    edition="commit 10057908a741153d027f03aae79d9ecf57fdd815",
+    url="https://github.com/destinynet/destiny-core/blob/10057908a741153d027f03aae79d9ecf57fdd815/src/main/kotlin/destiny/core/chinese/ziwei/ZiweiConfig.kt",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.destiny-core",
+    provenance="静态追ZiweiConfig、ZiweiFeature与HouseMonthImpl、HouseFunctions的实际调用。",
+    claims="命身月与月系月可分设，配置静态默认均为本月；月系输入包含辅弼、月马和刑姚。",
+    limits="未执行Kotlin引擎，不认证网站线上默认或流派归属；紫微累加日数是另一个选项。",
+    rights="README声明GPLv3；仅必要配置短引及仓内说明，不复制算法或实现。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 10),
+  ),
+  Source(
+    id="source.lam-leap-month",
+    title="四化簡介（六）：闰月取月讨论",
+    authors=("林赞孙",),
+    edition="作者博客分类页所收全文，2026-11-10取得",
+    url="https://jdmedicalcare.com/category/%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8/%E6%96%97%E6%95%B8%E5%9B%9B%E5%8C%96/",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.lam-leap-month",
+    provenance="作者自站文章，原月主张及天刑位置比较分别核读。",
+    claims="主张闰月整月归原月，并直接讨论天刑五月丑与六月寅的差别。",
+    limits="作者的征验论证不当作统计证明；该段未点名天姚，转述其他作者的规则不升级为其原著。",
+    rights="仅必要政策短引，不转载全文、人物生平或出生资料。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 10),
   ),
   Source(
     id="source.jiuqian-dushu",
@@ -1620,6 +1695,78 @@ CITATIONS = (
     limits="本命安星段的生年支定位；不收后四句吉凶，不据此另定换年界线。",
   ),
   Citation(
+    id="citation.quanshu.tianxing-tianyao",
+    source_id="source.quanshu-wikisource",
+    locator="卷二，安天刑天姚星诀",
+    quote="天刑星从酉上起正月顺至本生月便安之。天姚星从丑上起正月顺至本生月即安之。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="本段只定两星从本生月定位，不单独规定闰月归属。",
+  ),
+  Citation(
+    id="citation.jielan.tianxing-tianyao",
+    source_id="source.jielan-xingyao-tianji",
+    locator="卷之一，第30章，正月直接例；紧接二月例为刑戌、姚寅",
+    quote="假如正月生人，即在丑宫安天姚，酉宫安天刑。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="直接例独立于项目展开表，不据此认定独立传承或闰月规则。",
+  ),
+  Citation(
+    id="citation.iluck.tianxing-month9",
+    source_id="source.iluck-month-stars",
+    locator="月星系，九月直接例；完整表天刑行",
+    quote="天刑位于巳宫。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="例子只用于验证九月天刑位置，完整十二个月的表另核。",
+  ),
+  Citation(
+    id="citation.iluck.tianyao-month9",
+    source_id="source.iluck-month-stars",
+    locator="月星系，九月直接例；完整表天姚行",
+    quote="天姚位于酉宫。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="例子只用于验证九月天姚位置，不反推闰月政策。",
+  ),
+  Citation(
+    id="citation.jingcheng.leap-month-general",
+    source_id="source.jingcheng-pdf",
+    locator="第二章第一节第6项①，物理页15；页16保留本命不符时试半月，页20列刑姚月表",
+    quote="凡遇闰月出生的，作下一个月来推排",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="本命总则与刑姚月表构成同书上下文依据，仍非两星闰月直接盘例；不把斗君流月半分当成本命规则。",
+  ),
+  Citation(
+    id="citation.iztro.leap-month-stars",
+    source_id="source.iztro-leap-month",
+    locator="src/utils/index.ts:131；src/star/location.ts:813-820实际使用修正月安刑姚",
+    quote="const needToAdd = isLeap && fixLeap && lunarDay > 15;",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="byLunar与bySolar默认启用fixLeap；合成2023闰二月十五、十六日两星输出与调用链相合，只作软件变体见证。",
+  ),
+  Citation(
+    id="citation.destiny-core.month-config",
+    source_id="source.destiny-core-month-config",
+    locator="ZiweiConfig.kt:240-242；ZiweiFeature.kt:318-335分设两月，HouseFunctions.kt:251-259安刑姚",
+    quote="override var monthStarsAlgo: MonthAlgo = MonthAlgo.MONTH_FIXED_THIS,",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="命身mainStarsAlgo与月系monthStarsAlgo为不同配置；核静态消费路径，不冒充已执行或网站现版。",
+  ),
+  Citation(
+    id="citation.lam.leap-current",
+    source_id="source.lam-leap-month",
+    locator="《四化簡介》(六)，闰月三说第3项；随后天刑丑、寅比较",
+    quote="閏月作該月計算，不分上半月和下半月。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.查法,),
+    limits="此句为作者赞成的整月原月说，天刑比较另见同段；不能补成天姚或十五、十六日成对书例。",
+  ),
+  Citation(
     id="citation.jielan.hongluan-tianxi-examples",
     source_id="source.jielan-tianji",
     locator="卷之一，第29章安红鸾天喜星诀，甲子及乙丑例；取页面JSON-LD的Article.description，保留所见空格",
@@ -2273,6 +2420,17 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
       "不与其他系统同名星混用。《捷览》同章另引《全书》，不据此认定两路独立传承；"
       "纸本底本与换年明文未核，完整生辰外部盘例未取得。",
     ),
+    "variant.star.tianxing-tianyao-month": (
+      (
+        "citation.quanshu.tianxing-tianyao",
+        "citation.jielan.tianxing-tianyao",
+        "citation.iluck.tianxing-month9",
+        "citation.iluck.tianyao-month9",
+      ),
+      "《全书》口诀、《捷览》正二月直接例及iLuck九月例和十二个月的表支持普通月定位。"
+      "《捷览》与《全书》不作独立传承，iLuck独立成文不认证源流独立。"
+      "闰月另按entry.star.month-policy-composition组合，纸本底本未校；本条不默认展示。",
+    ),
   }
   selected = tuple(rule for rule in rules if rule.tianma_rule is None)
   ids = {rule.id for rule in selected}
@@ -2295,6 +2453,8 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
         if Star.紫微 in rule.stars
         else "取得《全书》安红鸾天喜诀与《捷览》两例的具版次纸本影像，核录文与查法；另取完整生辰和明确配置的外部两星盘例。"
         if Star.红鸾 in rule.stars
+        else "取得《全书》刑姚段与《捷览》第30章具版次影像，核两星起宫与例解；补明确口径的闰月十五、十六日两星成对例。"
+        if Star.天刑 in rule.stars
         else "取得所引电子录文底本与现代讲义具版次原书，核对应规则、查法与例解；同文转录不增独立来源数。"
       ),
       tracking_url=(
@@ -2302,6 +2462,8 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
         if Star.火星 in rule.stars or Star.地空 in rule.stars
         else "https://github.com/0xf3cd/ziwei/issues/54"
         if Star.红鸾 in rule.stars
+        else "https://github.com/0xf3cd/ziwei/issues/86"
+        if Star.天刑 in rule.stars
         else "https://github.com/0xf3cd/ziwei/issues/4"
       ),
     )
@@ -3234,7 +3396,9 @@ ENTRIES = (
     show_by_default=False,
     curation=CurationStatus.待整理,
     alternatives=("闰月例只约束命宫与身宫", "闰月例同时约束其他月系星"),
-    limits="这两种读法讨论的是安身命例的适用范围，并非各有直接出处的规则；同段后文“凡有闰月具要依此为例”是待对照的范围线索，不否认已明确的身命归月。",
+    limits="这两种读法讨论的是《全书》安身命例本身的适用范围，并非各有直接出处的规则；"
+    "同段后文“凡有闰月具要依此为例”是待对照线索。其他作者总则与软件的刑姚闰月先例"
+    "见entry.star.month-policy-composition，不因本条待定而否认那些先例。",
     recheck="取得同版其他月系星的闰月例，核安身命例的归月是否被沿用；不由身命段自行外推。",
     tracking_url=_SOURCE_RESEARCH_URL,
   ),
@@ -3429,23 +3593,33 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.star.month-policy-composition",
-    statement="本项目让左辅右弼、月马和命宫使用按所选闰月规则得到的同一个月份。选择前后半月分别归属时，用解析后的农历日判断：初一至十五按本月，十六日起按下月；不把前一个月的天数加到生日上。",
+    statement="本项目的命身宫按leap_month_policy取月，左辅右弼、月马和刑姚按month_star_policy取月。"
+    "月系未另指定时跟随命身，显式覆盖时分别取月；每组均可选择整月本月、整月下月或十五、十六日分界。"
+    "半月法使用解析后的农历日，不把前月天数加到生日上；推荐示例不改变底层必填口径。",
     concept_ids=(
       Star.左辅.concept_id,
       Star.右弼.concept_id,
       Star.天马.concept_id,
+      Star.天刑.concept_id,
+      Star.天姚.concept_id,
       "concept.palace.minggong",
       "concept.policy.leap-month",
     ),
     variant_ids=tuple(
       rule.id
       for rule in STAR_RULES
-      if Star.左辅 in rule.stars or rule.tianma_rule is TianmaRule.MONTH_BRANCH
+      if Star.左辅 in rule.stars
+      or Star.天刑 in rule.stars
+      or rule.tianma_rule is TianmaRule.MONTH_BRANCH
     ),
     citation_ids=(
       "citation.zhongzhou.leap-split",
       "citation.jingcheng.birth-month",
       "citation.lifedna.leap-current",
+      "citation.jingcheng.leap-month-general",
+      "citation.iztro.leap-month-stars",
+      "citation.destiny-core.month-config",
+      "citation.lam.leap-current",
     ),
     premises=(
       "采用本项目的组合方式，不代表完整采用某部著作或中州派的规则",
@@ -3454,8 +3628,13 @@ ENTRIES = (
     premise_status=PremiseStatus.已明确,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    limits="中州派讲义按闰月前后半月分别归属，《精成》按闰月全月归下月，LifeDNA列出全月归本月选项，这些说法分别记录。本项目的组合不解决《全书》身命闰月例能否用于其他安星段落的争议。闰十二月若需按下月计算，包括前后半月分别归属时的十六日起，会因无对应月份而抛错。",
-    recheck="分别核讲义原书的闰月说明、《精成》原书的准备工作，以及直接采用闰月全月归本月的作者例盘；不把项目的组合方式当作原典所载规则。",
+    limits="讲义转录支持半月通则；《精成》PDF总则与刑姚月表为下月法的书内上下文依据，"
+    "也保留本命不符时试半月。林赞孙直接比较原月天刑，但未给天姚成对例。"
+    "iztro固定版半月修正传到刑姚；destiny-core命身与月系可分设，仅静态核验。"
+    "这些来源不证明跨派共识或实际使用份额。项目分设与继承不裁定《全书》原意，"
+    "也不表示完整采用某派；任一被入口使用的月份需第13月时整次失败，不合成为来年正月。",
+    recheck="核王亭之讲义与《全书》具版次书页；取得明确口径的刑姚闰月十五、十六日成对书例，"
+    "若有区别总则的刑姚专条则复核当前上下文解释；软件升级另核固定版行为。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),
 )

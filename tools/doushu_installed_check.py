@@ -49,6 +49,7 @@ def main(version: str, expectations: Path, first: str) -> None:
   knowledge = import_module("doushu.knowledge")
   render = import_module("doushu.render")
   sihua = import_module("doushu.sihua")
+  stars = import_module("doushu.stars")
 
   if pickle.loads(pickle.dumps(birth.Gender.女)) is not birth.Gender.女:
     raise ValueError("Alias enum identity did not survive pickle")
@@ -126,9 +127,34 @@ def main(version: str, expectations: Path, first: str) -> None:
     or chart_api.流年宫位 is not chart_api.LiunianPalaceView
     or not all(isinstance(row, import_module("ziwei.chart").LiunianPalaceView) for row in rows)
     or not all(row.流年四化 == annual_sihua for row in rows)
-    or sum(len(row.本命宫.星位) for row in rows) != 30
+    or sum(len(row.本命宫.星位) for row in rows) != len(stars.Star)
   ):
     raise ValueError("Installed alias annual palace query differs")
+  monthly_choices = config.ChartConfig(
+    leap_month_policy=config.LeapMonthPolicy.全月归本月,
+    day_rollover=config.DayRollover.早晚子时同日,
+    year_boundary=config.YearBoundary.农历正月初一,
+    month_star_leap_month_policy=config.LeapMonthPolicy.上半月归本月下半月归下月,
+  )
+  monthly = chart_api.create_chart(
+    birth.LunarBirthRecord(
+      year=2023,
+      month=2,
+      day=16,
+      is_leap_month=True,
+      shichen=ganzhi.Dizhi.子,
+      gender=birth.Gender.女,
+    ),
+    monthly_choices,
+    sihua_variant=sihua.SihuaVariant.排命盘口诀转录,
+  )
+  if monthly.计算输入.命盘配置.month_star_policy is not monthly_choices.month_star_policy or tuple(
+    (p.星曜, p.地支) for p in monthly.星位[-2:]
+  ) != (
+    (stars.星曜.天刑, ganzhi.地支.亥),
+    (stars.星曜.天姚, ganzhi.地支.卯),
+  ):
+    raise ValueError("Installed alias xingyao or month policy differs")
   print(
     f"Installed doushu {version}; {len(names)} modules/{count} original objects; first={first}; optimized={sys.flags.optimize}"
   )
