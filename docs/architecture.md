@@ -23,7 +23,7 @@ src/ziwei/
   palaces.py        命宫、身宫、十二宫与宫干
   _frame.py         命身月份、命宫与五行局的包内共享推导
   bureau.py         五行局
-  stars.py          主星与辅星的安星表
+  stars.py          主星、辅星与杂曜的安星表
   brightness.py     已有星位的具名亮度表与只读查询
   sihua.py          生年四化的具名变体
   decades.py        大限的顺逆与起止

@@ -689,12 +689,12 @@ SOURCES = (
     id="source.jingcheng-pdf",
     title="紫微斗数精成（PDF下载件）",
     authors=("大德山人（下载件署名）",),
-    edition="SHA256 cec405b5b6f253360dccfb40c939148cf3d7df6f195de6c91045fb051e9ee1cc；物理页与页内页码15、16、20、24、32、33、507，版次未核",
+    edition="SHA256 cec405b5b6f253360dccfb40c939148cf3d7df6f195de6c91045fb051e9ee1cc；物理页与页内页码15、16、20、24、29、32、33、507，版次未核",
     url="https://www.ziweicn.com/book/dade_jc.pdf",
     layer=TextLayer.今人说明,
     lineage_id="lineage.jingcheng-golla",
     provenance="直接核下载件页图和文字；与既有同名网页转录保守归组，载体版本关系尚未校定。",
-    claims="本命闰月归下月总则、含刑姚的月系表；小限起一岁、男顺女逆；童限六宫、进入大限后不再看童限、期间参看小限。",
+    claims="本命闰月归下月总则、含刑姚的月系表与安刑姚诀；小限起一岁、男顺女逆；童限六宫、进入大限后不再看童限、期间参看小限。",
     limits="只核列明下载件，不认证纸本版次或转载许可。现代停止说法只有一路；当岁包含性未明。第24页女命四岁亥宫与同页规则不符，第32至33页重复该例，仍写四岁亥宫，均不作正确期望。"
     "所载完整四化表在戊、庚、壬的科星与讲义表不同，不能替讲义表认证年度用途。",
     rights="仅收定位所需短引与仓内说明，不转载现代书文或页图。",
@@ -937,12 +937,13 @@ SOURCES = (
   Source(
     id="source.jielan-xingyao-tianji",
     title="紫微斗数捷览：安天姚天刑星诀（天机电子录文）",
+    authors=("陈希夷（网页题署）", "白玉蟾（网页题署增辑）"),
     edition="第30章；2026-11-05取得HTML，SHA256 "
     "296a595b0e873c772bf5844057225bee5b423be7b219d9d211200190540e6f01",
     url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/30",
     layer=TextLayer.原文,
     lineage_id="lineage.jielan-tianji",
-    provenance="完整章节正文由原HTML流式组件数据提取；与《全书》有共同传统，不计独立传承。",
+    provenance="完整章节正文由原HTML流式组件数据提取；作者字段只录网页题署，不认定历史作者。与《全书》有共同传统，不计独立传承。",
     claims="刑姚正月起宫、顺行与正月、二月直接定位例。",
     limits="纸本版次与录文忠实度未校；本章刑姚段没有闰月定位例。",
     rights="只收必要古籍短引，不转载完整网页。",
@@ -1731,6 +1732,15 @@ CITATIONS = (
     limits="例子只用于验证九月天姚位置，不反推闰月政策。",
   ),
   Citation(
+    id="citation.jingcheng.tianxing-tianyao",
+    source_id="source.jingcheng-pdf",
+    locator="物理页29，安天刑诀、安天姚诀",
+    quote="安天刑诀：从酉宫起正月，顺数至生月宫止，所在宫即是。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="短引为天刑；下一行天姚从丑宫起正月顺数，两星普通月定位与现行规则相同。闰月另见本书第15至16页总则，不把本段当作闰月直接例。",
+  ),
+  Citation(
     id="citation.jingcheng.leap-month-general",
     source_id="source.jingcheng-pdf",
     locator="第二章第一节第6项①，物理页15；页16保留本命不符时试半月，页20列刑姚月表",
@@ -2379,7 +2389,7 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
     ),
     "variant.star.fubi-effective-month": (
       ("citation.quanshu.fubi", "citation.zhongzhou.fubi-wen-kongjie"),
-      "辅弼的基本安法见《全书》与中州派讲义。让它们采用所选闰月归属规则是项目的选择；《全书》安身命段的闰月例能否用于其他月系星，仍待核实。",
+      "辅弼的基本安法见《全书》与中州派讲义。安星月份按ChartConfig.month_star_policy确定，组合依据见entry.star.month-policy-composition；《全书》安身命段的闰月例能否用于其他月系星，仍待核实。",
     ),
     "variant.star.wenchang-wenqu-hour": (
       ("citation.quanshu.wenchang-wenqu", "citation.zhongzhou.fubi-wen-kongjie"),
@@ -2426,8 +2436,9 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
         "citation.jielan.tianxing-tianyao",
         "citation.iluck.tianxing-month9",
         "citation.iluck.tianyao-month9",
+        "citation.jingcheng.tianxing-tianyao",
       ),
-      "《全书》口诀、《捷览》正二月直接例及iLuck九月例和十二个月的表支持普通月定位。"
+      "《全书》口诀、《捷览》正二月直接例、iLuck九月例和十二个月的表及《精成》安刑姚诀支持普通月定位。"
       "《捷览》与《全书》不作独立传承，iLuck独立成文不认证源流独立。"
       "闰月另按entry.star.month-policy-composition组合，纸本底本未校；本条不默认展示。",
     ),
@@ -3339,7 +3350,7 @@ ENTRIES = (
     premise_status=PremiseStatus.已明确,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    limits="两页三合月口诀同文，按一路文本计，传承关系与原书版本未核，不认定为两路独立出处。让月马采用所选闰月归属规则，是项目的选择。",
+    limits="两页三合月口诀同文，按一路文本计，传承关系与原书版本未核，不认定为两路独立出处。安星月份按ChartConfig.month_star_policy确定，组合依据见entry.star.month-policy-composition。",
     recheck="取得《精成》原书的准备工作与按月安天马段，核对网页转录；再找一路独立成文、明确按农历生月查天马的证据。",
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
   ),

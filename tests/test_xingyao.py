@@ -103,7 +103,7 @@ def test_xingyao_ownership_and_knowledge(star: Star) -> None:
   assert rule.id == RULE
   entry = catalog.get("entry.star.tianxing-tianyao-month")
   assert isinstance(entry, KnowledgeEntry) and not entry.show_by_default
-  assert len(catalog.references(entry.id)) == 4
+  assert len(catalog.references(entry.id)) == 5
   composition = catalog.get("entry.star.month-policy-composition")
   assert isinstance(composition, KnowledgeEntry)
   assert star.concept_id in composition.concept_ids and RULE in composition.variant_ids

@@ -247,9 +247,9 @@ _FUBI = StarRule(
   "辅弼按有效生月",
   tuple(star for star, _, _ in _FUBI_MONTH_STARS),
   "左辅从辰宫起正月，顺数到生月；右弼从戌宫起正月，逆数到生月。"
-  "闰月按所选的闰月归属规则确定安星用的月份。",
+  "闰月按所选月系口径确定安星用的月份，见ChartConfig.month_star_policy。",
   "ziwei.stars.place_month_stars",
-  conditions=("月参数须已按所选闰月归属规则确定，不能直接传入尚未处理的闰月月份",),
+  conditions=("月参数须已按所选月系闰月归属规则确定，不能直接传入尚未处理的闰月月份",),
 )
 _XINGYAO = StarRule(
   "variant.star.tianxing-tianyao-month",
@@ -320,7 +320,9 @@ _MONTH_MA = StarRule(
   "把农历生月对应到地支，再按所属三合组查天马，不按节气划分月份。"
   "作为可选的月支天马规则执行，来源与同文限度见知识目录。",
   "ziwei.stars.tianma_dizhi",
-  conditions=("安星用的月份按所选闰月归属规则确定；这是项目组合，不代表采用原书的整套历法规则",),
+  conditions=(
+    "安星用的月份按所选月系闰月归属规则确定；组合依据见entry.star.month-policy-composition",
+  ),
   tianma_rule=TianmaRule.MONTH_BRANCH,
 )
 _HONGLUAN_TIANXI = StarRule(
