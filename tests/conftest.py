@@ -72,7 +72,7 @@ def civil_chart(chart_choices: ChartConfig) -> ZiweiChart:
 
 @pytest.fixture
 def expected_1954() -> dict[Star, Dizhi]:
-  """2007论坛《排命盘口诀》排命盘举例第1至13步中已实现的28星；原著/底本未核。"""
+  """断言2007论坛《排命盘口诀》排命盘举例第1至13步中的28星；原著/底本未核。"""
   return {
     Star.紫微: Dizhi.戌,
     Star.天机: Dizhi.酉,

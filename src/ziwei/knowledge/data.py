@@ -2440,6 +2440,7 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
       ),
       "《全书》口诀、《捷览》正二月直接例、iLuck九月例和十二个月的表及《精成》安刑姚诀支持普通月定位。"
       "《捷览》与《全书》不作独立传承，iLuck独立成文不认证源流独立。"
+      "《精成》同列上述安法，和其他材料的传承关系未核。"
       "闰月另按entry.star.month-policy-composition组合，纸本底本未校；本条不默认展示。",
     ),
   }
