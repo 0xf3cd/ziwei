@@ -1,7 +1,7 @@
 """三个独立口径均需显式给出。"""
 
 import json
-from dataclasses import FrozenInstanceError, asdict, fields
+from dataclasses import FrozenInstanceError, asdict, fields, replace
 from itertools import product
 from typing import Any, get_args, get_type_hints
 
@@ -30,12 +30,14 @@ def test_all_independent_combinations() -> None:
       "day_rollover": config.day_rollover,
       "year_boundary": config.year_boundary,
       "tianma_rule": TianmaRule.年支天马,
+      "month_star_leap_month_policy": None,
     }
     assert json.loads(json.dumps(asdict(config), ensure_ascii=False)) == {
       "leap_month_policy": config.leap_month_policy.value,
       "day_rollover": config.day_rollover.value,
       "year_boundary": config.year_boundary.value,
       "tianma_rule": TianmaRule.年支天马.value,
+      "month_star_leap_month_policy": None,
     }
     field = "year_boundary"
     with pytest.raises(FrozenInstanceError):
@@ -48,6 +50,7 @@ def test_policy_registry_matches_the_config_fields_and_type_alias() -> None:
   assert tuple(annotations[field.name] for field in fields(ChartConfig)) == (
     *POLICY_ENUMS,
     TianmaRule,
+    LeapMonthPolicy | None,
   )
   assert not isinstance(TianmaRule.年支天马, PolicyOption)
   for enumeration in POLICY_ENUMS:
@@ -108,4 +111,35 @@ def test_tianma_selection_does_not_accept_other_values(invalid: Any) -> None:
       day_rollover=DayRollover.早晚子时同日,
       year_boundary=YearBoundary.农历正月初一,
       tianma_rule=invalid,
+    )
+
+
+def test_month_star_policy_follows_unless_explicitly_overridden() -> None:
+  config = ChartConfig(
+    leap_month_policy=LeapMonthPolicy.全月归本月,
+    day_rollover=DayRollover.早晚子时同日,
+    year_boundary=YearBoundary.农历正月初一,
+  )
+  assert config.month_star_leap_month_policy is None
+  assert config.month_star_policy is LeapMonthPolicy.全月归本月
+  changed = replace(config, leap_month_policy=LeapMonthPolicy.全月归下月)
+  assert changed.month_star_policy is LeapMonthPolicy.全月归下月
+  explicit = replace(config, month_star_leap_month_policy=LeapMonthPolicy.全月归本月)
+  assert replace(explicit, leap_month_policy=LeapMonthPolicy.全月归下月).month_star_policy is (
+    LeapMonthPolicy.全月归本月
+  )
+  assert replace(explicit, month_star_leap_month_policy=None) == config
+  attribute = "month_star_policy"
+  with pytest.raises((AttributeError, TypeError)):
+    setattr(config, attribute, LeapMonthPolicy.全月归下月)
+
+
+@pytest.mark.parametrize("invalid", [True, False, 0, "全月归本月", [], YearBoundary.立春])
+def test_month_star_policy_does_not_coerce(invalid: Any) -> None:
+  with pytest.raises(TypeError, match="月系闰月口径"):
+    ChartConfig(
+      leap_month_policy=LeapMonthPolicy.全月归本月,
+      day_rollover=DayRollover.早晚子时同日,
+      year_boundary=YearBoundary.农历正月初一,
+      month_star_leap_month_policy=invalid,
     )

@@ -60,8 +60,9 @@ True
 
 例如，[月支天马](knowledge-reference.md#entry.tianma.month-branch)按所见网页的农历生月口径登记；
 [闰月例能否用于同书其他安星段落](knowledge-reference.md#entry.leap-month.month-stars-scope)仍保留两种读法。
-本项目让左辅右弼、月马和命宫使用同一种闰月处理方式，调用者可在三种闰月归属选项中选择，
-另记为[项目组合](knowledge-reference.md#entry.star.month-policy-composition)。这项实现选择不用于判定古籍原意。
+调用者可分别选择命身与月系归月；月系未另指定时跟随命身，辅弼、月马与刑姚共用月系选择，
+见[项目组合](knowledge-reference.md#entry.star.month-policy-composition)及[配置示例](stars.md#归月与失败边界)。
+条目并列记录书本上下文和固定软件行为，推荐半月法不改变默认展示资格。
 [晚子时归次日](knowledge-reference.md#entry.day-rollover.late-zi)登记项目已有选项，但不编造其外部出处。
 [换年](knowledge-reference.md#concept.policy.year-boundary)区分正月初一与立春：前者记录《精成》网页的春节生年句，
 后者只登记项目已有选项。历书能给立春时刻，不能证明术数应采用立春换年。
@@ -193,7 +194,7 @@ False
 支持层次、该处文本层与限度；同一来源的原文与注文可分别标记。同一本资料的多处引文共享来源，不复制一份版本信息。
 `KnowledgeEntry.statement`保存整理者的陈述；逐字原文单独保存在`Citation.quote`。
 `RuleVariant.option`只关联闰月归属、子时换日和换年界线的枚举选项；`implementation`可保存已实现规则的公开对象路径，
-查询时不动态导入或运行。30星的概念标识、规则标识、公开实现链接从`stars`定义引用，
+查询时不动态导入或运行。32星的概念标识、规则标识、公开实现链接从`stars`定义引用，
 完整四化表与大限也链接所属模块的执行入口；既有单行四化异文和魁钺古籍异文仍保留`implementation=None`，
 不因某行与执行表相同就改变原记录的含义。完整表、盘例与转录限度见[四化与大限](sihua-decades.md)。
 口径概念的`options`从配置定义取值；目录拒绝把变体链接到该概念之外的配置选项。

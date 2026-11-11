@@ -1,4 +1,4 @@
-"""安星月份、命宫与五行局的包内共享推导，供命盘、安星与大限入口使用。"""
+"""命身月份、命宫与五行局的包内共享推导，供命盘、安星与大限入口使用。"""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ class ChartFrame:
 
 
 def chart_frame(value: CalculationInput) -> ChartFrame:
-  """推导安星月份、命宫与五行局；调用方先核输入类型与已知时辰，允许性别未知。"""
+  """推导命身月份、命宫与五行局；调用方先核输入类型与已知时辰，允许性别未知。"""
   month = effective_month(
     value.month, value.day, value.is_leap_month, value.config.leap_month_policy
   )

@@ -618,6 +618,27 @@ def test_installed_consumer_rejects_consistent_wrong_positions(
     installed_check.check_chart()
 
 
+@pytest.mark.parametrize("defect", ["policy", "position"])
+def test_installed_consumer_rejects_faulty_month_policy(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  def faulty(*args: Any, **kwargs: Any) -> ZiweiChart:
+    chart = create_chart(*args, **kwargs)
+    if chart.calculation.is_leap_month:
+      if defect == "policy":
+        object.__setattr__(chart.calculation.config, "month_star_leap_month_policy", None)
+      else:
+        positions = tuple(
+          replace(p, dizhi=Dizhi.子) if p.star is Star.天刑 else p for p in chart.stars
+        )
+        object.__setattr__(chart, "stars", positions)
+    return chart
+
+  monkeypatch.setattr(installed_check, "create_chart", faulty)
+  with pytest.raises(ValueError, match="Installed xingyao"):
+    installed_check.check_chart()
+
+
 @pytest.mark.parametrize(
   "kind", ["no_provenance", "wrong_package", "wrong_iana", "wrong_offset", "gap", "fold"]
 )

@@ -72,7 +72,8 @@ def test_external_1954_full_chart(
   """http://www.zhongyi999.com.cn/thread-1744-1-1.html，举例1-13步；底本未核。
 
   1954九月初七子时男命，甲午、火六局、命身同戌。第22步正文列前九限，末三限按规则推得，表23图未核。
-  年马/月马此例相同，不用于证明切换。外部观测只含28星，不据此验证新增的红鸾、天喜。
+  年马/月马此例相同，不用于证明切换。本测试逐项断言其中28星；原例第11步另列刑姚、
+  第15步另列红鸾天喜，未纳入此期望表。
   """
   assert lunar_chart.bureau is WuxingJu.火六局
   assert lunar_chart.shengong is Dizhi.戌

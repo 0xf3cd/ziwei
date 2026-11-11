@@ -1,8 +1,8 @@
-# 30星安星
+# 32星安星
 
 [API参考](api.md#安星) · [出生输入](birth.md) · [知识查询](knowledge.md) · [项目入口](../README.md)
 
-`place_stars()`从解析后的`CalculationInput`安30星：十四主星、六吉、六煞、禄存、天马与红鸾天喜。
+`place_stars()`从解析后的`CalculationInput`安32星：十四主星、六吉、六煞、禄存、天马、红鸾天喜与天刑天姚。
 红鸾／天喜自0.3.0起提供，0.2.0的星集仍为28星。
 返回不可变元组，每项保存星曜`Star`、所在宫位的地支`dizhi`和实际使用的规则标识`rule_id`。
 每颗星只有一个位置，不同星可以落在同一宫。
@@ -33,7 +33,7 @@
 >>> positions = place_stars(value)
 >>> horse = next(position for position in positions if position.star is Star.天马)
 >>> len(positions), horse.dizhi.value, horse.rule_id
-(30, '寅', 'variant.tianma.year-branch')
+(32, '寅', 'variant.tianma.year-branch')
 >>> Star.天马.concept_id
 'concept.star.tianma'
 ```
@@ -81,7 +81,7 @@ True
 
 各组也可单独计算，返回的星位均带规则标识：
 
-- `place_month_stars()`接收按闰月归属规则处理后的月份（1至12），安左辅、右弼。
+- `place_month_stars()`接收按月系闰月规则处理后的月份（1至12），依次安左辅、右弼、天刑、天姚。
 - `place_hour_stars()`按时辰安文昌、文曲、地空、地劫。
 - `place_stem_stars()`按年干安天魁、天钺、禄存、擎羊、陀罗；天魁、天钺使用现代资料的表。
 - `place_fire_bell()`按年支与时辰安火星、铃星。
@@ -104,20 +104,54 @@ True
 该位置与《捷览》乙丑直接例一致，但例子没有完整出生年月日时或年界配置。
 直接例、口诀展开与合成完整盘的证明范围分开，见[红鸾天喜条目](knowledge-reference.md#entry.star.hongluan-tianxi-year-branch)。
 
+## 天刑与天姚
+
+天刑从酉起正月、天姚从丑起正月，两星均顺行到生月。可以从分组函数读取：
+
+```{doctest}
+>>> from ziwei.stars import place_month_stars
+>>> [(p.star.value, p.dizhi.value) for p in place_month_stars(9)[-2:]]
+[('天刑', '巳'), ('天姚', '酉')]
+>>> place_month_stars(9)[-1].rule_id
+'variant.star.tianxing-tianyao-month'
+```
+
+这个位置与iLuck九月直接例相同。两星没有生年四化或本库亮度等级；从完整盘按宫读取时仍是普通星位，
+文本与SVG盘面都会显示这两颗星。定位依据见[刑姚条目](knowledge-reference.md#entry.star.tianxing-tianyao-month)。
+
 ## 归月与失败边界
 
-`place_stars()`不重新换算历法。它先用`effective_month()`按所选闰月归属规则确定安星用的月份，
-再将这个月份用于命宫、左辅右弼和月马。选择`LeapMonthPolicy.上半月归本月下半月归下月`时，用解析后的农历日判断：
-初一至十五按本月，十六日起按下月。
-让这些星曜和命宫共用同一种闰月处理方式，是本项目的选择，不代表完整采用某部古籍或中州派的规则；
-子时是否换日仍由解析层按另一项配置处理。
+`leap_month_policy`选择命身取月；`month_star_leap_month_policy`可另选辅弼、月马与刑姚取月，
+省略或传`None`时跟随命身。两组都支持整月本月、整月下月与半月法；半月法推荐作为起步示例，
+构造配置时仍须显式选择闰月、子时和年界，不会自动套用一整套流派规则。
 
-例如闰四月，按四月计算时，左辅、右弼都在未宫；按五月计算时，左辅在申宫、右弼在午宫。
-改用月马（`tianma_rule=TianmaRule.月支天马`）时，月马按四月在亥宫，按五月在申宫。
-选择前后半月分别归属时，解析后的十五日仍按四月，十六日起按五月。
+下面用合成的2023闰二月十六日，命身按本月、月系按半月法，刑姚便使用三月：
+
+```{doctest}
+>>> mixed_config = replace(config,
+...   month_star_leap_month_policy=LeapMonthPolicy.上半月归本月下半月归下月,
+... )
+>>> mixed_record = LunarBirthRecord(year=2023, month=2, day=16, is_leap_month=True,
+...   shichen=Dizhi.子, gender=Gender.未知)
+>>> mixed_input = resolve(mixed_record, mixed_config)
+>>> [(p.star.value, p.dizhi.value) for p in place_stars(mixed_input)[-2:]]
+[('天刑', '亥'), ('天姚', '卯')]
+>>> mixed_input.config.leap_month_policy.value, mixed_input.config.month_star_policy.value
+('全月归本月', '上半月归本月、下半月归下月')
+>>> replace(mixed_config, month_star_leap_month_policy=None).month_star_policy.value
+'全月归本月'
+```
+
+未指定月系时，`dataclasses.replace()`修改命身口径也会改变月系；已经显式指定的月系则保持自己的选择。
+月系覆盖不影响命身宫、五行局、主星或大限，年支天马也不受影响。组合依据与不同说法见
+[归月条目](knowledge-reference.md#entry.star.month-policy-composition)。
+
+两组都用`effective_month()`确定月份；选择半月法时，按解析后的农历日判断，初一至十五按本月、十六日起按下月。
+子时换日由解析层先处理，紫微仍用解析后的日数，不累加前月天数。
 
 闰十二月若需要按下月计算，就没有可用的第13月；这也包括前后半月分别归属时的十六日起。
-此时整次安星抛错，不自行改作来年正月，也不返回部分星位。只按五行局与生日计算的主星函数仍可单独调用。
+命身或月系需要第13月时整次安星抛错，不自行改作来年正月，也不返回部分星位。
+大限入口只需命身月份，不需要月系月份；只按五行局与生日计算的主星函数仍可单独调用。
 
 公开函数拒绝错误枚举、`bool`冒充整数、越界月份与日期。未知时辰不代填子时；
 农历不存在的月日由解析层拒绝。普通运行与`python -O`校验一致。

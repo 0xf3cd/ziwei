@@ -335,7 +335,7 @@ celestial-calendar 的具体适配；导入本模块不初始化 celestial 原�
 
 ## 安星
 
-[30星用法、来源与失败边界](stars.md) · [定义生成的安星参考表](knowledge-reference.md#implemented-stars)
+[32星用法、来源与失败边界](stars.md) · [定义生成的安星参考表](knowledge-reference.md#implemented-stars)
 
 ```{eval-rst}
 .. automodule:: ziwei.stars

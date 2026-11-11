@@ -319,8 +319,26 @@ def runtime_aliases(
     sihua_variant=modules["ziwei.sihua"].SihuaVariant.排命盘口诀转录,
   )
 
-  def create_chart(*args: object, **kwargs: object) -> ZiweiChart:
-    return chart
+  monthly = modules["ziwei.chart"].create_chart(
+    birth.LunarBirthRecord(
+      year=2023,
+      month=2,
+      day=16,
+      is_leap_month=True,
+      shichen=modules["ziwei.ganzhi"].Dizhi.子,
+      gender=birth.Gender.女,
+    ),
+    config.ChartConfig(
+      leap_month_policy=config.LeapMonthPolicy.全月归本月,
+      day_rollover=config.DayRollover.早晚子时同日,
+      year_boundary=config.YearBoundary.农历正月初一,
+      month_star_leap_month_policy=config.LeapMonthPolicy.上半月归本月下半月归下月,
+    ),
+    sihua_variant=modules["ziwei.sihua"].SihuaVariant.排命盘口诀转录,
+  )
+
+  def create_chart(*args: Any, **kwargs: Any) -> ZiweiChart:
+    return monthly if args[0].is_leap_month else chart
 
   monkeypatch.setattr(modules["ziwei.chart"], "create_chart", create_chart)
   modules["doushu.chart"].create_chart = create_chart
@@ -395,6 +413,7 @@ def test_runtime_consumer_queries_every_major_star(
     ("annual-sihua", "Installed annual Chinese sihua differs"),
     ("annual-native", "Annual sihua initialized"),
     ("annual-palace", "Installed alias annual palace query differs"),
+    ("month-policy", "Installed alias xingyao or month policy differs"),
   ],
 )
 def test_runtime_consumer_rejects_invalid_contracts(
@@ -497,6 +516,17 @@ def test_runtime_consumer_rejects_invalid_contracts(
       monkeypatch.setattr(
         modules["ziwei.chart"].LiunianPalaceView, "流年四化", property(lambda _: None)
       )
+    case "month-policy":
+      original = modules["ziwei.chart"].create_chart
+
+      def wrong_month(*args: Any, **kwargs: Any) -> ZiweiChart:
+        result: ZiweiChart = original(*args, **kwargs)
+        if args[0].is_leap_month:
+          object.__setattr__(result.calculation.config, "month_star_leap_month_policy", None)
+        return result
+
+      monkeypatch.setattr(modules["ziwei.chart"], "create_chart", wrong_month)
+      modules["doushu.chart"].create_chart = wrong_month
   if message is None:
     doushu_installed_check.main(version, expectations, first)
   else:

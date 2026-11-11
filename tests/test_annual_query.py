@@ -169,7 +169,7 @@ def test_all_natal_content_and_annual_marks_are_preserved_separately(
   rows = liunian_palaces(lunar_chart, year, sihua_variant=VARIANT)
   assert len(rows) == len({row.name for row in rows}) == len({row.dizhi for row in rows}) == 12
   positions = tuple(position for row in rows for position in row.natal.stars)
-  assert len(positions) == len(lunar_chart.stars) == 30
+  assert len(positions) == len(lunar_chart.stars) == len(Star)
   assert {p.star: p for p in positions} == {p.star: p for p in lunar_chart.stars}
   assert all(any(p is original for original in lunar_chart.stars) for p in positions)
   assert sum(row.natal.is_shengong for row in rows) == 1

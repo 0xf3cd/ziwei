@@ -112,6 +112,8 @@ def test_twelve_months(month: int) -> None:
   expected = {
     Star.左辅: Dizhi("辰巳午未申酉戌亥子丑寅卯"[month - 1]),
     Star.右弼: Dizhi("戌酉申未午巳辰卯寅丑子亥"[month - 1]),
+    Star.天刑: Dizhi("酉戌亥子丑寅卯辰巳午未申"[month - 1]),
+    Star.天姚: Dizhi("丑寅卯辰巳午未申酉戌亥子"[month - 1]),
   }
   assert {item.star: item.dizhi for item in place_month_stars(month)} == expected
   month_branch = Dizhi("寅卯辰巳午未申酉戌亥子丑"[month - 1])
@@ -215,6 +217,8 @@ def test_star_aliases_identity_json_and_no_global_tiankong() -> None:
     "天马",
     "红鸾",
     "天喜",
+    "天刑",
+    "天姚",
   )
   pinyin = (
     "ZIWEI",
@@ -247,12 +251,14 @@ def test_star_aliases_identity_json_and_no_global_tiankong() -> None:
     "TIANMA",
     "HONGLUAN",
     "TIANXI",
+    "TIANXING",
+    "TIANYAO",
   )
   for name, member in zip(chinese, pinyin, strict=True):
     assert Star.__members__[name] is Star.__members__[member]
     assert Star.__members__[name].value == name
     assert Star.__members__[name].concept_id == "concept.star." + member.lower()
-  assert len(Star) == 30
+  assert len(Star) == 32
   assert "天空" not in Star.__members__
   assert json.loads(json.dumps(list(Star), ensure_ascii=False)) == list(chinese)
 
@@ -427,7 +433,9 @@ cases = [lambda: ziwei_dizhi(WuxingJu.水二局, True),
    lambda: place_hongluan_tianxi('子'),
   lambda: tianma_dizhi('子'), lambda: tianfu_dizhi('子'),
   lambda: place_stars(replace(value, shichen=None)), lambda: place_stars(None),
-  lambda: replace(config, tianma_rule='年支天马'),
+   lambda: replace(config, tianma_rule='年支天马'),
+   lambda: replace(config, month_star_leap_month_policy=True),
+   lambda: StarPlacement(Star.天刑, Dizhi.酉, 'variant.star.fubi-effective-month'),
   lambda: StarPlacement(Star.天马, Dizhi.寅, place_major_stars(WuxingJu.水二局, 1)[0].rule_id),
   lambda: StarPlacement('紫微', Dizhi.寅, 'variant.unknown')]
 for action in cases:
@@ -447,4 +455,4 @@ print('checked=' + str(len(cases)))
     check=False,
   )
   assert result.returncode == 0, result.stdout + result.stderr
-  assert "checked=20" in result.stdout
+  assert "checked=22" in result.stdout
