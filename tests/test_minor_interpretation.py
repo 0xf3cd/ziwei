@@ -20,6 +20,7 @@ from ziwei.knowledge.model import (
   EvidenceAspect,
   KnowledgeEntry,
   PremiseStatus,
+  Source,
 )
 
 
@@ -37,6 +38,12 @@ def minor_reference() -> dict[str, Any]:
 
 def _check_minor(catalog: Catalog, reference: dict[str, Any]) -> None:
   assert catalog.find("天空") == ()
+  source = catalog.get(reference["source_id"])
+  assert isinstance(source, Source)
+  assert all(
+    section in source.claims
+    for section in ("十四主星", "天空地劫", "天伤天使", "天刑", "天姚", "天哭天虚")
+  )
   for row in reference["entries"]:
     entry = catalog.get("entry.interpretation." + row["suffix"])
     assert isinstance(entry, KnowledgeEntry)
@@ -75,6 +82,22 @@ def test_five_sections_each_have_nature_and_condition(minor_reference: dict[str,
   for section in {row["section"] for row in rows}:
     assert {row["kind"] for row in rows if row["section"] == section} == {"nature", "condition"}
   _check_minor(load_catalog(), minor_reference)
+
+
+def test_minor_source_scope_rejects_stale_claims(minor_reference: dict[str, Any]) -> None:
+  catalog = load_catalog()
+  _check_minor(catalog, minor_reference)
+  changed = replace(
+    catalog,
+    sources=tuple(
+      replace(source, claims="支持所列十四主星星性及带条件解释的实际措辞。")
+      if source.id == minor_reference["source_id"]
+      else source
+      for source in catalog.sources
+    ),
+  )
+  with pytest.raises(AssertionError):
+    _check_minor(changed, minor_reference)
 
 
 @pytest.mark.parametrize("index", range(10))

@@ -1,4 +1,4 @@
-"""哭虚外表、固定伤使与完整盘消费分别验收。"""
+"""哭虚外部年支表、固定伤使与完整盘消费分别验收。"""
 
 from dataclasses import replace
 from datetime import date, time, timedelta
