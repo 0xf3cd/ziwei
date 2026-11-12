@@ -1,8 +1,8 @@
-# 32星安星
+# 36星安星
 
 [API参考](api.md#安星) · [出生输入](birth.md) · [知识查询](knowledge.md) · [项目入口](../README.md)
 
-`place_stars()`从解析后的`CalculationInput`安32星：十四主星、六吉、六煞、禄存、天马、红鸾天喜与天刑天姚。
+`place_stars()`从解析后的`CalculationInput`安36星：十四主星、六吉、六煞、禄存、天马、红鸾天喜、刑姚、哭虚与伤使。
 红鸾／天喜自0.3.0起提供，0.2.0的星集仍为28星。
 返回不可变元组，每项保存星曜`Star`、所在宫位的地支`dizhi`和实际使用的规则标识`rule_id`。
 每颗星只有一个位置，不同星可以落在同一宫。
@@ -33,7 +33,7 @@
 >>> positions = place_stars(value)
 >>> horse = next(position for position in positions if position.star is Star.天马)
 >>> len(positions), horse.dizhi.value, horse.rule_id
-(32, '寅', 'variant.tianma.year-branch')
+(36, '寅', 'variant.tianma.year-branch')
 >>> Star.天马.concept_id
 'concept.star.tianma'
 ```
@@ -86,6 +86,8 @@ True
 - `place_stem_stars()`按年干安天魁、天钺、禄存、擎羊、陀罗；天魁、天钺使用现代资料的表。
 - `place_fire_bell()`按年支与时辰安火星、铃星。
 - `place_hongluan_tianxi()`按已确定的生年支安红鸾、天喜，不需要生时或性别。
+- `place_tianku_tianxu()`按已确定的生年支安天哭、天虚。
+- `place_tianshang_tianshi()`按命宫安固定法天伤、天使。
 
 `tianma_dizhi()`只按传入的地支查天马，返回地支位置，不返回星位记录。
 `place_stars()`负责选择传入年支还是农历月份对应的地支。各函数签名见[API](api.md#安星)。
@@ -119,6 +121,25 @@ True
 这个位置与iLuck九月直接例相同。两星没有生年四化或本库亮度等级；从完整盘按宫读取时仍是普通星位，
 文本与SVG盘面都会显示这两颗星。定位依据见[刑姚条目](knowledge-reference.md#entry.star.tianxing-tianyao-month)。
 
+## 天哭天虚与固定法天伤天使
+
+哭虚从午宫起子年，哭逆虚顺，使用解析后的年支。伤使只依赖命宫，天伤固定在奴仆宫、天使固定在疾厄宫，
+不按性别或年干阴阳互换：
+
+```{doctest}
+>>> from ziwei.stars import place_tianku_tianxu, place_tianshang_tianshi
+>>> [(p.star.value, p.dizhi.value) for p in place_tianku_tianxu(Dizhi.辰)]
+[('天哭', '寅'), ('天虚', '戌')]
+>>> [(p.star.value, p.dizhi.value) for p in place_tianshang_tianshi(Dizhi.巳)]
+[('天伤', '戌'), ('天使', '子')]
+>>> place_tianshang_tianshi(Dizhi.巳)[0].rule_id
+'variant.star.tianshang-tianshi-fixed'
+```
+
+伤使的另一种[阴阳男女互换法](knowledge-reference.md#variant.star.tianshang-tianshi-yinyang)仅登记在知识目录，
+没有执行选项。定位来源见[哭虚](knowledge-reference.md#entry.star.tianku-tianxu-year-branch)与
+[固定伤使](knowledge-reference.md#entry.star.tianshang-tianshi-fixed)条目。
+
 ## 归月与失败边界
 
 `leap_month_policy`选择命身取月；`month_star_leap_month_policy`可另选辅弼、月马与刑姚取月，
@@ -134,7 +155,7 @@ True
 >>> mixed_record = LunarBirthRecord(year=2023, month=2, day=16, is_leap_month=True,
 ...   shichen=Dizhi.子, gender=Gender.未知)
 >>> mixed_input = resolve(mixed_record, mixed_config)
->>> [(p.star.value, p.dizhi.value) for p in place_stars(mixed_input)[-2:]]
+>>> [(p.star.value, p.dizhi.value) for p in place_stars(mixed_input) if p.star in (Star.天刑, Star.天姚)]
 [('天刑', '亥'), ('天姚', '卯')]
 >>> mixed_input.config.leap_month_policy.value, mixed_input.config.month_star_policy.value
 ('全月归本月', '上半月归本月、下半月归下月')

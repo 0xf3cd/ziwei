@@ -47,6 +47,12 @@ def reference() -> dict[str, Any]:
   value = json.loads(
     (Path(__file__).parent / "fixtures/interpretation-reference.json").read_text(encoding="utf-8")
   )
+  minor = json.loads(
+    (Path(__file__).parent / "fixtures/minor-interpretation-reference.json").read_text(
+      encoding="utf-8"
+    )
+  )
+  value["extra_entry_ids"] = ["entry.interpretation." + row["suffix"] for row in minor["entries"]]
   return cast(dict[str, Any], value)
 
 
@@ -90,7 +96,10 @@ def test_reference_covers_each_major_star_twice(reference: dict[str, Any]) -> No
 
 def _check_interpretations(catalog: Catalog, reference: dict[str, Any]) -> None:
   selected = catalog.filter_entries(source_id=reference["source_id"])
-  assert {entry.id for entry in selected} == {item["id"] for item in reference["entries"]}
+  assert {entry.id for entry in selected} == {
+    *reference["extra_entry_ids"],
+    *(item["id"] for item in reference["entries"]),
+  }
   for expected in reference["entries"]:
     assert 0 <= expected["quote_start"] < expected["quote_end"]
     assert len(expected["quote"]) == expected["quote_end"] - expected["quote_start"]

@@ -298,6 +298,11 @@ def test_builtin_corpus_retains_sources_and_unresolved_premises() -> None:
   assert catalog.filter_entries(show_by_default=True) == ()
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
   assert [item.id for item in pending] == [
+    "entry.interpretation.kongjie-shenming-jixiong",
+    "entry.interpretation.shangshi-tai-sui-erxian",
+    "entry.interpretation.tianxing-rumiao",
+    "entry.interpretation.tianyao-ziweijixing",
+    "entry.interpretation.kuxu-yulu",
     "entry.interpretation.ziwei-fubi",
     "entry.interpretation.tianfu-kongwang",
     "entry.interpretation.tianji-tianliang",

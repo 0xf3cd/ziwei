@@ -53,6 +53,7 @@ CONCEPTS = (
       aliases=(
         star.name.title(),
         *(("天馬",) if star is Star.天马 else ("紅鸞",) if star is Star.红鸾 else ()),
+        *(("天虛",) if star is Star.天虚 else ("天傷",) if star is Star.天伤 else ()),
       ),
       kind=ConceptKind.星曜,
     )
@@ -391,7 +392,11 @@ VARIANTS = (
       aliases=("年马", "年馬")
       if rule.tianma_rule is TianmaRule.YEAR_BRANCH
       else (("月马", "月馬") if rule.tianma_rule is TianmaRule.MONTH_BRANCH else ()),
-      tracking_url="https://github.com/0xf3cd/ziwei/issues/54"
+      tracking_url="https://github.com/0xf3cd/ziwei/issues/88"
+      if Star.天哭 in rule.stars
+      else "https://github.com/0xf3cd/ziwei/issues/92"
+      if Star.天伤 in rule.stars
+      else "https://github.com/0xf3cd/ziwei/issues/54"
       if Star.红鸾 in rule.stars
       else "https://github.com/0xf3cd/ziwei/issues/4",
     )
@@ -404,6 +409,16 @@ VARIANTS = (
     scope="仅记录维基文库1963110修订的录文，不作可执行变体",
     concept_ids=(Star.天魁.concept_id, Star.天钺.concept_id),
     tracking_url="https://github.com/0xf3cd/ziwei/issues/4",
+  ),
+  RuleVariant(
+    id="variant.star.tianshang-tianshi-yinyang",
+    name="天伤天使阴阳男女互换法（未实现）",
+    definition="阳男阴女天伤在仆役、天使在疾厄；阴男阳女互换两星位置。",
+    scope="讲义下游所列伤使安法，目录登记，不作可执行选择",
+    concept_ids=(Star.天伤.concept_id, Star.天使.concept_id),
+    school_ids=("concept.school.zhongzhou",),
+    conditions=("年干阴阳、性别及命宫已定",),
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/92",
   ),
   RuleVariant(
     id="variant.leap-month.current",
@@ -542,7 +557,8 @@ SOURCES = (
     layer=TextLayer.今人说明,
     lineage_id="lineage.zhongzhou-wangtingzhi",
     provenance="与上篇连续的安星讲义下游转录，不计为另一条独立传承。",
-    claims="第43条流四化起法同起星盘；第45条流年取年干、太岁起十二宫逆排；第47条给庚月例。",
+    claims="第33条并列伤使互换与固定法；第43条流四化起法同起星盘；"
+    "第45条流年取年干、太岁起十二宫逆排；第47条给庚月例。",
     limits="原文字词与标点保留；庚月例属于流月，不充年度直接例。"
     "纸本版次、转录忠实度及转载授权未核。",
     rights="仅必要短引与自撰事实说明，不收全文。",
@@ -949,6 +965,81 @@ SOURCES = (
     rights="只收必要古籍短引，不转载完整网页。",
     status=SourceStatus.已核,
     checked_on=date(2026, 11, 10),
+  ),
+  Source(
+    id="source.jielan-kuxu-tianji",
+    title="紫微斗数捷览：安天哭天虚星诀（天机电子录文）",
+    edition="第42章；2026-11-05取得HTML，SHA256 "
+    "774965d23bff8d799b2191b8bcbf51869a6d77eaa86d3c7db2b80def74ba10a9",
+    url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/42",
+    layer=TextLayer.原文,
+    lineage_id="lineage.jielan-tianji",
+    provenance="章节正文从原HTML组件数据提取；与《全书》有共同传统，不按网站数计独立传承。",
+    claims="午起子、哭逆虚顺，以及辰年哭寅虚戌、子年俱午的直接例。",
+    limits="口诀作巨行，保留原字，方向依同页散文例；纸本版次与录文忠实度未校。",
+    rights="仅必要古籍短引及位置事实，不转载全文。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 12),
+  ),
+  Source(
+    id="source.jielan-tiankong-tianji",
+    title="紫微斗数捷览：安天空星诀（天机电子录文）",
+    edition="第39章；2026-11-05取得HTML，SHA256 "
+    "e9334bb3f55f74ea6bdffdc890d7965c8a5026e3fabc01c0fed76b11af2bd33a",
+    url="https://tianjihq.com/zh-CN/learn/books/ziwei-jielan/39",
+    layer=TextLayer.原文,
+    lineage_id="lineage.jielan-tianji",
+    provenance="与其他捷览章节同一路录文；不认证独立传承。",
+    claims="天空在太岁前一位，子年安丑，与按生时的地空不同。",
+    limits="只作同名不同规则的对照，不据本章反证卷一所有天空的所指；纸本未校。",
+    rights="仅必要短引与称名说明，不转载全文。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 12),
+  ),
+  Source(
+    id="source.iluck-year-branch",
+    title="iLuck紫微斗数命盘排法：年支星系",
+    edition="2026-11-05取得HTML，SHA256 "
+    "d90333960272b999b23a6decb475197872b043fc0bdcdc46863d920a18e151ee",
+    url="https://iluck7.com/ZWDS_GB/Tutorial/PaiPan/10-0_NianZhiXi.php",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.iluck-natal-stars",
+    provenance="现代教程独立成文，和伤使页同组；不认证与古籍源流独立。",
+    claims="哭虚十二年支完整表、戌年哭申虚辰直接例，以及年支天空戌年亥的不同规则。",
+    limits="首句将按年支定义的星系写作年干星系，查法依该句年支锚与后续表；不由此裁定换年界线。",
+    rights="仅必要短引及表中位置事实，不收完整盘或人物资料。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 12),
+  ),
+  Source(
+    id="source.iluck-shangshi",
+    title="iLuck紫微斗数命盘排法：天殇星、天使星",
+    edition="2026-11-05取得HTML，SHA256 "
+    "a2f8cd66df618a7cb8d77d9c04aa99e2db10a5563683faaa0e1ec3a62dac2986",
+    url="https://iluck7.com/ZWDS_GB/Tutorial/PaiPan/15-0_TianShang_TianShi.php",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.iluck-natal-stars",
+    provenance="与年支星系同一教程；固定伤使法的独立成文例，不认证独立传承。",
+    claims="阳女例命宫巳、交友戌天殇、疾厄子天使，固定法不随阴阳男女互换。",
+    limits="该页作天殇，不判字误或传承；疾厄例句也写天殇，与该页首段及盘表天使不合，只取盘表定位。",
+    rights="仅必要短引及匿名化位置事实，不转载完整命盘或人物出生资料。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 12),
+  ),
+  Source(
+    id="source.yunling-shangshi",
+    title="刘韫龄笔记：排盘第三步安其余星曜（二）",
+    edition="2026-11-05取得HTML，SHA256 "
+    "769f5b6738da0febed2b8b7df316fcced1903726ab872b90c68149a3a72bb717",
+    url="https://www.ziweishuyuan.com/ziwei-place/place-way/577.html",
+    layer=TextLayer.今人说明,
+    lineage_id="lineage.yunling-shangshi",
+    provenance="白文转引与现代注解分开；白文不作《全书》以外的独立出处。",
+    claims="现代注解明说天伤固定交友、天使固定疾厄。",
+    limits="只核网页所列注解；纸本及与其他资料的传承关系未核。",
+    rights="仅必要注解短引，不转载全文。",
+    status=SourceStatus.已核,
+    checked_on=date(2026, 11, 12),
   ),
   Source(
     id="source.iluck-month-stars",
@@ -2366,6 +2457,168 @@ CITATIONS = (
     aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
     limits="与中州派讲义的天魁、天钺表一致；《全书》中相近口诀的不同字句，不算作对现代表的第二路版本核验。",
   ),
+  Citation(
+    id="citation.quanshu.kuxu",
+    source_id="source.quanshu-wikisource",
+    locator="安天哭天虚星诀/论本生年支",
+    quote="天哭天虚起午宫。午宫起子两分踪。哭逆巳兮虚顺未。数到生年便居中。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="午宫起子，哭逆虚顺；换年界线不由该段裁定。",
+  ),
+  Citation(
+    id="citation.jielan.kuxu",
+    source_id="source.jielan-kuxu-tianji",
+    locator="第42章/口诀；随后辰年哭寅虚戌、子年俱午例",
+    quote="哭逆巨行虚顺未",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="保留巨字，不据此改写方向；方向核同页辰年、子年散文例，纸本未校。",
+  ),
+  Citation(
+    id="citation.iluck.kuxu",
+    source_id="source.iluck-year-branch",
+    locator="年支星系/戌年直接例与十二年支表哭虚两列",
+    quote="天哭位于申宫。\n天虚位于辰宫。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="戌年直接例与十二行表分开验证；不推断换年政策。",
+  ),
+  Citation(
+    id="citation.quanshu.shangshi",
+    source_id="source.quanshu-wikisource",
+    locator="安天伤天使诀/宫名定位",
+    quote="天伤安在奴仆宫，天使安在疾厄宫。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="同段命前后六位的原句按宫名理解，不另设含首计数；后文夹限解释不进安星。",
+  ),
+  Citation(
+    id="citation.iluck.shangshi",
+    source_id="source.iluck-shangshi",
+    locator="首段固定法；阳女例盘表交友戌天殇、疾厄子天使",
+    quote="天殇星永远位于交友宫。\n天使星永远位于疾厄宫。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="原页作殇；只取首段及盘表，正文疾厄例句与盘表不合，不将它当无误句。",
+  ),
+  Citation(
+    id="citation.yunling.shangshi",
+    source_id="source.yunling-shangshi",
+    locator="一、安天伤、天使诀/注解",
+    quote="天伤星固定安在交友宫，天使固定安在疾厄宫。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="此处为现代注解，不把上段《全书》白文转引计成独立古籍证据。",
+  ),
+  Citation(
+    id="citation.zhongzhou.shangshi-swap",
+    source_id="source.zhongzhou-mdyixue-lower",
+    locator="第33条/阴男阳女互换及固定法注",
+    quote="凡阳男阴女皆依此诀，但若为阴男阳女，则改为天伤居疾厄，天使居仆役。",
+    layer=TextLayer.今人说明,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="前句固定伤在仆役、使在疾厄；注另列不分阴阳固定法。此互换法只登记，不执行。",
+  ),
+  Citation(
+    id="citation.jielan.tiankong-year",
+    source_id="source.jielan-tiankong-tianji",
+    locator="第39章/太岁前一位、子年丑宫例",
+    quote="前一位丑宫即安天空",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.规则, EvidenceAspect.查法),
+    limits="这是按年支安的天空，作为时系地空不同规则的对照，不加入运行时星集。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.kongjie-nature",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天空地劫所主若何？/歌曰首联",
+    quote="劫空为害最愁人，才智英雄误一身，",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="取歌曰首联，不将诗句标作答曰或无条件结论。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.kongjie-shenming-jixiong",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天空地劫所主若何？/希夷先生曰身命遇吉凶句",
+    quote="二星守身命，遇吉则吉，遇凶则凶。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="保留守身命前提及吉凶两种条件；四杀冲照等后文不拼入本句。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.shangshi-nature",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天伤天使所主若何？/答曰首句",
+    quote="天伤乃上天虚耗之神，天使乃上天传使之神。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="仅取二星称述，不据此推断其安星方法。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.shangshi-tai-sui-erxian",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天伤天使所主若何？/答曰太岁二限与吉多句",
+    quote="太岁二限逢之不问得地否？只要吉多为福其祸稍轻，",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="保留问号和原逗号；后续无吉而值诸星的另一条件另记，不删无吉。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.tianxing-nature",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天刑星所主若何？/歌曰首句分句",
+    quote="天刑未必是凶星，",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="歌曰分句保留逗号；同联入庙与昌曲条件不由本句消除。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.tianxing-rumiao",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天刑星所主若何？/答曰入庙句",
+    quote="入庙则吉。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="本句位于守命身、二限逢之的论述之后，不自定其句间适用范围。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.tianyao-nature",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天姚星所主若何？/答曰首句",
+    quote="天姚守身命，心性阴毒，多疑恐、善颜色、风流多婢、主淫。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="历史文本评价按原字保存，不作为对现实个人的事实判断。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.tianyao-ziweijixing",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天姚星所主若何？/答曰紫微吉星加句",
+    quote="或紫微吉星加，刚柔相济，主风骚，",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="分句保留原逗号；后续加红鸾、加刑刃另有条件，不合成一条。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.kuxu-nature",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天哭天虚二星所主若何？/答曰首句",
+    quote="哭虚为恶曜，临命最非常。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="只取首句；丑卯申宫及遇禄等后续条件另记。",
+  ),
+  Citation(
+    id="citation.quanshu-juan1.kuxu-yulu",
+    source_id="source.quanshu-juan1-wikisource",
+    locator="诸星问答论/问天哭天虚二星所主若何？/答曰丑卯申与遇禄句",
+    quote="丑卯申宫吉，遇禄名显扬。",
+    layer=TextLayer.原文,
+    aspects=(EvidenceAspect.解释,),
+    limits="两句关系及遇禄所指未裁，不补成禄存或化禄。",
+  ),
 )
 
 
@@ -2443,6 +2696,18 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
       "《精成》同列上述安法，和其他材料的传承关系未核。"
       "闰月另按entry.star.month-policy-composition组合，纸本底本未校；本条不默认展示。",
     ),
+    "variant.star.tianku-tianxu-year-branch": (
+      ("citation.quanshu.kuxu", "citation.jielan.kuxu", "citation.iluck.kuxu"),
+      "《全书》口诀、《捷览》辰年与子年直接例、iLuck十二年支表及戌年例相合；"
+      "捷览巨行原字保留，不据同文认证独立传承，iLuck独立成文不证明源流独立。"
+      "年支消费解析结果，不由这些普通年支例推断换年界线；纸本底本未校。",
+    ),
+    "variant.star.tianshang-tianshi-fixed": (
+      ("citation.quanshu.shangshi", "citation.iluck.shangshi", "citation.yunling.shangshi"),
+      "按《全书》同段的奴仆、疾厄宫名定位，不另造前后六位的含首计数。"
+      "iLuck阳女例的盘表及刘韫龄现代注解支持固定法，白文转引不计新出处。"
+      "iLuck作天殇，原字保留；另有阴阳男女互换法，只登记不执行。",
+    ),
   }
   selected = tuple(rule for rule in rules if rule.tianma_rule is None)
   ids = {rule.id for rule in selected}
@@ -2467,10 +2732,18 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
         if Star.红鸾 in rule.stars
         else "取得《全书》刑姚段与《捷览》第30章具版次影像，核两星起宫与例解；补明确口径的闰月十五、十六日两星成对例。"
         if Star.天刑 in rule.stars
+        else "取得卷二哭虚安诀与捷览第42章具版次影像，核午起子、方向和直接例；补明确年界的完整盘例。"
+        if Star.天哭 in rule.stars
+        else "取得卷二伤使安诀具版次影像，核宫名与前后六位原句；补明确固定法的独立完整盘例。"
+        if Star.天伤 in rule.stars
         else "取得所引电子录文底本与现代讲义具版次原书，核对应规则、查法与例解；同文转录不增独立来源数。"
       ),
       tracking_url=(
-        _SOURCE_RESEARCH_URL
+        "https://github.com/0xf3cd/ziwei/issues/88"
+        if Star.天哭 in rule.stars
+        else "https://github.com/0xf3cd/ziwei/issues/92"
+        if Star.天伤 in rule.stars
+        else _SOURCE_RESEARCH_URL
         if Star.火星 in rule.stars or Star.地空 in rule.stars
         else "https://github.com/0xf3cd/ziwei/issues/54"
         if Star.红鸾 in rule.stars
@@ -2484,6 +2757,185 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
 
 
 ENTRIES = (
+  KnowledgeEntry(
+    id="entry.interpretation.kongjie-nature",
+    statement="《诸星问答论》天空地劫节的歌曰以劫空为害形容二星。",
+    concept_ids=(Star.地空.concept_id, Star.地劫.concept_id),
+    variant_ids=(),
+    citation_ids=(
+      "citation.quanshu-juan1.kongjie-nature",
+      "citation.quanshu.kongjie",
+      "citation.jielan.tiankong-year",
+    ),
+    premises=(
+      "本条记录天空地劫节歌曰的称述。",
+      "仅按同书卷二的时系空劫规则作本节局部称名对应，关联本库地空、地劫。",
+    ),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    exceptions=("同节前文另说二星守身命遇吉则吉、遇凶则凶；本条不将诗句改作无条件结论。",),
+    limits="天空只在本节与同书卷二时系规则对应，不建立全局别名；卷一与卷二纸本同一性未核，不能据同名绑定按年支安的天空。",
+    recheck="取得卷一、卷二同一具版次纸本，对照本节题名、歌曰与时系空劫安诀；核局部称名关系。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.kongjie-shenming-jixiong",
+    statement="《诸星问答论》在二星守身命的前提下，分别说遇吉则吉、遇凶则凶。",
+    concept_ids=(Star.地空.concept_id, Star.地劫.concept_id),
+    variant_ids=(),
+    citation_ids=(
+      "citation.quanshu-juan1.kongjie-shenming-jixiong",
+      "citation.quanshu.kongjie",
+      "citation.jielan.tiankong-year",
+    ),
+    premises=(
+      "只在同书卷二时系规则对应的局部称名下关联本库地空、地劫。",
+      "二星守身命及遇吉、遇凶成立；守身命与吉凶的具体范围待核。",
+    ),
+    premise_status=PremiseStatus.待定,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    exceptions=("后文另列四杀冲照、破财与二限等说法，不合并成同一无条件判断。",),
+    limits="没有将遇吉、遇凶映射成仓内星曜清单，也未把本节天空推广为全局地空别名；纸本同一性仍待核。",
+    recheck="对照同版卷一、卷二及例解，核守身命、遇吉凶与后文四杀条件的关系。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.shangshi-nature",
+    statement="《诸星问答论》将天伤称为虚耗之神、天使称为传使之神。",
+    concept_ids=(Star.天伤.concept_id, Star.天使.concept_id),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.shangshi-nature",),
+    premises=("本条记录天伤天使节答曰的称述。",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="称述与安星方法分别记录，不能据此推出固定法或阴阳男女互换法。",
+    recheck="取得具版次卷一纸本，核天伤天使称述与后文太岁二限句的分段。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.shangshi-tai-sui-erxian",
+    statement="《诸星问答论》在太岁二限逢伤使的语境中，说吉多时为福、祸稍轻。",
+    concept_ids=(Star.天伤.concept_id, Star.天使.concept_id),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.shangshi-tai-sui-erxian",),
+    premises=("原文所说太岁二限逢之及吉多成立。", "太岁二限、逢之和吉多的判定范围待核。"),
+    premise_status=PremiseStatus.待定,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    exceptions=("后文另说无吉而值巨门、羊陀、火铃、忌、天机的情形，不能删去无吉条件。",),
+    limits="不将二限自动等同于本库大限或小限，不作伤使夹限判断。",
+    recheck="取得具版次纸本及同段例解，核太岁二限的所指、吉多与无吉两种条件。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.tianxing-nature",
+    statement="《诸星问答论》天刑节的歌曰说天刑未必是凶星。",
+    concept_ids=(Star.天刑.concept_id,),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.tianxing-nature",),
+    premises=("本条记录天刑节歌曰的称述，不替代同节答曰。",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    exceptions=("同联后续有入庙、昌曲吉星来凑合等条件，不能从本句推为无条件吉星。",),
+    limits="未把诗句改成答曰，也未由此给本库天刑设置亮度或吉凶类别。",
+    recheck="取得具版次卷一影像，对照答曰、歌曰及同联入庙与昌曲条件。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.tianxing-rumiao",
+    statement="《诸星问答论》天刑节答曰另列入庙则吉的条件。",
+    concept_ids=(Star.天刑.concept_id,),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.tianxing-rumiao",),
+    premises=(
+      "本条以同节天刑守命身、二限逢之等论述为上下文。",
+      "天刑入庙成立；入庙的具体判据及句间适用范围待核。",
+    ),
+    premise_status=PremiseStatus.待定,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    exceptions=("前文对守命身及二限另有不利称述，后文歌曰又列文星条件，本条不合并这些说法。",),
+    limits="本库亮度表仅有十四主星，本条不据入庙文字自动补全天刑亮度。",
+    recheck="核具版次纸本的入庙句与上下句关系，并取明确天刑庙位的同体系解释。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.tianyao-nature",
+    statement="《诸星问答论》在天姚守身命的语境下作多疑等性情称述。",
+    concept_ids=(Star.天姚.concept_id,),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.tianyao-nature",),
+    premises=("本条只记录天姚节答曰首句在守身命语境中的称述。",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="保留历史文本措辞，不将其中对人的评价作为事实或命盘结论。",
+    recheck="取得具版次卷一纸本，核天姚守身命句的原字与后续条件段落。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.tianyao-ziweijixing",
+    statement="《诸星问答论》天姚节将紫微吉星加与刚柔相济、主风骚相联系。",
+    concept_ids=(Star.天姚.concept_id,),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.tianyao-ziweijixing",),
+    premises=("本条以同节天姚守身命的论述为语境。", "原文所说紫微吉星加成立；吉星与加的范围待核。"),
+    premise_status=PremiseStatus.待定,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    exceptions=("后续另说加红鸾、加刑刃的情形，不能将本句覆盖到那些条件。",),
+    limits="不把加直接等同同宫或会照，也不将后文各条件拼作同一结论。",
+    recheck="对照具版次纸本及天姚同段例解，核紫微吉星加的断句、对象和关系范围。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.kuxu-nature",
+    statement="《诸星问答论》哭虚节以恶曜称述二星，并提到临命。",
+    concept_ids=(Star.天哭.concept_id, Star.天虚.concept_id),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.kuxu-nature",),
+    premises=("本条记录天哭天虚合节答曰首句的称述。",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    exceptions=("同段另有丑卯申宫吉、遇禄等条件，不以首句概括全部情形。",),
+    limits="不将书中称述认证为星曜固定吉凶，也不作临命的自动判定。",
+    recheck="取得具版次卷一纸本，核首句与后文丑卯申、遇禄句的关系。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.interpretation.kuxu-yulu",
+    statement="《诸星问答论》哭虚节另说丑卯申宫吉、遇禄名显扬。",
+    concept_ids=(Star.天哭.concept_id, Star.天虚.concept_id),
+    variant_ids=(),
+    citation_ids=("citation.quanshu-juan1.kuxu-yulu",),
+    premises=("本条记录哭虚合节中的丑卯申宫与遇禄条件。", "两句的关系、所指星曜及遇禄的范围待核。"),
+    premise_status=PremiseStatus.待定,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    exceptions=("同段还有临命、加临父母、身命陷及二限等说法，不将本句推广为整节通则。",),
+    limits="未把禄自动对应禄存或化禄，也不从本句生成哭虚亮度表。",
+    recheck="取得具版次纸本及例解，核丑卯申宫与遇禄句的断句、二星分别适用情况和禄的所指。",
+    tracking_url=_INTERPRETATION_RESEARCH_URL,
+  ),
+  KnowledgeEntry(
+    id="entry.star.tianshang-tianshi-yinyang",
+    statement="讲义转录将阳男阴女按固定宫名安伤使，阴男阳女互换；同段另列不分阴阳的固定法。",
+    concept_ids=(Star.天伤.concept_id, Star.天使.concept_id),
+    variant_ids=("variant.star.tianshang-tianshi-yinyang",),
+    citation_ids=("citation.zhongzhou.shangshi-swap",),
+    premises=("只记录该转录所列两种方法，不将互换法用于本库固定法结果",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="互换法没有执行入口或配置；讲义纸本未核，不按下游网页数量计算独立传承。",
+    recheck="取得第33条具版次讲义原书，对照互换法与固定法注，再核阴男、阳女的直接盘例。",
+    tracking_url="https://github.com/0xf3cd/ziwei/issues/92",
+  ),
   KnowledgeEntry(
     id="entry.liunian.twelve-palaces",
     statement=LIUNIAN_PALACES_DEFINITION + "同支本命宫名、原星位、生年四化和身宫标记另外读取。",

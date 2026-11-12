@@ -86,6 +86,11 @@ def _star_rows() -> list[tuple[str, ...]]:
   for year in Dizhi:
     for position in stars.place_hongluan_tianxi(year):
       rows.append((position.rule_id, year.value, position.star.value, position.dizhi.value))
+    for position in stars.place_tianku_tianxu(year):
+      rows.append((position.rule_id, year.value, position.star.value, position.dizhi.value))
+  for minggong in Dizhi:
+    for position in stars.place_tianshang_tianshi(minggong):
+      rows.append((position.rule_id, minggong.value, position.star.value, position.dizhi.value))
   for group in stars.SANHE_GROUPS:
     for hour in Dizhi:
       for position in stars.place_fire_bell(group[0], hour):

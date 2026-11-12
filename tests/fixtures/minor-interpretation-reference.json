@@ -1,0 +1,95 @@
+{
+  "source_id": "source.quanshu-juan1-wikisource",
+  "revision": 7913704,
+  "sha256": "9beb8038a8b82154d15d81c8ff822423d4f0c7c006f536a86552adeaa594818a",
+  "scope": "固定卷一五节的十条短引。行号从原wiki首行起算，start/end为Unicode零基半开区间；内容分组与条件为仓内整理预期，不是命盘外证。",
+  "entries": [
+    {
+      "suffix": "kongjie-nature", "kind": "nature", "line": 497, "start": 1, "end": 17,
+      "section": "问天空地劫所主若何？", "part": "歌曰首联",
+      "quote": "劫空为害最愁人，才智英雄误一身，", "concepts": ["dikong", "dijie"],
+      "statement": "《诸星问答论》天空地劫节的歌曰以劫空为害形容二星。",
+      "premises": ["本条记录天空地劫节歌曰的称述。", "仅按同书卷二的时系空劫规则作本节局部称名对应，关联本库地空、地劫。"],
+      "exceptions": ["同节前文另说二星守身命遇吉则吉、遇凶则凶；本条不将诗句改作无条件结论。"],
+      "premise_status": "已明确"
+    },
+    {
+      "suffix": "kongjie-shenming-jixiong", "kind": "condition", "line": 493, "start": 6, "end": 22,
+      "section": "问天空地劫所主若何？", "part": "希夷先生曰身命遇吉凶句",
+      "quote": "二星守身命，遇吉则吉，遇凶则凶。", "concepts": ["dikong", "dijie"],
+      "statement": "《诸星问答论》在二星守身命的前提下，分别说遇吉则吉、遇凶则凶。",
+      "premises": ["只在同书卷二时系规则对应的局部称名下关联本库地空、地劫。", "二星守身命及遇吉、遇凶成立；守身命与吉凶的具体范围待核。"],
+      "exceptions": ["后文另列四杀冲照、破财与二限等说法，不合并成同一无条件判断。"],
+      "premise_status": "待定"
+    },
+    {
+      "suffix": "shangshi-nature", "kind": "nature", "line": 501, "start": 7, "end": 27,
+      "section": "问天伤天使所主若何？", "part": "答曰首句",
+      "quote": "天伤乃上天虚耗之神，天使乃上天传使之神。", "concepts": ["tianshang", "tianshi"],
+      "statement": "《诸星问答论》将天伤称为虚耗之神、天使称为传使之神。",
+      "premises": ["本条记录天伤天使节答曰的称述。"], "exceptions": [], "premise_status": "已明确"
+    },
+    {
+      "suffix": "shangshi-tai-sui-erxian", "kind": "condition", "line": 501, "start": 27, "end": 50,
+      "section": "问天伤天使所主若何？", "part": "答曰太岁二限与吉多句",
+      "quote": "太岁二限逢之不问得地否？只要吉多为福其祸稍轻，", "concepts": ["tianshang", "tianshi"],
+      "statement": "《诸星问答论》在太岁二限逢伤使的语境中，说吉多时为福、祸稍轻。",
+      "premises": ["原文所说太岁二限逢之及吉多成立。", "太岁二限、逢之和吉多的判定范围待核。"],
+      "exceptions": ["后文另说无吉而值巨门、羊陀、火铃、忌、天机的情形，不能删去无吉条件。"],
+      "premise_status": "待定"
+    },
+    {
+      "suffix": "tianxing-nature", "kind": "nature", "line": 511, "start": 1, "end": 9,
+      "section": "问天刑星所主若何？", "part": "歌曰首句分句",
+      "quote": "天刑未必是凶星，", "concepts": ["tianxing"],
+      "statement": "《诸星问答论》天刑节的歌曰说天刑未必是凶星。",
+      "premises": ["本条记录天刑节歌曰的称述，不替代同节答曰。"],
+      "exceptions": ["同联后续有入庙、昌曲吉星来凑合等条件，不能从本句推为无条件吉星。"],
+      "premise_status": "已明确"
+    },
+    {
+      "suffix": "tianxing-rumiao", "kind": "condition", "line": 507, "start": 50, "end": 55,
+      "section": "问天刑星所主若何？", "part": "答曰入庙句",
+      "quote": "入庙则吉。", "concepts": ["tianxing"],
+      "statement": "《诸星问答论》天刑节答曰另列入庙则吉的条件。",
+      "premises": ["本条以同节天刑守命身、二限逢之等论述为上下文。", "天刑入庙成立；入庙的具体判据及句间适用范围待核。"],
+      "exceptions": ["前文对守命身及二限另有不利称述，后文歌曰又列文星条件，本条不合并这些说法。"],
+      "premise_status": "待定"
+    },
+    {
+      "suffix": "tianyao-nature", "kind": "nature", "line": 517, "start": 7, "end": 34,
+      "section": "问天姚星所主若何？", "part": "答曰首句",
+      "quote": "天姚守身命，心性阴毒，多疑恐、善颜色、风流多婢、主淫。", "concepts": ["tianyao"],
+      "statement": "《诸星问答论》在天姚守身命的语境下作多疑等性情称述。",
+      "premises": ["本条只记录天姚节答曰首句在守身命语境中的称述。"],
+      "exceptions": [], "premise_status": "已明确"
+    },
+    {
+      "suffix": "tianyao-ziweijixing", "kind": "condition", "line": 517, "start": 85, "end": 101,
+      "section": "问天姚星所主若何？", "part": "答曰紫微吉星加句",
+      "quote": "或紫微吉星加，刚柔相济，主风骚，", "concepts": ["tianyao"],
+      "statement": "《诸星问答论》天姚节将紫微吉星加与刚柔相济、主风骚相联系。",
+      "premises": ["本条以同节天姚守身命的论述为语境。", "原文所说紫微吉星加成立；吉星与加的范围待核。"],
+      "exceptions": ["后续另说加红鸾、加刑刃的情形，不能将本句覆盖到那些条件。"],
+      "premise_status": "待定"
+    },
+    {
+      "suffix": "kuxu-nature", "kind": "nature", "line": 527, "start": 7, "end": 19,
+      "section": "问天哭天虚二星所主若何？", "part": "答曰首句",
+      "quote": "哭虚为恶曜，临命最非常。", "concepts": ["tianku", "tianxu"],
+      "statement": "《诸星问答论》哭虚节以恶曜称述二星，并提到临命。",
+      "premises": ["本条记录天哭天虚合节答曰首句的称述。"],
+      "exceptions": ["同段另有丑卯申宫吉、遇禄等条件，不以首句概括全部情形。"],
+      "premise_status": "已明确"
+    },
+    {
+      "suffix": "kuxu-yulu", "kind": "condition", "line": 527, "start": 67, "end": 79,
+      "section": "问天哭天虚二星所主若何？", "part": "答曰丑卯申与遇禄句",
+      "quote": "丑卯申宫吉，遇禄名显扬。", "concepts": ["tianku", "tianxu"],
+      "statement": "《诸星问答论》哭虚节另说丑卯申宫吉、遇禄名显扬。",
+      "premises": ["本条记录哭虚合节中的丑卯申宫与遇禄条件。", "两句的关系、所指星曜及遇禄的范围待核。"],
+      "exceptions": ["同段还有临命、加临父母、身命陷及二限等说法，不将本句推广为整节通则。"],
+      "premise_status": "待定"
+    }
+  ]
+}

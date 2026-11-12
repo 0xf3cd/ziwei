@@ -31,7 +31,7 @@ from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan, 地支
 from ziwei.knowledge import load_catalog
-from ziwei.knowledge.model import EvidenceAspect, KnowledgeEntry, PremiseStatus, Source
+from ziwei.knowledge.model import Citation, EvidenceAspect, KnowledgeEntry, PremiseStatus, Source
 from ziwei.liunian import (
   LIUNIAN_STARS_RULE_ID,
   LiunianBoundary,
@@ -458,7 +458,7 @@ def check_chart() -> None:
   if (
     mixed.calculation.config.month_star_policy is not LeapMonthPolicy.上半月归本月下半月归下月
     or mixed.palaces[0].dizhi is not Dizhi.卯
-    or tuple((p.star, p.dizhi, p.rule_id) for p in mixed.stars[-2:])
+    or tuple((p.star, p.dizhi, p.rule_id) for p in mixed.stars if p.star in (Star.天刑, Star.天姚))
     != (
       (Star.天刑, Dizhi.亥, "variant.star.tianxing-tianyao-month"),
       (Star.天姚, Dizhi.卯, "variant.star.tianxing-tianyao-month"),
@@ -466,6 +466,24 @@ def check_chart() -> None:
     or not all(name in render_text(mixed) for name in ("天刑", "天姚"))
   ):
     raise ValueError("Installed xingyao or separate month policy differs")
+  if len(mixed.stars) != 36 or tuple((p.star, p.dizhi) for p in mixed.stars[-4:]) != (
+    (Star.天哭, Dizhi.卯),
+    (Star.天虚, Dizhi.酉),
+    (Star.天伤, Dizhi.申),
+    (Star.天使, Dizhi.戌),
+  ):
+    raise ValueError("Installed kuxu or fixed shangshi differs")
+  for position in mixed.stars[-4:]:
+    if position not in palace_view(mixed, position.dizhi).stars:
+      raise ValueError("Installed minor star palace query differs")
+    if render_text(mixed).count(position.star.value) != 1:
+      raise ValueError("Installed minor star text is incomplete")
+    image = fromstring(render_svg(mixed))
+    if (
+      sum(node.text == position.star.value for node in image.iter() if node.get("class") == "star")
+      != 1
+    ):
+      raise ValueError("Installed minor star SVG is incomplete")
   print("Installed full chart: calculated, rendered; independent positions and decades checked")
 
 
@@ -503,10 +521,11 @@ def check_knowledge() -> None:
   if not isinstance(source, Source) or source.lineage_id != "lineage.quanshu-wikisource":
     raise ValueError("Installed knowledge interpretation lineage changed")
   entries = catalog.filter_entries(source_id=source.id)
-  if len(entries) != 28 or any(
+  if len(entries) != 38 or any(
     entry.show_by_default or not entry.recheck or not entry.tracking_url for entry in entries
   ):
     raise ValueError("Installed knowledge interpretation entries or default display changed")
+  expected_ids: set[str] = set()
   for name, suffix, nature_quote, quote, condition, status in (
     (
       "紫微",
@@ -625,6 +644,7 @@ def check_knowledge() -> None:
     selected = catalog.filter_entries(concept_id=concept.id, source_id=source.id)
     nature_id = f"entry.interpretation.{concept.id.rsplit('.', 1)[1]}-nature"
     condition_id = f"entry.interpretation.{suffix}"
+    expected_ids.update((nature_id, condition_id))
     by_id = {entry.id: entry for entry in selected}
     if set(by_id) != {nature_id, condition_id} or len(selected) != 2:
       raise ValueError("Installed knowledge interpretation concept or condition changed")
@@ -650,6 +670,82 @@ def check_knowledge() -> None:
         or citations[0].aspects != (EvidenceAspect.解释,)
       ):
         raise ValueError("Installed knowledge interpretation citation changed")
+  for names, nature, condition, nature_quote, condition_quote, premise in (
+    (
+      ("地空", "地劫"),
+      "kongjie-nature",
+      "kongjie-shenming-jixiong",
+      "劫空为害最愁人，才智英雄误一身，",
+      "二星守身命，遇吉则吉，遇凶则凶。",
+      "守身命",
+    ),
+    (
+      ("天伤", "天使"),
+      "shangshi-nature",
+      "shangshi-tai-sui-erxian",
+      "天伤乃上天虚耗之神，天使乃上天传使之神。",
+      "太岁二限逢之不问得地否？只要吉多为福其祸稍轻，",
+      "吉多",
+    ),
+    (("天刑",), "tianxing-nature", "tianxing-rumiao", "天刑未必是凶星，", "入庙则吉。", "入庙"),
+    (
+      ("天姚",),
+      "tianyao-nature",
+      "tianyao-ziweijixing",
+      "天姚守身命，心性阴毒，多疑恐、善颜色、风流多婢、主淫。",
+      "或紫微吉星加，刚柔相济，主风骚，",
+      "吉星与加",
+    ),
+    (
+      ("天哭", "天虚"),
+      "kuxu-nature",
+      "kuxu-yulu",
+      "哭虚为恶曜，临命最非常。",
+      "丑卯申宫吉，遇禄名显扬。",
+      "遇禄",
+    ),
+  ):
+    concept_ids = tuple(catalog.find(name)[0].id for name in names)
+    pair = ("entry.interpretation." + nature, "entry.interpretation." + condition)
+    expected_ids.update(pair)
+    for concept_id in concept_ids:
+      if {e.id for e in catalog.filter_entries(concept_id=concept_id, source_id=source.id)} != set(
+        pair
+      ):
+        raise ValueError("Installed knowledge minor interpretation set changed")
+    for index, (identifier, expected_quote) in enumerate(
+      zip(pair, (nature_quote, condition_quote), strict=True)
+    ):
+      entry = catalog.get(identifier)
+      if (
+        not isinstance(entry, KnowledgeEntry)
+        or entry.concept_ids != concept_ids
+        or entry.variant_ids
+      ):
+        raise ValueError("Installed knowledge minor interpretation concept changed")
+      if entry.premise_status is not (PremiseStatus.已明确 if index == 0 else PremiseStatus.待定):
+        raise ValueError("Installed knowledge minor interpretation status changed")
+      if index == 1 and not any(premise in p for p in entry.premises):
+        raise ValueError("Installed knowledge minor interpretation condition changed")
+      citations = catalog.references(identifier)
+      expected_citations: tuple[str, ...] = (
+        identifier.replace("entry.interpretation.", "citation.quanshu-juan1."),
+      )
+      if nature == "kongjie-nature":
+        expected_citations += ("citation.quanshu.kongjie", "citation.jielan.tiankong-year")
+      primary = catalog.get(expected_citations[0])
+      if (
+        not isinstance(primary, Citation)
+        or entry.citation_ids != expected_citations
+        or {c.id for c in citations} != set(expected_citations)
+        or primary.quote != expected_quote
+        or primary.aspects != (EvidenceAspect.解释,)
+      ):
+        raise ValueError("Installed knowledge minor interpretation citation changed")
+      if entry.statement == expected_quote:
+        raise ValueError("Installed knowledge minor interpretation duplicates its quote")
+  if {e.id for e in entries} != expected_ids:
+    raise ValueError("Installed knowledge interpretation entries changed")
 
 
 if __name__ == "__main__":

@@ -163,7 +163,13 @@ def test_month_policy_matrix_does_not_change_palace_frame(
   assert "".join(positions[s] for s in (Star.左辅, Star.右弼, Star.天刑, Star.天姚)) == expected
   expected_horse = ("申" if following else "亥") if horse is TianmaRule.月支天马 else "寅"
   assert positions[Star.天马] == expected_horse
-  assert tuple(p.star for p in chart.stars) == (*OLD_STARS, Star.天刑, Star.天姚)
+  assert tuple(p.star for p in chart.stars[:32]) == (*OLD_STARS, Star.天刑, Star.天姚)
+  assert tuple(p.star for p in chart.stars[32:]) == (
+    Star.天哭,
+    Star.天虚,
+    Star.天伤,
+    Star.天使,
+  )
   with pytest.raises(ValueError, match="星位"):
     replace(chart, stars=chart.stars[:-1])
 
@@ -195,8 +201,14 @@ def test_day_rollover_reaches_month_star_split(chart_choices: ChartConfig) -> No
     16,
     True,
   )
-  assert tuple(p.dizhi.value for p in same.stars[-2:]) == ("戌", "寅")
-  assert tuple(p.dizhi.value for p in late.stars[-2:]) == ("亥", "卯")
+  assert tuple(p.dizhi.value for p in same.stars if p.star in (Star.天刑, Star.天姚)) == (
+    "戌",
+    "寅",
+  )
+  assert tuple(p.dizhi.value for p in late.stars if p.star in (Star.天刑, Star.天姚)) == (
+    "亥",
+    "卯",
+  )
 
 
 def test_synthetic_leap12_failure_is_scoped_to_consumed_policy(chart_choices: ChartConfig) -> None:
@@ -255,7 +267,7 @@ def test_new_stars_render_and_chinese_palace_queries(chart_choices: ChartConfig)
     replace(chart_choices, month_star_leap_month_policy=LeapMonthPolicy.上半月归本月下半月归下月),
     sihua_variant=SihuaVariant.王亭之讲义转录,
   )
-  assert len(chart.stars) == len(OLD_STARS) + 2
+  assert len(chart.stars) == len(OLD_STARS) + 6
   text = render_text(chart)
   svg = fromstring(render_svg(chart))
   readings = chart_brightness(chart, table=BrightnessTable.全书卷二录文)

@@ -356,7 +356,7 @@ def runtime_aliases(
   return modules, expectations
 
 
-def test_runtime_consumer_queries_every_major_star(
+def test_runtime_consumer_queries_every_interpreted_star(
   runtime_aliases: tuple[dict[str, Any], Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
   modules, expectations = runtime_aliases
@@ -385,6 +385,14 @@ def test_runtime_consumer_queries_every_major_star(
     "天梁",
     "七杀",
     "破军",
+    "天哭",
+    "天虚",
+    "天伤",
+    "天使",
+    "地空",
+    "地劫",
+    "天刑",
+    "天姚",
   }
 
 
@@ -404,8 +412,8 @@ def test_runtime_consumer_queries_every_major_star(
     ("enum-pickle", "enum identity"),
     ("record-pickle", "record did not retain"),
     ("knowledge-query", "knowledge query differs"),
-    ("interpretation-missing", "major-star interpretation query differs"),
-    ("interpretation-display", "major-star interpretation query differs"),
+    ("interpretation-missing", "star interpretation query differs"),
+    ("interpretation-display", "star interpretation query differs"),
     ("chart-type", "chart differs"),
     ("chart-output", "chart differs"),
     ("chinese-query", "Chinese query differs"),
