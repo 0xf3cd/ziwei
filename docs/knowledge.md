@@ -106,7 +106,8 @@ True
 
 ### 按星曜和来源查解释
 
-《诸星问答论》提供十四主星各一条星性描述（书中如何称述星曜）和一条带条件解释，共28条。
+《诸星问答论》提供十四主星各一条星性描述（书中如何称述星曜）和一条带条件解释，共28条；
+另有天空地劫、天伤天使、天刑、天姚、天哭天虚五节各两条，共38条。
 用概念与来源一起筛选，可以将这本书的解释和已有安星条目分开读取。
 当前目录的解释来源只有《紫微斗数全书》卷一，因此示例将来源结果解包为`source`：
 
@@ -150,8 +151,26 @@ False
 `statement`是仓内归纳，`references()`给出逐字原引，
 `premises`、`exceptions`与`limits`分别保存条件、例外和解释范围。这些记录说明书中如何称述星曜，
 查询不会检查某张命盘是否满足条件。上例的“已明确”只说明条目前提表达明确，武曲条目仍不默认展示。
-全部28条均可检索，但不进入默认展示；
+全部38条均可检索，但不进入默认展示；
 展示资格与出处、前提状态的区别见[状态说明](#状态需要分开表达)。
+
+成对论述共用一条记录，关联两颗星。例如，天哭和天虚读到相同的两条解释：
+
+```{doctest}
+>>> tianku, = catalog.find("天哭")
+>>> tianxu, = catalog.find("天虚")
+>>> paired = catalog.filter_entries(concept_id=tianku.id, source_id=source.id)
+>>> paired == catalog.filter_entries(concept_id=tianxu.id, source_id=source.id)
+True
+>>> [entry.id for entry in paired]
+['entry.interpretation.kuxu-nature', 'entry.interpretation.kuxu-yulu']
+>>> paired[1].premise_status is PremiseStatus.待定
+True
+```
+
+书中“天空地劫”一节的解释关联本库时系地空、地劫；这个局部文献称名不成为全局星名别名。
+用`catalog.get("entry.interpretation.kongjie-nature")`及`references()`可查同书卷二安诀和年支天空的区别。
+查询仍不检查某张盘是否符合身命、二限、入庙或遇禄等条件，也不补全杂曜亮度。
 
 来源、文本层次与复核动作见[卷一来源记录](knowledge-reference.md#source.quanshu-juan1-wikisource)
 及其关联条目；其他星曜的解释覆盖由[#77](https://github.com/0xf3cd/ziwei/issues/77)追踪。
@@ -194,7 +213,7 @@ False
 支持层次、该处文本层与限度；同一来源的原文与注文可分别标记。同一本资料的多处引文共享来源，不复制一份版本信息。
 `KnowledgeEntry.statement`保存整理者的陈述；逐字原文单独保存在`Citation.quote`。
 `RuleVariant.option`只关联闰月归属、子时换日和换年界线的枚举选项；`implementation`可保存已实现规则的公开对象路径，
-查询时不动态导入或运行。32星的概念标识、规则标识、公开实现链接从`stars`定义引用，
+查询时不动态导入或运行。36星的概念标识、规则标识、公开实现链接从`stars`定义引用，
 完整四化表与大限也链接所属模块的执行入口；既有单行四化异文和魁钺古籍异文仍保留`implementation=None`，
 不因某行与执行表相同就改变原记录的含义。完整表、盘例与转录限度见[四化与大限](sihua-decades.md)。
 口径概念的`options`从配置定义取值；目录拒绝把变体链接到该概念之外的配置选项。

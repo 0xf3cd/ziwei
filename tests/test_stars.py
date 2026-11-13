@@ -219,6 +219,10 @@ def test_star_aliases_identity_json_and_no_global_tiankong() -> None:
     "天喜",
     "天刑",
     "天姚",
+    "天哭",
+    "天虚",
+    "天伤",
+    "天使",
   )
   pinyin = (
     "ZIWEI",
@@ -253,12 +257,16 @@ def test_star_aliases_identity_json_and_no_global_tiankong() -> None:
     "TIANXI",
     "TIANXING",
     "TIANYAO",
+    "TIANKU",
+    "TIANXU",
+    "TIANSHANG",
+    "TIANSHI",
   )
   for name, member in zip(chinese, pinyin, strict=True):
     assert Star.__members__[name] is Star.__members__[member]
     assert Star.__members__[name].value == name
     assert Star.__members__[name].concept_id == "concept.star." + member.lower()
-  assert len(Star) == 32
+  assert len(Star) == 36
   assert "天空" not in Star.__members__
   assert json.loads(json.dumps(list(Star), ensure_ascii=False)) == list(chinese)
 
@@ -431,6 +439,7 @@ cases = [lambda: ziwei_dizhi(WuxingJu.水二局, True),
   lambda: place_hour_stars('子'), lambda: place_stem_stars('甲'),
    lambda: place_fire_bell('辰', Dizhi.卯), lambda: place_fire_bell(Dizhi.辰, None),
    lambda: place_hongluan_tianxi('子'),
+   lambda: place_tianku_tianxu('子'), lambda: place_tianshang_tianshi('寅'),
   lambda: tianma_dizhi('子'), lambda: tianfu_dizhi('子'),
   lambda: place_stars(replace(value, shichen=None)), lambda: place_stars(None),
    lambda: replace(config, tianma_rule='年支天马'),
@@ -455,4 +464,4 @@ print('checked=' + str(len(cases)))
     check=False,
   )
   assert result.returncode == 0, result.stdout + result.stderr
-  assert "checked=22" in result.stdout
+  assert "checked=24" in result.stdout

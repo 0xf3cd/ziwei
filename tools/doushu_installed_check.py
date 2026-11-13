@@ -71,13 +71,21 @@ def main(version: str, expectations: Path, first: str) -> None:
     "天梁",
     "七杀",
     "破军",
+    "天哭",
+    "天虚",
+    "天伤",
+    "天使",
+    "地空",
+    "地劫",
+    "天刑",
+    "天姚",
   ):
     (concept,) = catalog.find(name)
     entries = catalog.filter_entries(
       concept_id=concept.id, source_id="source.quanshu-juan1-wikisource"
     )
     if len(entries) != 2 or any(entry.show_by_default for entry in entries):
-      raise ValueError("Alias major-star interpretation query differs")
+      raise ValueError("Alias star interpretation query differs")
   if any(n == "celestial_calendar" or n.startswith("celestial_calendar.") for n in sys.modules):
     raise ValueError("Alias import or knowledge query initialized the native calendar")
   annual_api = import_module("doushu.liunian")
@@ -149,12 +157,19 @@ def main(version: str, expectations: Path, first: str) -> None:
     sihua_variant=sihua.SihuaVariant.排命盘口诀转录,
   )
   if monthly.计算输入.命盘配置.month_star_policy is not monthly_choices.month_star_policy or tuple(
-    (p.星曜, p.地支) for p in monthly.星位[-2:]
+    (p.星曜, p.地支) for p in monthly.星位 if p.星曜 in (stars.星曜.天刑, stars.星曜.天姚)
   ) != (
     (stars.星曜.天刑, ganzhi.地支.亥),
     (stars.星曜.天姚, ganzhi.地支.卯),
   ):
     raise ValueError("Installed alias xingyao or month policy differs")
+  if len(monthly.星位) != 36 or tuple((p.星曜, p.地支) for p in monthly.星位[-4:]) != (
+    (stars.星曜.天哭, ganzhi.地支.卯),
+    (stars.星曜.天虚, ganzhi.地支.酉),
+    (stars.星曜.天伤, ganzhi.地支.申),
+    (stars.星曜.天使, ganzhi.地支.戌),
+  ):
+    raise ValueError("Installed alias kuxu or fixed shangshi differs")
   print(
     f"Installed doushu {version}; {len(names)} modules/{count} original objects; first={first}; optimized={sys.flags.optimize}"
   )

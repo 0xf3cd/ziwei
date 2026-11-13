@@ -22,7 +22,13 @@ from ziwei._frame import chart_frame
 from ziwei.bureau import WuxingJu
 from ziwei.config import TianmaRule
 from ziwei.ganzhi import Dizhi, Tiangan
-from ziwei.palaces import effective_month, month_palace_index, opposite_dizhi
+from ziwei.palaces import (
+  PalaceName,
+  effective_month,
+  month_palace_index,
+  opposite_dizhi,
+  palace_dizhi,
+)
 
 if TYPE_CHECKING:
   from ziwei.birth import CalculationInput
@@ -73,6 +79,10 @@ class Star(StrEnum):
   TIANXI = "天喜", "concept.star.tianxi"
   TIANXING = "天刑", "concept.star.tianxing"
   TIANYAO = "天姚", "concept.star.tianyao"
+  TIANKU = "天哭", "concept.star.tianku"
+  TIANXU = "天虚", "concept.star.tianxu"
+  TIANSHANG = "天伤", "concept.star.tianshang"
+  TIANSHI = "天使", "concept.star.tianshi"
   紫微 = ZIWEI
   天机 = TIANJI
   太阳 = TAIYANG
@@ -105,6 +115,10 @@ class Star(StrEnum):
   天喜 = TIANXI
   天刑 = TIANXING
   天姚 = TIANYAO
+  天哭 = TIANKU
+  天虚 = TIANXU
+  天伤 = TIANSHANG
+  天使 = TIANSHI
 
   @property
   def concept_id(self) -> str:
@@ -334,6 +348,22 @@ _HONGLUAN_TIANXI = StarRule(
   scope="紫微斗数本命安星；只定两星位置，不解释吉凶",
   conditions=("年支须已按所选本命换年口径确定；两星不另设年界",),
 )
+_KU_XU = StarRule(
+  "variant.star.tianku-tianxu-year-branch",
+  "天哭天虚按生年支",
+  (Star.天哭, Star.天虚),
+  "午宫起子年，天哭逆数、天虚顺数到生年支。",
+  "ziwei.stars.place_tianku_tianxu",
+  conditions=("年支须已按所选本命换年口径确定；两星不另设年界",),
+)
+_SHANG_SHI = StarRule(
+  "variant.star.tianshang-tianshi-fixed",
+  "天伤天使固定奴仆疾厄法",
+  (Star.天伤, Star.天使),
+  "天伤固定安在奴仆宫，天使固定安在疾厄宫；不随性别或年干阴阳互换。",
+  "ziwei.stars.place_tianshang_tianshi",
+  conditions=("命宫已定，十二宫自命宫逆排",),
+)
 STAR_RULES: Final[tuple[StarRule, ...]] = (
   _ZIWEI,
   _ZIWEI_SERIES,
@@ -350,6 +380,8 @@ STAR_RULES: Final[tuple[StarRule, ...]] = (
   _MONTH_MA,
   _HONGLUAN_TIANXI,
   _XINGYAO,
+  _KU_XU,
+  _SHANG_SHI,
 )
 """计算、知识目录与参考页共用的规则记录；实现路径只存为字符串，不据此导入或调用函数。"""
 
@@ -507,6 +539,25 @@ def place_hongluan_tianxi(year_dizhi: Dizhi) -> tuple[StarPlacement, ...]:
   )
 
 
+def place_tianku_tianxu(year_dizhi: Dizhi) -> tuple[StarPlacement, ...]:
+  """按已确定的生年支安天哭、天虚：午起子，哭逆虚顺。"""
+  if not isinstance(year_dizhi, Dizhi):
+    raise TypeError("生年支须为 Dizhi 成员")
+  offset = tuple(Dizhi).index(year_dizhi)
+  return (
+    _placement(Star.天哭, _move(Dizhi.午, -offset)),
+    _placement(Star.天虚, _move(Dizhi.午, offset)),
+  )
+
+
+def place_tianshang_tianshi(minggong: Dizhi) -> tuple[StarPlacement, ...]:
+  """按命宫安固定法天伤、天使，分别落在奴仆宫、疾厄宫。"""
+  return (
+    _placement(Star.天伤, palace_dizhi(minggong, PalaceName.奴仆)),
+    _placement(Star.天使, palace_dizhi(minggong, PalaceName.疾厄)),
+  )
+
+
 def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
   """从解析结果安星，按Star枚举顺序返回；要求时辰已知，允许性别未知。
 
@@ -542,6 +593,8 @@ def place_stars(value: CalculationInput) -> tuple[StarPlacement, ...]:
     *place_fire_bell(year.dizhi, value.shichen),
     _placement(Star.天马, tianma_dizhi(ma_branch), value.config.tianma_rule),
     *place_hongluan_tianxi(year.dizhi),
+    *place_tianku_tianxu(year.dizhi),
+    *place_tianshang_tianshi(frame.minggong),
   )
   if len(positions) != len(Star) or {item.star for item in positions} != set(Star):
     raise ValueError("安星结果须覆盖全部星曜且每颗只出现一次")

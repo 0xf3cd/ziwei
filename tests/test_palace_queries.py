@@ -104,7 +104,7 @@ def test_hand_derived_empty_and_multiple_stars(chart_choices: ChartConfig) -> No
   """合成甲子正月初一午时：命身申、壬申金四局，紫微亥、天府巳。
 
   依已登记口诀手推两星系及辅星，官禄子无星，命宫申为太阳、巨门、火星、月马；
-  对宫午有天同、太阴，不借入空宫。此例不是外部原盘。
+  对宫午有天同、太阴及哭虚，不借入空宫。此例不是外部原盘。
   """
   result = create_chart(
     LunarBirthRecord(
@@ -118,7 +118,12 @@ def test_hand_derived_empty_and_multiple_stars(chart_choices: ChartConfig) -> No
   assert empty.stars == ()
   assert (empty.lu, empty.quan, empty.ke, empty.ji) == (None, None, None, None)
   assert empty.is_shengong is False
-  assert tuple(p.star for p in palace_view(result, Dizhi.午).stars) == (Star.天同, Star.太阴)
+  assert tuple(p.star for p in palace_view(result, Dizhi.午).stars) == (
+    Star.天同,
+    Star.太阴,
+    Star.天哭,
+    Star.天虚,
+  )
   ming = palace_view(result, PalaceName.命宫)
   assert ming.palace.dizhi is Dizhi.申 and ming.is_shengong is True
   assert tuple(p.star for p in ming.stars) == (Star.太阳, Star.巨门, Star.火星, Star.天马)

@@ -335,11 +335,11 @@ celestial-calendar 的具体适配；导入本模块不初始化 celestial 原�
 
 ## 安星
 
-[32星用法、来源与失败边界](stars.md) · [定义生成的安星参考表](knowledge-reference.md#implemented-stars)
+[36星用法、来源与失败边界](stars.md) · [定义生成的安星参考表](knowledge-reference.md#implemented-stars)
 
 ```{eval-rst}
 .. automodule:: ziwei.stars
-   :members: Star, StarRule, StarPlacement, ziwei_dizhi, tianfu_dizhi, place_major_stars, place_month_stars, place_hour_stars, lucun_yangtuo_dizhi, place_stem_stars, place_fire_bell, tianma_dizhi, place_hongluan_tianxi, place_stars
+   :members: Star, StarRule, StarPlacement, ziwei_dizhi, tianfu_dizhi, place_major_stars, place_month_stars, place_hour_stars, lucun_yangtuo_dizhi, place_stem_stars, place_fire_bell, tianma_dizhi, place_hongluan_tianxi, place_tianku_tianxu, place_tianshang_tianshi, place_stars
    :undoc-members:
    :member-order: bysource
 
