@@ -66,7 +66,7 @@ docs/               中文指南与说明
 
 | 口径 | 具名选项 | 影响 |
 |---|---|---|
-| 闰月归属 | [定义生成的选项](knowledge-reference.md#implemented-policies) | 命宫、身宫、左辅右弼等按月安星 |
+| 闰月归属 | [定义生成的选项](knowledge-reference.md#implemented-policies) | 命宫、身宫取月；月系星默认跟随，也可另选，见下文 |
 | 子时换日 | [定义生成的选项](knowledge-reference.md#implemented-policies) | 农历日，进而影响紫微星位置与整盘 |
 | 换年 | [定义生成的选项](knowledge-reference.md#implemented-policies) | 年干支，进而影响生年四化、禄存、天魁天钺、火铃、天马、红鸾天喜与哭虚 |
 

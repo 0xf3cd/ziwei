@@ -172,8 +172,10 @@ True
 
 ## 从出生记录读取年度十二宫
 
-`liunian_palaces()`按`PalaceName`顺序返回十二个`LiunianPalaceView`。本例使用合成出生资料，
+先用出生记录排出本命盘，再将命盘与目标纪年传给`liunian_palaces()`，
+按`PalaceName`顺序读取十二个`LiunianPalaceView`。本例使用合成出生资料，
 本命表选《排命盘口诀》转录，年度表另选王亭之讲义转录；两次选择互不代替。
+表中的“生年四化”来自本命盘，“流年四化”来自显式选择的年度表。
 
 ```{doctest}
 >>> from datetime import date
