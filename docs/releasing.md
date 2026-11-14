@@ -47,6 +47,15 @@
 三份公开制品与同次原件逐字节相同，PEP740发布身份、制品摘要与源码／workflow／environment／run／attempt字段已核对；
 Python3.11／3.14各三种全新索引安装消费通过，含别名的组合也通过类型正反例。本次两个上传job分别等待并取得了`pypi`环境批准。
 
+[ziwei PyPI 0.5.0](https://pypi.org/project/ziwei/0.5.0/)、
+[doushu PyPI 0.5.0](https://pypi.org/project/doushu/0.5.0/)与
+[v0.5.0 Release](https://github.com/0xf3cd/ziwei/releases/tag/v0.5.0)已公开，
+轻量标签`v0.5.0`固定指向源码`20966bb3b7b2d1916a9a5a40b47737423c0f6d2d`。
+[正式运行43583279009](https://github.com/0xf3cd/ziwei/actions/runs/43583279009)的attempt 1完成构建、七项跨平台消费及两包上传。
+三份公开制品与同次原件逐字节相同，PEP740发布身份、制品摘要与证书中的源码／workflow／environment／run／attempt字段已核对；
+两个上传job实际拉取的镜像digest均与批准前记录一致。Python3.11／3.14各三组全新索引安装消费通过，
+含别名的组合也通过双导入顺序与已安装类型正反例；两次`pypi`环境批准均由维护者完成。
+
 ## 发布前准备
 
 候选版本合入main前，更新`pyproject.toml`版本号，核对README的安装与文档入口，以及构建后的包元数据与长描述。
