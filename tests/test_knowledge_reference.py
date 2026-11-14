@@ -49,6 +49,8 @@ def test_actual_html_and_relative_stable_links(html: Path) -> None:
 @pytest.mark.parametrize(
   "section",
   [
+    "implemented-liunian-palaces",
+    "implemented-liunian-sihua",
     "implemented-liunian-stars",
     "implemented-xiaoxian",
     "implemented-tongxian",
@@ -379,3 +381,14 @@ def test_sphinx_hook_only_expands_reference_page() -> None:
     "entry.tianma.year-branch",
   )
   assert "entry.unknown" not in slugs
+
+
+def test_tuple_fields_render_as_separate_list_items(html: Path) -> None:
+  page = html / "docs/knowledge-reference.html"
+  text = page.read_text(encoding="utf-8")
+  assert "。、" not in text
+  for key in ("concepts", "variants", "sources", "citations", "entries"):
+    assert f'href="#records-{key}"' in text and f'<section id="records-{key}">' in text
+  page.write_text(text.replace("</li><li>", "", 1), encoding="utf-8")
+  with pytest.raises(ValueError, match="lost or changed fields"):
+    check_knowledge_reference(html)

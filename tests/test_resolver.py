@@ -411,6 +411,30 @@ def test_lichun_adjacent_minutes_both_sides() -> None:
   assert after.ganzhi_year == 2024
 
 
+@pytest.mark.parametrize(
+  "microsecond, year, bureau",
+  [(443958, 2023, "土五局"), (443971, 2023, "土五局"), (443972, 2024, "木三局")],
+)
+def test_lichun_microsecond_threshold_reaches_complete_chart(
+  microsecond: int, year: int, bureau: str
+) -> None:
+  record = GregorianBirthRecord(
+    birth_date=date(2024, 2, 4),
+    birth_time=time(16, 27, 6, microsecond),
+    time_precision=TimePrecision.微秒,
+    timezone=FixedOffset(timedelta(hours=8)),
+    gender=Gender.男,
+  )
+  chart = create_chart(
+    record, config(year=YearBoundary.立春), sihua_variant=SihuaVariant.排命盘口诀转录
+  )
+  value = chart.calculation
+  assert value.ut1_jd is not None and value.lichun_jd is not None
+  assert (value.ut1_jd >= value.lichun_jd) is (year == 2024)
+  assert value.ganzhi_year == year
+  assert chart.bureau.value == bureau
+
+
 def test_late_zi_rollover_policies() -> None:
   """子时两口径：晚子时归次日顺延一农历日，早晚子时同日不改。"""
   record = gregorian(date(1988, 7, 1), time(23, 30))

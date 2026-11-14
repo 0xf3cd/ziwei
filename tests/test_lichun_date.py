@@ -84,7 +84,9 @@ def test_subsecond_midnight_gap_distinguishes_ut1_from_utc(
   day = date(year, 2, 4)
   local_midnight = datetime(year, 2, 4, tzinfo=timezone(timedelta(hours=8)))
   correct = calendar.utc_to_ut1_jd(local_midnight)
-  wrong = calendar._civil_to_jd(year, 2, 3, 16 / 24)
+  import celestial_calendar as celestial
+
+  wrong = celestial.ut1_to_jd(celestial.CivilDateTime(year, 2, 3, 16 / 24))
   target = correct + (wrong - correct) / 2
   assert min(correct, wrong) < target < max(correct, wrong)
   monkeypatch.setattr(calendar, "lichun_jd", lambda _: target)

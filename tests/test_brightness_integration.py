@@ -53,7 +53,7 @@ def test_chart_readings_preserve_positions_and_are_available_by_palace(
   readings = chart_brightness(brightness_chart, table=TABLE)
   assert len(readings) == len(Star)
   assert sum(item.level is not None for item in readings) == 14
-  assert sum(item.level is None for item in readings) == 16
+  assert sum(item.level is None for item in readings) == len(Star) - 14
   assert tuple((item.star, item.dizhi) for item in readings) == tuple(
     (item.star, item.dizhi) for item in before
   )

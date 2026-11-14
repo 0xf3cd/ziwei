@@ -112,13 +112,13 @@ wheels = [
 
 [[package]]
 name = "celestial-calendar"
-version = "0.8.0"
+version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/42/20897e54b7a61727690f5dffbc1a699a1e1de42f69b680a972845dd91728/celestial_calendar-0.8.0-py3-none-macosx_14_0_arm64.whl", hash = "sha256:77fd86e861d64c0034c695b8436442ba5f105dc6934fbee10738b90018d19bb5", size = 686030, upload-time = "2026-10-17T22:30:42.457Z" },
-    { url = "https://files.pythonhosted.org/packages/0d/ad/bdc46453f735b8f493e9b21af45d1f768762348a4ee69983b499a288d705/celestial_calendar-0.8.0-py3-none-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c8048ed9a3e670362d15604c39b1cefe8beefbed838a4d102397eee943b9d6e9", size = 784580, upload-time = "2026-10-17T22:30:44.388Z" },
-    { url = "https://files.pythonhosted.org/packages/42/30/b634df43da1d76d8b68036092625b81840ffd0beb4a42c09f178c6402ec4/celestial_calendar-0.8.0-py3-none-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e873e05bb3dfba456d85eb7c397fc90970f84c3b829577808ea74ae8230d8e38", size = 809758, upload-time = "2026-10-17T22:30:46.117Z" },
-    { url = "https://files.pythonhosted.org/packages/04/c5/203d0df6d4d8aa960313014487896523e67a4eadaae95dffd1a444aacc1f/celestial_calendar-0.8.0-py3-none-win_amd64.whl", hash = "sha256:c3e261aa2693e48d8c14667924a16cd47618e15aea538116d8e52d58431127df", size = 884539, upload-time = "2026-10-17T22:30:47.595Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/b1/2c599a8e92238ea1ed7ab8d67cb443471568ee63fa1d54d36536119a5ac1/celestial_calendar-1.1.1-py3-none-macosx_15_0_arm64.whl", hash = "sha256:90640b97d2d99a2d86681727d612b9cb39044510993bf5bc6afe35ab01e0bd9e", size = 759283, upload-time = "2026-11-03T20:18:22.403Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/70/f30a92887368106102dbfc5d0c9c60d09b18893876253fbffa0d80d72d19/celestial_calendar-1.1.1-py3-none-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:505ba793c79a998facdbb83f13990278f359de11750ab2a9b62568506d0de956", size = 864637, upload-time = "2026-11-03T20:18:24.17Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/70/9cfe3bf5788cd3ccd858b9d1b873d3ab6de2e0d9188bf68acebc7a1c45bd/celestial_calendar-1.1.1-py3-none-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c53b88f32661434d6529112c9e390a3592b55bbddda05c3750cd4443398371bd", size = 896859, upload-time = "2026-11-03T20:18:26.093Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/3a/fd690dce82365e4355ef787cc3c44c80f900aee8cdabdf7104419dbd4817/celestial_calendar-1.1.1-py3-none-win_amd64.whl", hash = "sha256:96933cdbc2ffa7660b4c2094733cc2da3f742393cd0d10a76a6206b93234ffef", size = 962602, upload-time = "2026-11-03T20:18:27.681Z" },
 ]
 
 [[package]]
@@ -1411,11 +1411,11 @@ wheels = [
 
 [[package]]
 name = "tzdata"
-version = "2026.5"
+version = "2026.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d9/68/f1b440335057bfce71b6e50a9d09445aa2ecbd08359a337976627b8409e7/tzdata-2026.5.tar.gz", hash = "sha256:8cc73c0a0bfca7dbfa59235d60b2eff82231dee33f53d206db1acd9173cfc0a7", size = 200404, upload-time = "2026-10-03T09:23:14.143Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/29/6a1391d31cd00ff9e927215a224a880e1e84e826b64ba80a499e51c074d8/tzdata-2026.6.tar.gz", hash = "sha256:85d2cd9c09f81f0bb29db27759fc83af4f1e620efb814f8c5bf8b4cc4feece6d", size = 201017, upload-time = "2026-10-28T09:57:09.137Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/21/1e5995a1c920cce14e4bffae20c665ec10e7ed03ab25e006cd741092b718/tzdata-2026.5-py2.py3-none-any.whl", hash = "sha256:b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac", size = 347996, upload-time = "2026-10-03T09:23:12.535Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/66/9a06c2227fedfd4919f0eaaa8b94377d9730882a7e4f95823c9a331ab5e1/tzdata-2026.6-py2.py3-none-any.whl", hash = "sha256:0a10eec6e13ef16b627fabed9a5f2ba61a62b1c67f327305f4e7e412a70b4aec", size = 348210, upload-time = "2026-10-28T09:57:07.276Z" },
 ]
 
 [[package]]
@@ -1438,7 +1438,7 @@ wheels = [
 
 [[package]]
 name = "ziwei"
-version = "0.4.1"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "celestial-calendar" },
@@ -1464,8 +1464,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "celestial-calendar", specifier = "==0.8.0" },
-    { name = "tzdata", specifier = "==2026.5" },
+    { name = "celestial-calendar", specifier = "==1.1.1" },
+    { name = "tzdata", specifier = "==2026.6" },
 ]
 
 [package.metadata.requires-dev]

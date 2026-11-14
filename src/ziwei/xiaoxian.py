@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, TypeAlias
 
 from ziwei.ganzhi import Dizhi
 
@@ -44,7 +44,7 @@ class Xiaoxian:
     if self.gender is Gender.未知:
       raise ValueError("小限需要已知性别")
     if type(self.age) is not int:
-      raise TypeError("小限虚岁须为整数，不接受 bool")
+      raise TypeError("小限虚岁不接受 bool" if isinstance(self.age, bool) else "小限虚岁须为整数")
     if self.age < 1:
       raise ValueError("小限虚岁须为正整数")
     start = next(start for group, start in XIAOXIAN_STARTS if self.year_dizhi in group)
@@ -58,7 +58,26 @@ class Xiaoxian:
     """本读数使用的定位规则标识。"""
     return XIAOXIAN_RULE_ID
 
+  @property
+  def 生年支(self) -> Dizhi:
+    return self.year_dizhi
+
+  @property
+  def 性别(self) -> Gender:
+    return self.gender
+
+  @property
+  def 虚岁(self) -> int:
+    return self.age
+
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
+
 
 def xiaoxian_at_age(year_dizhi: Dizhi, gender: Gender, age: int) -> Xiaoxian:
   """按生年支、已知性别和正整数虚岁查询小限。"""
   return Xiaoxian(year_dizhi=year_dizhi, gender=gender, age=age)
+
+
+小限: TypeAlias = Xiaoxian

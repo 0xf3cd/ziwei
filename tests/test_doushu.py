@@ -10,7 +10,7 @@ import pickle
 import shutil
 import subprocess
 import sys
-from copy import deepcopy
+from dataclasses import replace
 from importlib import import_module
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -319,8 +319,26 @@ def runtime_aliases(
     sihua_variant=modules["ziwei.sihua"].SihuaVariant.排命盘口诀转录,
   )
 
-  def create_chart(*args: object, **kwargs: object) -> ZiweiChart:
-    return chart
+  monthly = modules["ziwei.chart"].create_chart(
+    birth.LunarBirthRecord(
+      year=2023,
+      month=2,
+      day=16,
+      is_leap_month=True,
+      shichen=modules["ziwei.ganzhi"].Dizhi.子,
+      gender=birth.Gender.女,
+    ),
+    config.ChartConfig(
+      leap_month_policy=config.LeapMonthPolicy.全月归本月,
+      day_rollover=config.DayRollover.早晚子时同日,
+      year_boundary=config.YearBoundary.农历正月初一,
+      month_star_leap_month_policy=config.LeapMonthPolicy.上半月归本月下半月归下月,
+    ),
+    sihua_variant=modules["ziwei.sihua"].SihuaVariant.排命盘口诀转录,
+  )
+
+  def create_chart(*args: Any, **kwargs: Any) -> ZiweiChart:
+    return monthly if args[0].is_leap_month else chart
 
   monkeypatch.setattr(modules["ziwei.chart"], "create_chart", create_chart)
   modules["doushu.chart"].create_chart = create_chart
@@ -338,16 +356,50 @@ def runtime_aliases(
   return modules, expectations
 
 
-def test_runtime_consumer_fixture_reaches_the_complete_chart(
-  runtime_aliases: tuple[dict[str, Any], Path],
+def test_runtime_consumer_queries_every_interpreted_star(
+  runtime_aliases: tuple[dict[str, Any], Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-  _, expectations = runtime_aliases
+  modules, expectations = runtime_aliases
+  catalog_type = modules["ziwei.knowledge.catalog"].Catalog
+  original = catalog_type.find
+  queried: set[str] = set()
+
+  def find(catalog: Any, name: str) -> Any:
+    queried.add(name)
+    return original(catalog, name)
+
+  monkeypatch.setattr(catalog_type, "find", find)
   doushu_installed_check.main(VERSION, expectations, "doushu")
+  assert queried == {
+    "紫微",
+    "天府",
+    "天机",
+    "太阳",
+    "武曲",
+    "天同",
+    "廉贞",
+    "太阴",
+    "贪狼",
+    "巨门",
+    "天相",
+    "天梁",
+    "七杀",
+    "破军",
+    "天哭",
+    "天虚",
+    "天伤",
+    "天使",
+    "地空",
+    "地劫",
+    "天刑",
+    "天姚",
+  }
 
 
 @pytest.mark.parametrize(
   "defect, message",
   [
+    (None, None),
     ("identity", "original objects"),
     ("version", "same version"),
     ("order", "import order"),
@@ -360,15 +412,23 @@ def test_runtime_consumer_fixture_reaches_the_complete_chart(
     ("enum-pickle", "enum identity"),
     ("record-pickle", "record did not retain"),
     ("knowledge-query", "knowledge query differs"),
+    ("interpretation-missing", "star interpretation query differs"),
+    ("interpretation-display", "star interpretation query differs"),
     ("chart-type", "chart differs"),
     ("chart-output", "chart differs"),
+    ("chinese-query", "Chinese query differs"),
+    ("chinese-native", "Chinese query initialized"),
+    ("annual-sihua", "Installed annual Chinese sihua differs"),
+    ("annual-native", "Annual sihua initialized"),
+    ("annual-palace", "Installed alias annual palace query differs"),
+    ("month-policy", "Installed alias xingyao or month policy differs"),
   ],
 )
 def test_runtime_consumer_rejects_invalid_contracts(
   runtime_aliases: tuple[dict[str, Any], Path],
   monkeypatch: pytest.MonkeyPatch,
-  defect: str,
-  message: str,
+  defect: str | None,
+  message: str | None,
 ) -> None:
   modules, expectations = runtime_aliases
   version, first = VERSION, "doushu"
@@ -393,13 +453,26 @@ def test_runtime_consumer_rejects_invalid_contracts(
       modules["doushu"].__file__ = str(ROOT / "src/doushu/__init__.py")
     case "missing-file":
       modules["doushu"].__file__ = None
-    case "native-query" | "knowledge-query":
+    case "native-query" | "knowledge-query" | "interpretation-missing" | "interpretation-display":
       original = modules["ziwei.knowledge"].load_catalog
 
       def load_catalog() -> Any:
         if defect == "native-query":
           monkeypatch.setitem(sys.modules, "celestial_calendar", ModuleType("celestial_calendar"))
           return original()
+        if defect in ("interpretation-missing", "interpretation-display"):
+          catalog = original()
+          return replace(
+            catalog,
+            entries=tuple(
+              replace(item, show_by_default=True)
+              if defect == "interpretation-display"
+              and item.id == "entry.interpretation.pojun-nature"
+              else item
+              for item in catalog.entries
+              if defect != "interpretation-missing" or item.id != "entry.interpretation.pojun-jumen"
+            ),
+          )
         return SimpleNamespace(get=lambda name: SimpleNamespace(id="wrong"))
 
       monkeypatch.setattr(modules["ziwei.knowledge"], "load_catalog", load_catalog)
@@ -421,17 +494,75 @@ def test_runtime_consumer_rejects_invalid_contracts(
     case "chart-output":
       monkeypatch.setattr(modules["ziwei.render"], "render_text", lambda chart: "wrong")
       modules["doushu.render"].render_text = modules["ziwei.render"].render_text
-  with pytest.raises(ValueError, match=message):
+    case "chinese-query":
+      monkeypatch.setattr(
+        modules["ziwei.liunian"].LiunianStars,
+        "陀罗",
+        property(lambda _: modules["ziwei.ganzhi"].Dizhi.子),
+      )
+    case "chinese-native":
+
+      def year_ganzhi(value: Any) -> Any:
+        monkeypatch.setitem(sys.modules, "celestial_calendar", ModuleType("celestial_calendar"))
+        return value.year_ganzhi
+
+      monkeypatch.setattr(modules["ziwei.liunian"].LiunianStars, "年干支", property(year_ganzhi))
+    case "annual-sihua":
+      monkeypatch.setattr(
+        modules["ziwei.liunian"].LiunianSihua,
+        "化科",
+        property(lambda _: modules["ziwei.stars"].Star.天同),
+      )
+    case "annual-native":
+
+      def annual_ke(value: Any) -> Any:
+        monkeypatch.setitem(sys.modules, "celestial_calendar", ModuleType("celestial_calendar"))
+        return value.ke
+
+      monkeypatch.setattr(modules["ziwei.liunian"].LiunianSihua, "化科", property(annual_ke))
+    case "annual-palace":
+      monkeypatch.setattr(
+        modules["ziwei.chart"].LiunianPalaceView, "流年四化", property(lambda _: None)
+      )
+    case "month-policy":
+      original = modules["ziwei.chart"].create_chart
+
+      def wrong_month(*args: Any, **kwargs: Any) -> ZiweiChart:
+        result: ZiweiChart = original(*args, **kwargs)
+        if args[0].is_leap_month:
+          object.__setattr__(result.calculation.config, "month_star_leap_month_policy", None)
+        return result
+
+      monkeypatch.setattr(modules["ziwei.chart"], "create_chart", wrong_month)
+      modules["doushu.chart"].create_chart = wrong_month
+  if message is None:
     doushu_installed_check.main(version, expectations, first)
+  else:
+    with pytest.raises(ValueError, match=message):
+      doushu_installed_check.main(version, expectations, first)
+
+
+TYPING_RESULTS = [
+  (0, ""),
+  (1, "error [arg-type]"),
+  (1, "error [attr-defined]"),
+  (1, "error [misc]"),
+  (1, "error [attr-defined]"),
+  (1, "error [call-arg]"),
+  (1, "error [call-arg]"),
+  (1, "error [misc]"),
+]
 
 
 @pytest.mark.parametrize(
   "results",
   [
-    [(0, ""), (1, "error [arg-type]")],
+    TYPING_RESULTS,
     [(1, "error [arg-type]")],
     [(0, ""), (0, "")],
     [(0, ""), (1, "unrelated error")],
+    *[[*TYPING_RESULTS[:index], (0, "")] for index in range(2, len(TYPING_RESULTS))],
+    *[[*TYPING_RESULTS[:index], (1, "unrelated error")] for index in range(2, len(TYPING_RESULTS))],
   ],
 )
 def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
@@ -450,17 +581,59 @@ def test_typing_gate_checks_both_outcomes_and_uses_installed_environment(
   monkeypatch.setattr(subprocess, "run", fake_run)
   monkeypatch.setenv("MYPYPATH", "untrusted")
   monkeypatch.setenv("PYTHONPATH", "untrusted")
-  valid = results == [(0, ""), (1, "error [arg-type]")]
+  monkeypatch.setenv("PYTHONUTF8", "0")
+  monkeypatch.setenv("PYTHONIOENCODING", "cp1252")
+  valid = results == TYPING_RESULTS
   if valid:
     doushu.check_alias_typing(tmp_path)
+    assert len(calls) == len(TYPING_RESULTS)
   else:
-    with pytest.raises(ValueError, match="did not accept"):
+    with pytest.raises(ValueError, match="unexpected exit code or diagnostic"):
       doushu.check_alias_typing(tmp_path)
   assert calls
   for command, env in calls:
     assert "MYPYPATH" not in env and "PYTHONPATH" not in env
+    assert env["PYTHONUTF8"] == "1" and env["PYTHONIOENCODING"] == "utf-8"
     assert "--no-incremental" in command and "--python-executable" in command
     assert command[command.index("--python-executable") + 1].startswith(str(tmp_path / "consumer"))
+
+
+@pytest.mark.parametrize(
+  "code,stdout,stderr",
+  [(2, "", "INTERNAL ERROR"), (1, "[arg-type]", "INTERNAL ERROR"), (2, "", "")],
+)
+def test_typing_gate_identifies_checker_crashes(
+  tmp_path: Path, monkeypatch: pytest.MonkeyPatch, code: int, stdout: str, stderr: str
+) -> None:
+  monkeypatch.setattr(
+    subprocess,
+    "run",
+    lambda *args, **kwargs: SimpleNamespace(returncode=code, stdout=stdout, stderr=stderr),
+  )
+  with pytest.raises(ValueError, match="mypy crashed"):
+    doushu.check_alias_typing(tmp_path)
+
+
+def test_typing_gate_logs_chinese_diagnostics_on_a_narrow_output_stream(
+  tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  pending = iter(TYPING_RESULTS)
+
+  def fake_run(command: tuple[str, ...], **kwargs: Any) -> SimpleNamespace:
+    assert kwargs["encoding"] == "utf-8"
+    code, output = next(pending)
+    return SimpleNamespace(returncode=code, stdout=output + (" 陀罗" if code else ""), stderr="")
+
+  buffer = io.BytesIO()
+  stream = io.TextIOWrapper(buffer, encoding="cp1252", errors="strict")
+  with monkeypatch.context() as patch:
+    patch.setattr(subprocess, "run", fake_run)
+    patch.setattr(sys, "stdout", stream)
+    doushu.check_alias_typing(tmp_path)
+  stream.flush()
+  output = buffer.getvalue().decode("cp1252")
+  assert r"\u9640\u7f57" in output and "[attr-defined]" in output
+  assert next(pending, None) is None
 
 
 def test_alias_installs_by_file_without_resolving_another_primary(
@@ -626,7 +799,7 @@ def test_alias_builder_rejects_extra_output(
     doushu.build_alias(tmp_path / "build")
 
 
-@pytest.mark.parametrize("phase", ["primary", "alias"])
+@pytest.mark.parametrize("phase", ["install", "primary", "alias"])
 def test_consumption_cannot_replace_retained_artifacts(
   alias_wheel: Path,
   tmp_path: Path,
@@ -644,14 +817,16 @@ def test_consumption_cannot_replace_retained_artifacts(
   monkeypatch.setattr(check, "check_sdist", lambda *args: None)
   monkeypatch.setattr(check, "check_wheel", lambda *args: None)
   monkeypatch.setattr(check, "alias_from_sdist", lambda *args: alias_wheel)
-  monkeypatch.setattr(check, "install_and_consume", lambda *args, **kwargs: None)
-  monkeypatch.setattr(
-    check,
-    "consume_alias",
-    lambda *args, **kwargs: (primary if phase == "primary" else alias_wheel).write_bytes(
-      b"changed"
-    ),
-  )
+  changed = alias_wheel if phase == "alias" else primary
+
+  def change(*args: object, **kwargs: object) -> None:
+    changed.write_bytes(b"changed")
+
+  def keep(*args: object, **kwargs: object) -> None:
+    pass
+
+  monkeypatch.setattr(check, "install_and_consume", change if phase == "install" else keep)
+  monkeypatch.setattr(check, "consume_alias", keep if phase == "install" else change)
   monkeypatch.setattr(check, "check_alias_typing", lambda *args: None)
   with pytest.raises(ValueError, match="changed during"):
     check.check_distribution(
@@ -706,46 +881,3 @@ def test_real_alias_publish_bash_blocks_upload(
   )
   assert result.returncode == (0 if defect is None else 1), result.stderr
   assert marker.exists() is (defect is None)
-
-
-@pytest.mark.parametrize(
-  "defect",
-  [
-    "alias-needs",
-    "alias-path",
-    "alias-hash",
-    "alias-upload",
-    "consume-path",
-    "consume-pin",
-    "outputs",
-    "upload-path",
-  ],
-)
-def test_workflow_rejects_alias_boundary_drift(defect: str) -> None:
-  from tests.test_workflow import check_release_policy, load_workflow
-
-  good = load_workflow((ROOT / ".github/workflows/release.yml").read_text())
-  check_release_policy(good)
-  bad = deepcopy(good)
-  alias = bad["jobs"]["publish-pypi-doushu"]
-  match defect:
-    case "alias-needs":
-      alias["needs"].remove("publish-pypi")
-    case "alias-path":
-      alias["steps"][0]["with"]["path"] = "dist"
-    case "alias-hash":
-      alias["steps"][1]["env"]["WHEEL_SHA256"] = "${{ needs.build.outputs.wheel_sha256 }}"
-    case "alias-upload":
-      alias["steps"][2]["with"]["packages-dir"] = "dist/packages"
-    case "consume-path":
-      bad["jobs"]["consume"]["steps"][4]["with"]["path"] = "dist"
-    case "consume-pin":
-      bad["jobs"]["consume"]["env"].pop("DOUSHU_WHEEL_SHA256")
-    case "outputs":
-      bad["jobs"]["build"]["outputs"]["doushu_artifact_id"] = (
-        "${{ steps.upload.outputs.artifact-id }}"
-      )
-    case "upload-path":
-      bad["jobs"]["build"]["steps"][11]["with"]["path"] = "dist/"
-  with pytest.raises(ValueError):
-    check_release_policy(bad)

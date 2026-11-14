@@ -50,6 +50,9 @@ EXPECTED_RULE_STARS = {
   "variant.tianma.year-branch": (stars.Star.天马,),
   "variant.tianma.month-branch": (stars.Star.天马,),
   "variant.star.hongluan-tianxi-year-branch": (stars.Star.红鸾, stars.Star.天喜),
+  "variant.star.tianxing-tianyao-month": (stars.Star.天刑, stars.Star.天姚),
+  "variant.star.tianku-tianxu-year-branch": (stars.Star.天哭, stars.Star.天虚),
+  "variant.star.tianshang-tianshi-fixed": (stars.Star.天伤, stars.Star.天使),
 }
 
 
@@ -61,6 +64,8 @@ def _pure_star_positions() -> tuple[stars.StarPlacement, ...]:
     *stars.place_stem_stars(Tiangan.甲),
     *stars.place_fire_bell(Dizhi.辰, Dizhi.子),
     *stars.place_hongluan_tianxi(Dizhi.辰),
+    *stars.place_tianku_tianxu(Dizhi.辰),
+    *stars.place_tianshang_tianshi(Dizhi.戌),
   )
 
 

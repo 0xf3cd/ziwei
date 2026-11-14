@@ -421,7 +421,7 @@ def test_svg_does_not_recompute_or_access_calendar(
         "place_stars",
         "shengnian_sihua",
         "place_decades",
-        "_chart_frame",
+        "chart_frame",
       ),
     ),
     (resolver, ("resolve",)),

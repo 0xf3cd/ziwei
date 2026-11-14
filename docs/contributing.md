@@ -2,7 +2,7 @@
 
 [项目入口](../README.md) · [文档入口](index.md)
 
-本指南面向参与`main`开发的人；固定发行版本的文档请从相应源码标签查阅。
+本指南面向参与开发的人；固定发行版本的文档请从相应源码标签查阅。
 先读[相关 issue](https://github.com/0xf3cd/ziwei/issues)和[结构设计](architecture.md)，确认功能范围与验收盘例。
 仓库的编码、知识整理与交付约定统一维护在[AGENTS.md](https://github.com/0xf3cd/ziwei/blob/main/AGENTS.md)，它也是唯一的agent指令源；
 本页说明如何安装、检查和准备贡献，不另列一套规约。
@@ -70,27 +70,26 @@ uv run --locked python tools/check.py --docs-dir build/docs
 根入口使用相对链接，离线打开和部署到项目子路径都使用同一份输出。
 [开发文档站](https://0xf3cd.github.io/ziwei/)随`main`更新，不固定于某次发行。
 
-按上面的`uv sync`从本仓安装源码，本地分发名／版本为`ziwei`／`0.4.1`。
+按上面的`uv sync`从本仓安装源码，本地分发名为`ziwei`，版本号与`pyproject.toml`相同。
 可检查安装的版本字符串：
 
 ```{doctest}
+:options: +ELLIPSIS
+
 >>> from importlib.metadata import version
 >>> version("ziwei")
-'0.4.1'
+'...'
 ```
 
 同一版本字符串不能证明安装来源或具体源码提交；核对安装对象时还须检查这两项。
 
 ## 依赖兼容策略
 
-当前正式支持的组合为`celestial-calendar==0.8.0`和`tzdata==2026.5`，包元数据也限定这组版本。
-实际pip安装中，将ziwei与celestial 0.9.0或tzdata 2026.4显式放在同一安装命令中，会因依赖冲突被拒绝；
-环境中仅预装celestial 0.9.0时，再安装ziwei会将其降到0.8.0。
-因此应使用独立虚拟环境，不要让应用在同一环境中要求另一精确版本。
-
-celestial 0.7.0／0.9.0的探索以`--no-deps`强制安装，选定排盘例及HKO表、天文计算、混合三算法的范围端点检查通过，
-但`pip check`均拒绝其元数据；这既不证明候选版本不可运行，也不构成正式兼容支持。
-此次所见三算法支持范围均未变化，平台要求仍以[安装要求](../README.md#安装要求)为准。
+当前源码支持的组合为`celestial-calendar==1.1.1`和`tzdata==2026.6`，包元数据也限定这组版本；
+已发行版本的依赖请查对应标签。Python与平台要求见[安装要求](../README.md#安装要求)。
+显式共装其他精确版本会产生依赖冲突；仅预装较新版本时，安装ziwei可能将其降到所需版本。
+请使用独立虚拟环境，不要让应用在同一环境中要求另一精确版本。
+以`--no-deps`强制替换依赖不构成兼容支持，须重新完成下述检查。
 
 候选依赖发布新版本、应用需要共装其他版本，或算法范围、时区来源与精度约定变化时，应重新评估。
 复查须实际安装、共装与排盘，核对算法范围内端点及范围外日期的接受／拒绝，保留算法、范围、
@@ -101,11 +100,15 @@ celestial 0.7.0／0.9.0的探索以`--no-deps`强制安装，选定排盘例及H
 ## 维护API文档
 
 公开类型别名以`TypeAlias`声明；公开常量以`Final`声明，并用紧随赋值的字符串或紧邻赋值之前的`#:`注释说明。
-修改声明时同步维护[API参考](api.md)的生成指令；检查要求这些公开数据在实际HTML中都有签名。
+修改声明时同步维护[API参考](api.md)的生成指令；检查通过Sphinx对象清单定位实际HTML签名，
+不根据中文名称猜测锚点。中文类型别名归所属领域模块，只读结果名用带返回注解的`@property`读取原成员；
+新增时同步维护`docs/api.md`的双名映射及生成指令、`tools/doushu.py`的`check_alias_typing`正反例，
+以及`tools/installed_check.py`和`tools/doushu_installed_check.py`的安装消费。
 
 ## 准备PR
 
 按[AGENTS.md](https://github.com/0xf3cd/ziwei/blob/main/AGENTS.md#验证与交付)准备PR格式、验证记录与署名。
+版本开发期间，PR以该版本的集成分支`milestone/<version>`为目标；补丁与依赖更新直接以`main`为目标。
 说明对应issue、变更的行为、实际运行的命令和未解决问题；使用AI编写的贡献仍由贡献者负责。
 改规则时先核[知识与来源](knowledge.md)，参考盘例及其限度见[完整命盘](chart.md#参考盘例与验收限度)。
 改文档时除运行示例外，还应打开生成页面，检查文字、完整盘面与目标锚点是否可读。

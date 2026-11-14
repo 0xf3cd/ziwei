@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from markdown_it import MarkdownIt
+from sphinx.util.inventory import InventoryFile
 
 # 直接运行tools/check.py时，脚本目录而非仓根在sys.path首位。
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -99,6 +100,8 @@ def check_api_reference(directory: Path, root: Path = ROOT) -> None:
   expected: set[str] = set()
   for module in (root / "src/ziwei").rglob("*.py"):
     parts = module.relative_to(root / "src").with_suffix("").parts
+    if any(part.startswith("_") and part != "__init__" for part in parts):
+      continue
     namespace = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
     source = module.read_text(encoding="utf-8")
     lines = source.split("\n")
@@ -138,7 +141,34 @@ def check_api_reference(directory: Path, root: Path = ROOT) -> None:
     raise ValueError("No public API definitions found")
   parser = ApiTargets()
   parser.feed((directory / "docs/api.html").read_text(encoding="utf-8"))
-  missing = expected - parser.targets
+  with (directory / "objects.inv").open("rb") as stream:
+    inventory = InventoryFile.load(stream, "", lambda base, location: location)
+  locations: dict[str, list[str]] = {}
+  for role, entries in inventory.items():
+    if role.startswith("py:"):
+      for name, item in entries.items():
+        locations.setdefault(name, []).append(item.uri)
+  missing = set()
+  resolved: dict[str, str] = {}
+  for name in expected:
+    candidates = locations.get(name, [])
+    if len(candidates) != 1:
+      missing.add(name)
+      continue
+    target = urlsplit(candidates[0])
+    fragment = unquote(target.fragment)
+    if (
+      target.scheme
+      or target.netloc
+      or target.query
+      or target.path != "docs/api.html"
+      or fragment not in parser.targets
+    ):
+      missing.add(name)
+    elif fragment in resolved:
+      missing.update((name, resolved[fragment]))
+    else:
+      resolved[fragment] = name
   if missing:
     raise ValueError("API HTML is missing signatures: " + ", ".join(sorted(missing)))
 

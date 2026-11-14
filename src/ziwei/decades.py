@@ -1,7 +1,7 @@
 """命宫起大限：局数起限，阳男阴女顺行、阴男阳女逆行，每限十年。
 
-2007论坛《排命盘口诀》大限段明确使用虚岁，并以3至12、13至22等首尾包含的区间举例；
-讲义网页存档正文另支持局数起限，图四图题与图内岁数尚未取得图像核对。只生成岁数标签，不算公历起止日期，
+规则据2007论坛《排命盘口诀》大限段与王亭之讲义网页存档，出处与限度见知识条目
+`entry.decades.xusui-inclusive`。只生成首尾包含的虚岁标签，不算公历起止日期，
 也不规定虚岁在生日、立春还是正月初一那天加一岁。年干取解析层所选年界的结果，性别未知时拒绝起限。
 计算时才导入出生模块，使独立知识查询不连带导入出生与历法模块。
 """
@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias
 
+from ziwei._frame import chart_frame
 from ziwei.bureau import WuxingJu
 from ziwei.ganzhi import Dizhi, Tiangan, Yinyang
-from ziwei.palaces import _chart_frame
 
 if TYPE_CHECKING:
   from ziwei.birth import CalculationInput, Gender
@@ -52,13 +52,33 @@ class Decade:
     if not isinstance(self.dizhi, Dizhi) or not isinstance(self.direction, Direction):
       raise TypeError("大限须使用 Dizhi 与 Direction 成员")
     if type(self.start_age) is not int or type(self.end_age) is not int:
-      raise TypeError("大限岁数须为整数，不接受 bool")
+      raise TypeError(
+        "大限岁数不接受 bool"
+        if isinstance(self.start_age, bool) or isinstance(self.end_age, bool)
+        else "大限岁数须为整数"
+      )
     if (
       not 0 <= self.start_age // 10 < len(Dizhi)
       or self.start_age % 10 not in {ju.number for ju in WuxingJu}
       or self.end_age != self.start_age + 9
     ):
       raise ValueError("大限须为五行局起算的十二限之一，首尾包含共十年")
+
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
+
+  @property
+  def 行运方向(self) -> Direction:
+    return self.direction
+
+  @property
+  def 起始虚岁(self) -> int:
+    return self.start_age
+
+  @property
+  def 终止虚岁(self) -> int:
+    return self.end_age
 
 
 def decade_direction(year_tiangan: Tiangan, gender: Gender) -> Direction:
@@ -106,5 +126,9 @@ def place_decades(value: CalculationInput) -> tuple[Decade, ...]:
     raise TypeError("起大限须使用 CalculationInput")
   if value.shichen is None:
     raise ValueError("起大限需要已知时辰")
-  frame = _chart_frame(value)
+  frame = chart_frame(value)
   return decade_periods(frame.minggong, frame.bureau, value.year_ganzhi.tiangan, value.gender)
+
+
+行运方向: TypeAlias = Direction
+大限: TypeAlias = Decade

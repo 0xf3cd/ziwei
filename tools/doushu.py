@@ -28,7 +28,7 @@ from tools.artifacts import file_sha256
 from tools.consumption import run
 
 ROOT = Path(__file__).resolve().parents[1]
-INTERNAL_MODULES = {"ziwei", "ziwei.knowledge.data"}
+INTERNAL_MODULES = {"ziwei", "ziwei._frame", "ziwei.knowledge.data"}
 ROOT_SOURCE = '"""ziwei的同版别名入口。"""\n\nimport ziwei as _ziwei\n'
 README = """# doushu（斗数）
 
@@ -357,7 +357,7 @@ def consume_alias(wheel: Path, version: str, directory: Path, *, root: Path = RO
 
 
 def check_alias_typing(directory: Path) -> None:
-  """用锁定mypy读取仓外安装的类型，要求混用通过、错误参数失败。"""
+  """用锁定mypy检查仓外安装的类型，要求正例通过、误用按预期诊断拒绝。"""
   python = directory / "consumer" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
   config = directory / "mypy.ini"
   config.write_text("[mypy]\nstrict = true\n", encoding="utf-8")
@@ -379,8 +379,28 @@ def check_alias_typing(directory: Path) -> None:
     "entry: Record = catalog.get('concept.star.ziwei')\n"
     "record = LunarBirthRecord(year=2024, month=1, day=1, is_leap_month=False, "
     "shichen=Dizhi.子, gender=Gender.女)\n"
+    "from doushu.birth import 出生记录, 农历出生记录\n"
+    "from doushu.ganzhi import 地支\n"
+    "from doushu.liunian import 流年星曜\n"
+    "from ziwei.liunian import LiunianStars\n"
+    "def annual(value: LiunianStars) -> 流年星曜:\n  return value\n"
+    "reading: 流年星曜 = 流年星曜(2024)\n"
+    "position: 地支 = reading.陀罗\n"
+    "chinese_record: 出生记录 = 农历出生记录(year=2024, month=1, day=1, "
+    "is_leap_month=False, shichen=地支.子, gender=Gender.未知)\n"
+    "from doushu.chart import liunian_palaces, 流年宫位\n"
+    "from doushu.liunian import 流年四化\n"
+    "from doushu.stars import Star\n"
+    "from ziwei.chart import LiunianPalaceView\n"
+    "annual_marks: 流年四化 = 流年四化(2030, variant=SihuaVariant.王亭之讲义转录)\n"
+    "annual_ke: Star = annual_marks.化科\n"
+    "def annual_rows(value: PrimaryChart) -> tuple[流年宫位, ...]:\n"
+    "  return liunian_palaces(value, 2030, sihua_variant=SihuaVariant.王亭之讲义转录)\n"
+    "def annual_row(value: 流年宫位) -> LiunianPalaceView:\n  return value\n"
   )
   env = {k: v for k, v in os.environ.items() if k not in {"MYPYPATH", "PYTHONPATH"}}
+  env["PYTHONUTF8"] = "1"
+  env["PYTHONIOENCODING"] = "utf-8"
   command = (
     sys.executable,
     "-m",
@@ -388,18 +408,29 @@ def check_alias_typing(directory: Path) -> None:
     "--config-file",
     str(config),
     "--no-incremental",
+    "--show-traceback",
     "--python-executable",
     str(python),
     str(source),
   )
-  for text, code in ((positive, 0), (positive.replace("year=2024", "year='bad'"), 1)):
+  for text, code, diagnostic in (
+    (positive, 0, ""),
+    (positive.replace("year=2024", "year='bad'"), 1, "[arg-type]"),
+    (positive + "reading.陁罗\n", 1, "[attr-defined]"),
+    (positive + "reading.陀罗 = 地支.子\n", 1, "[misc]"),
+    (positive + "地支.不存在\n", 1, "[attr-defined]"),
+    (positive + "流年星曜(纪年=2024)\n", 1, "[call-arg]"),
+    (positive + "流年四化(2030)\n", 1, "[call-arg]"),
+    (positive + "annual_marks.化科 = Star.天府\n", 1, "[misc]"),
+  ):
     source.write_text(text, encoding="utf-8")
-    result = subprocess.run(command, cwd=directory, env=env, capture_output=True, text=True)
-    print(result.stdout, result.stderr, flush=True)
-    if result.returncode != code or (code == 1 and "[arg-type]" not in result.stdout):
-      raise ValueError(
-        "Installed alias typing did not accept valid use and reject a wrong argument"
-      )
+    result = subprocess.run(command, cwd=directory, env=env, capture_output=True, encoding="utf-8")
+    for output in (result.stdout, result.stderr):
+      print(output.encode("ascii", errors="backslashreplace").decode("ascii"), flush=True)
+    if result.returncode not in (0, 1) or "INTERNAL ERROR" in result.stdout + result.stderr:
+      raise ValueError("Installed alias typing failed: mypy crashed")
+    if result.returncode != code or (code == 1 and diagnostic not in result.stdout):
+      raise ValueError("Installed alias typing returned an unexpected exit code or diagnostic")
 
 
 def main() -> None:

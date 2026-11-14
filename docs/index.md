@@ -3,6 +3,7 @@
 本套文档的[在线入口](https://0xf3cd.github.io/ziwei/)随`main`更新，不固定于某次发行。
 请核对安装版本；版本变化与历史发行入口见[发行说明](releases.md)。
 
+安装命令与Python、平台要求见[ziwei](../README.md#安装)页。
 从[最小排盘](../README.md#最小排盘)开始，或直接查阅在线[API正文](https://0xf3cd.github.io/ziwei/docs/api.html)
 与[知识参考正文](https://0xf3cd.github.io/ziwei/docs/knowledge-reference.html)。
 源码中的这两页只保留生成指令与说明；离线阅读全文请按[参与开发](contributing.md#构建文档)构建HTML。

@@ -2,10 +2,10 @@
   "position_sources": [
     {
       "source_id": "source.quanshu-juan3-wikisource",
-      "url": "https://zh.wikisource.org/w/index.php?title=紫微斗數全書/卷三&oldid=2268626",
+      "url": "https://zh.wikisource.org/w/index.php?title=%E7%B4%AB%E5%BE%AE%E6%96%97%E6%95%B8%E5%85%A8%E6%9B%B8/%E5%8D%B7%E4%B8%89&oldid=2268626",
       "revision": "2268626",
-      "retrieved_at_utc": "2026-10-28T20:04:53.213833+00:00",
-      "snapshot_sha256": "62bd440cff3c042777b8125ec968e87845ffde9d90aeaf94db685ed7ad068c37",
+      "retrieved_at_utc": "2026-11-05T05:23:11+00:00",
+      "snapshot_sha256": "ed327a68253a89a6e8b2962932a16f75546826ffcdd2e9e4ac419ad0f389b03b",
       "locator": "论立命行限宫歌，论太岁小限星辰庙陷遇十二宫中吉凶，十二支段头",
       "quotes": [
         "子年太岁并小限到子宫入庙化吉", "丑年太岁并小限到丑宫入庙化吉",
@@ -23,8 +23,8 @@
       "author": "Beatrice",
       "published": "2023-10-02T10:30:00+08:00",
       "modified": "2024-11-05T10:10:58+08:00",
-      "retrieved_at_utc": "2026-10-28T20:05:15.343546+00:00",
-      "snapshot_sha256": "5be193bca806ce1cffda49aba05e81336634a373fc0c615c769ebd5862e30e10",
+      "retrieved_at_utc": "2026-11-05T05:23:22+00:00",
+      "snapshot_sha256": "736c38c3a25f5d18eb6849b436c4945aba8750f50d83362f117c3acdf0dc1bbd",
       "locator": "流年是什麼段，2025乙巳例与初一至除夕定义",
       "quotes": [
         "流年是從每年的農曆正月初一開始算起，到除夕結束；隔年正月初一又是一個新的流年。",

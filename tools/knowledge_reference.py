@@ -13,7 +13,7 @@ from ziwei.bureau import WuxingJu
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
-from ziwei.palaces import month_palace_index
+from ziwei.palaces import PalaceName, month_palace_index
 
 
 def _sihua_rows() -> list[tuple[str, ...]]:
@@ -86,6 +86,11 @@ def _star_rows() -> list[tuple[str, ...]]:
   for year in Dizhi:
     for position in stars.place_hongluan_tianxi(year):
       rows.append((position.rule_id, year.value, position.star.value, position.dizhi.value))
+    for position in stars.place_tianku_tianxu(year):
+      rows.append((position.rule_id, year.value, position.star.value, position.dizhi.value))
+  for minggong in Dizhi:
+    for position in stars.place_tianshang_tianshi(minggong):
+      rows.append((position.rule_id, minggong.value, position.star.value, position.dizhi.value))
   for group in stars.SANHE_GROUPS:
     for hour in Dizhi:
       for position in stars.place_fire_bell(group[0], hour):
@@ -117,6 +122,33 @@ def _liunian_star_rows() -> list[tuple[str, ...]]:
     )
     for stem in Tiangan
   ]
+
+
+def _liunian_palace_rows() -> list[tuple[str, ...]]:
+  return [
+    (
+      str(year),
+      *(liunian.liunian_palace_dizhi(year, name).value for name in PalaceName),
+      liunian.LIUNIAN_PALACES_RULE_ID,
+    )
+    for year in range(2020, 2032)
+  ]
+
+
+def _liunian_sihua_rows() -> list[tuple[str, ...]]:
+  rows = []
+  for year in range(2024, 2034):
+    result = liunian.liunian_sihua(year, variant=sihua.SihuaVariant.王亭之讲义转录)
+    rows.append(
+      (
+        str(year),
+        result.year_tiangan.value,
+        *(star.value for star in (result.lu, result.quan, result.ke, result.ji)),
+        result.rule_id,
+        result.table_id,
+      )
+    )
+  return rows
 
 
 def _xiaoxian_rows() -> list[tuple[str, ...]]:
@@ -163,7 +195,9 @@ def _value(value: object, ids: set[str]) -> str:
       return f'<a href="#{value}">{text}</a>'
     return f'<a href="{text}">{text}</a>' if value.startswith(("https://", "http://")) else text
   if isinstance(value, tuple):
-    return "、".join(_value(item, ids) for item in value) or "（无）"
+    if not value:
+      return "（无）"
+    return "<ul>" + "".join(f"<li>{_value(item, ids)}</li>" for item in value) + "</ul>"
   if isinstance(value, date):
     return value.isoformat()
   if value is None:
@@ -174,15 +208,19 @@ def _value(value: object, ids: set[str]) -> str:
 def render_catalog(catalog: Catalog) -> str:
   """生成具有稳定记录锚点的HTML；原引文只作HTML转义。"""
   ids = {record.id for record in catalog.records}
-  parts: list[str] = []
-  for title, records in (
-    ("概念", catalog.concepts),
-    ("变体", catalog.variants),
-    ("来源", catalog.sources),
-    ("引文", catalog.citations),
-    ("条目", catalog.entries),
-  ):
-    parts.append(f"<h2>{title}</h2>")
+  groups = (
+    ("concepts", "概念", catalog.concepts),
+    ("variants", "变体", catalog.variants),
+    ("sources", "来源", catalog.sources),
+    ("citations", "引文", catalog.citations),
+    ("entries", "条目", catalog.entries),
+  )
+  index = " · ".join(
+    f'<a href="#records-{key}">{title}（{len(records)}）</a>' for key, title, records in groups
+  )
+  parts = [f'<nav><p>{index} · <a href="#implemented-policies">规则参考表</a></p></nav>']
+  for key, title, records in groups:
+    parts.append(f'<section id="records-{key}"><h2>{title}</h2>')
     for record in records:
       parts.append(f'<section id="{record.id}"><h3>{record.id}</h3><dl>')
       for member in fields(record):
@@ -190,6 +228,7 @@ def render_catalog(catalog: Catalog) -> str:
         rendered = f"<pre>{escape(value)}</pre>" if member.name == "quote" else _value(value, ids)
         parts.append(f"<dt>{member.name}</dt><dd>{rendered}</dd>")
       parts.append("</dl></section>")
+    parts.append("</section>")
   parts.append('<section id="implemented-policies"><h2>已实现的口径选项</h2><table>')
   for enumeration in config.POLICY_ENUMS:
     for option in enumeration:
@@ -218,6 +257,18 @@ def render_catalog(catalog: Catalog) -> str:
     parts.append("<tr>" + "".join(f"<td>{_value(value, ids)}</td>" for value in row) + "</tr>")
   parts.append("</table></section>")
   for identifier, title, headers, rows in (
+    (
+      "implemented-liunian-palaces",
+      "流年十二宫（十二起点）",
+      ("纪年", *(name.value for name in PalaceName), "规则标识"),
+      _liunian_palace_rows(),
+    ),
+    (
+      "implemented-liunian-sihua",
+      "讲义表的年度四化（甲至癸）",
+      ("纪年", "流年干", "禄", "权", "科", "忌", "年度规则", "完整表"),
+      _liunian_sihua_rows(),
+    ),
     (
       "implemented-liunian-stars",
       "流年禄存、擎羊与陀罗",
@@ -296,6 +347,8 @@ class KnowledgeTargets(HTMLParser):
     if tag in ("dt", "dd"):
       self._member_tag = tag
       self._member_text = []
+    if tag == "li" and self._member_tag == "dd" and self._member_text:
+      self._member_text.append("\n")
     if tag == "tr":
       self._row = []
     if tag == "td" and self._row is not None:
@@ -343,7 +396,7 @@ def _member_text(value: object) -> str:
   if isinstance(value, date):
     return value.isoformat()
   if isinstance(value, tuple):
-    return "、".join(_member_text(item) for item in value) or "（无）"
+    return "\n".join(_member_text(item) for item in value) or "（无）"
   if value is None:
     return "（无）"
   raise TypeError(f"Unsupported knowledge field type: {type(value).__name__}")
@@ -398,6 +451,8 @@ def check_knowledge_reference(directory: Path, catalog: Catalog | None = None) -
   if missing := expected_stars - numeric_stars:
     raise ValueError(f"Star reference missing numeric coverage: {sorted(missing)}")
   for section, rows in (
+    ("implemented-liunian-palaces", _liunian_palace_rows()),
+    ("implemented-liunian-sihua", _liunian_sihua_rows()),
     ("implemented-liunian-stars", _liunian_star_rows()),
     ("implemented-brightness", _brightness_rows()),
     ("implemented-sihua", _sihua_rows()),

@@ -12,14 +12,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Final, cast
+from typing import Final, TypeAlias
 
-from ziwei.bureau import WuxingJu, bureau_of
 from ziwei.config import LeapMonthPolicy
 from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, palace_stems, year_ganzhi
-
-if TYPE_CHECKING:
-  from ziwei.birth import CalculationInput
 
 OPPOSITE_RULE_ID: Final = "variant.palace.opposite"
 """对宫关系在知识目录中的标识。"""
@@ -31,7 +27,7 @@ def opposite_dizhi(dizhi: Dizhi) -> Dizhi:
   """返回对宫地支，即十二宫环上相隔六宫的位置。
 
   NTNU个人空间《名詞解釋》与安迪《紫微斗數解盤：三方四正的應用》均支持此对宫关系；
-  只据所见现代网页，不认证古籍底本。来源与短引见知识目录。
+  来源、短引与限度见知识条目 `entry.palace.opposite`。
   """
   if not isinstance(dizhi, Dizhi):
     raise TypeError("宫位地支须为 Dizhi 成员")
@@ -65,11 +61,11 @@ def effective_month(month: int, day: int, is_leap: bool, policy: LeapMonthPolicy
   if not isinstance(policy, LeapMonthPolicy):
     raise TypeError("闰月口径须为 LeapMonthPolicy 成员")
   if type(month) is not int:
-    raise TypeError("农历生月须为整数，不接受 bool")
+    raise TypeError("农历生月不接受 bool" if isinstance(month, bool) else "农历生月须为整数")
   if not 1 <= month <= 12:
     raise ValueError("农历生月须在1至12之间")
   if type(day) is not int:
-    raise TypeError("农历日须为整数，不接受 bool")
+    raise TypeError("农历日不接受 bool" if isinstance(day, bool) else "农历日须为整数")
   if not 1 <= day <= 30:
     raise ValueError("农历日须在1至30之间")
   if type(is_leap) is not bool:
@@ -139,11 +135,27 @@ class Palace:
     """该宫干支。"""
     return Ganzhi(self.tiangan, self.dizhi)
 
+  @property
+  def 地支(self) -> Dizhi:
+    return self.dizhi
+
+  @property
+  def 天干(self) -> Tiangan:
+    return self.tiangan
+
+  @property
+  def 宫名(self) -> PalaceName:
+    return self.name
+
+  @property
+  def 干支(self) -> Ganzhi:
+    return self.ganzhi
+
 
 def month_palace_index(month: int) -> int:
   """农历生月对应的地支下标（子为0、寅为2，正月返回2）；只接受1至12。"""
   if type(month) is not int:
-    raise TypeError("农历生月须为整数，不接受 bool")
+    raise TypeError("农历生月不接受 bool" if isinstance(month, bool) else "农历生月须为整数")
   if not 1 <= month <= 12:
     raise ValueError("农历生月须在1至12之间")
   return (2 + (month - 1)) % 12
@@ -203,17 +215,5 @@ def palace_ganzhi(minggong: Dizhi, ganzhi_year: int) -> Ganzhi:
   return Ganzhi(_stem_for(palace_stems(year.tiangan), minggong), minggong)
 
 
-@dataclass(frozen=True, slots=True)
-class _ChartFrame:
-  month: int
-  minggong: Dizhi
-  bureau: WuxingJu
-
-
-def _chart_frame(value: CalculationInput) -> _ChartFrame:
-  """推导安星月份、命宫与五行局；调用方先核输入类型与已知时辰，允许性别未知。"""
-  month = effective_month(
-    value.month, value.day, value.is_leap_month, value.config.leap_month_policy
-  )
-  minggong = minggong_dizhi(month, cast(Dizhi, value.shichen))
-  return _ChartFrame(month, minggong, bureau_of(palace_ganzhi(minggong, value.ganzhi_year)))
+宫名: TypeAlias = PalaceName
+宫位: TypeAlias = Palace

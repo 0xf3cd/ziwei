@@ -1,5 +1,6 @@
 """知识记录、状态分离、引用与独立查询。合成夹具不作为规则来源。"""
 
+import re
 from dataclasses import FrozenInstanceError, asdict, replace
 from datetime import date, datetime
 from typing import Any, cast
@@ -297,8 +298,24 @@ def test_builtin_corpus_retains_sources_and_unresolved_premises() -> None:
   assert catalog.filter_entries(show_by_default=True) == ()
   pending = catalog.filter_entries(premise_status=PremiseStatus.待定)
   assert [item.id for item in pending] == [
+    "entry.interpretation.kongjie-shenming-jixiong",
+    "entry.interpretation.shangshi-tai-sui-erxian",
+    "entry.interpretation.tianxing-rumiao",
+    "entry.interpretation.tianyao-ziweijixing",
+    "entry.interpretation.kuxu-yulu",
     "entry.interpretation.ziwei-fubi",
     "entry.interpretation.tianfu-kongwang",
+    "entry.interpretation.tianji-tianliang",
+    "entry.interpretation.taiyang-fubi",
+    "entry.interpretation.tiantong-fuzuo-birth",
+    "entry.interpretation.lianzhen-jumen-limit",
+    "entry.interpretation.taiyin-shenming-jiji",
+    "entry.interpretation.tanlang-kongwang",
+    "entry.interpretation.jumen-dizuo",
+    "entry.interpretation.tianxiang-fubi",
+    "entry.interpretation.tianliang-changqu-fubi",
+    "entry.interpretation.qisha-changqu-fubi",
+    "entry.interpretation.pojun-jumen",
     "entry.tongxian.classical-unresolved",
     "entry.decades.quanshu-adjacent",
     "entry.leap-month.month-stars-scope",
@@ -910,3 +927,36 @@ def test_source_and_citation_text_layers_are_independent(catalog: Catalog) -> No
 )
 def test_knowledge_chinese_alias_is_the_canonical_member(member: Any, alias: str) -> None:
   assert getattr(type(member), alias) is member
+
+
+@pytest.mark.parametrize(
+  "identifier",
+  ["concept.policy.liunian-year-boundary", "concept.policy.tongxian-boundary"],
+)
+def test_luck_period_query_concepts_belong_to_luck_periods(identifier: str) -> None:
+  catalog = load_catalog()
+  concept = catalog.get(identifier)
+  assert isinstance(concept, Concept)
+  assert concept.options == ()
+  assert concept in catalog.list_concepts(kind=ConceptKind.运限)
+  assert concept not in catalog.list_concepts(kind=ConceptKind.口径)
+
+
+def test_source_urls_are_percent_encoded() -> None:
+  """未编码的中文路径或查询参数在部分客户端（如维基文库）会得到 HTTP 400。"""
+  raw = [source.id for source in load_catalog().sources if not source.url.isascii()]
+  assert raw == []
+
+
+def test_jielan_citations_belong_to_the_chapter_their_source_records() -> None:
+  catalog = load_catalog()
+  checked = 0
+  for citation in catalog.citations:
+    source = catalog.get(citation.source_id)
+    assert isinstance(source, Source)
+    chapter = re.search(r"第(\d+)章", citation.locator)
+    if source.lineage_id != "lineage.jielan-tianji" or chapter is None:
+      continue
+    assert source.url.endswith(f"/{chapter[1]}"), citation.id
+    checked += 1
+  assert checked >= 5

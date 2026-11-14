@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from datetime import date, time, timedelta
+from importlib.metadata import version
 
 import pytest
 
@@ -199,6 +200,8 @@ def test_year_policy_inside_spring_festival_lichun_gap(choices: ChartConfig) -> 
   assert (lunar[Star.禄存], lichun[Star.禄存]) == (Dizhi.子, Dizhi.寅)
   assert (lunar[Star.天魁], lichun[Star.天魁]) == (Dizhi.卯, Dizhi.丑)
   assert (lunar[Star.天马], lichun[Star.天马]) == (Dizhi.巳, Dizhi.寅)
+  assert (lunar[Star.天哭], lichun[Star.天哭]) == (Dizhi.卯, Dizhi.寅)
+  assert (lunar[Star.天虚], lichun[Star.天虚]) == (Dizhi.酉, Dizhi.戌)
 
 
 def test_actual_lichun_second_sides_change_stem_and_branch_stars(choices: ChartConfig) -> None:
@@ -209,6 +212,8 @@ def test_actual_lichun_second_sides_change_stem_and_branch_stars(choices: ChartC
   assert (before[Star.禄存], after[Star.禄存]) == (Dizhi.子, Dizhi.寅)
   assert (before[Star.天马], after[Star.天马]) == (Dizhi.巳, Dizhi.寅)
   assert (before[Star.火星], after[Star.火星]) == (Dizhi.巳, Dizhi.戌)
+  assert (before[Star.天哭], after[Star.天哭]) == (Dizhi.卯, Dizhi.寅)
+  assert (before[Star.天虚], after[Star.天虚]) == (Dizhi.酉, Dizhi.戌)
 
 
 def test_apparent_solar_crosses_day_month_and_hour(choices: ChartConfig) -> None:
@@ -248,7 +253,8 @@ def test_calendar_algorithm_endpoints_reach_placement(
   )
   value = resolve(record, choices, lunar_algorithm=algorithm)
   positions = _positions(value)
-  assert value.lunar_algorithm is algorithm and value.lunar_algorithm_version == "0.8.0"
+  assert value.lunar_algorithm is algorithm
+  assert value.lunar_algorithm_version == version("celestial-calendar")
   assert positions[Star.左辅] is Dizhi.辰
   assert positions[Star.右弼] is Dizhi.戌
   assert positions[Star.天马] is ma

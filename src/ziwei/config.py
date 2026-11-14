@@ -53,7 +53,7 @@ POLICY_ENUMS: Final[tuple[type[StrEnum], ...]] = get_args(PolicyOption)
 class TianmaRule(StrEnum):
   """选择按年支还是农历生月对应的地支安天马。
 
-  默认按年支；也可选择月支天马，来源与同文限度见知识目录。闰月用哪个月由LeapMonthPolicy决定。
+  默认按年支；月支天马的闰月取月由ChartConfig.month_star_policy决定，来源见知识目录。
   """
 
   YEAR_BRANCH = "年支天马"
@@ -68,12 +68,15 @@ class ChartConfig:
 
   构造时必须分别指定闰月归属、子时换日和换年界线，这三项没有默认值。
   天马查法可以省略，默认按年支安天马，也可改为按农历生月对应的地支安天马。
+  leap_month_policy用于命身宫；month_star_leap_month_policy用于辅弼、月马与刑姚，
+  省略或传None时跟随命身口径。month_star_policy读取实际采用的月系口径。
   """
 
   leap_month_policy: LeapMonthPolicy
   day_rollover: DayRollover
   year_boundary: YearBoundary
   tianma_rule: TianmaRule = TianmaRule.YEAR_BRANCH
+  month_star_leap_month_policy: LeapMonthPolicy | None = None
 
   def __post_init__(self) -> None:
     for value, expected in (
@@ -84,3 +87,24 @@ class ChartConfig:
     ):
       if not isinstance(value, expected):
         raise TypeError(f"口径须为 {expected.__name__} 成员")
+    if self.month_star_leap_month_policy is not None and not isinstance(
+      self.month_star_leap_month_policy, LeapMonthPolicy
+    ):
+      raise TypeError("月系闰月口径须为 LeapMonthPolicy 成员或 None")
+
+  @property
+  def month_star_policy(self) -> LeapMonthPolicy:
+    """返回实际月系口径；未单独指定时读取当前命身口径。"""
+    return (
+      self.leap_month_policy
+      if self.month_star_leap_month_policy is None
+      else self.month_star_leap_month_policy
+    )
+
+
+闰月归属: TypeAlias = LeapMonthPolicy
+子时换日: TypeAlias = DayRollover
+换年界线: TypeAlias = YearBoundary
+天马规则: TypeAlias = TianmaRule
+命盘配置: TypeAlias = ChartConfig
+口径选项: TypeAlias = PolicyOption

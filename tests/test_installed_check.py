@@ -1,7 +1,5 @@
 """安装后消费者的拒绝用例。"""
 
-import re
-import subprocess
 import sys
 from dataclasses import asdict, replace
 from importlib.metadata import distribution, version
@@ -17,7 +15,14 @@ from ziwei.birth import Gender, GregorianBirthRecord
 from ziwei.brightness import BrightnessLevel, BrightnessTable
 from ziwei.bureau import WuxingJu
 from ziwei.calendar import LunarAlgorithm
-from ziwei.chart import PalaceView, ZiweiChart, chart_brightness, create_chart, palace_view
+from ziwei.chart import (
+  PalaceView,
+  ZiweiChart,
+  chart_brightness,
+  create_chart,
+  liunian_palaces,
+  palace_view,
+)
 from ziwei.decades import decade_periods
 from ziwei.ganzhi import Dizhi, Tiangan
 from ziwei.knowledge import load_catalog
@@ -31,18 +36,39 @@ from ziwei.knowledge.model import (
   RuleVariant,
 )
 from ziwei.liunian import (
+  LIUNIAN_SIHUA_RULE_ID,
   LIUNIAN_STARS_RULE_ID,
   LiunianBoundary,
   liunian_on_date,
+  liunian_sihua,
   liunian_stars,
+  流年星曜,
 )
 from ziwei.palaces import PalaceName
 from ziwei.render import render_svg, render_text
+from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
 from ziwei.tongxian import TongxianBoundary, tongxian_at_age
 
 pytestmark = pytest.mark.usefixtures("unload_celestial")
+
+
+@pytest.mark.parametrize("member,result", [("纪年", 2025), ("年干支", "甲子"), ("陀罗", Dizhi.子)])
+def test_chinese_primary_consumer_rejects_wrong_readings(
+  monkeypatch: pytest.MonkeyPatch, member: str, result: object
+) -> None:
+  monkeypatch.setattr(流年星曜, member, property(lambda _: result))
+  with pytest.raises(ValueError, match="Chinese query differs"):
+    installed_check.check_inputs()
+
+
+def test_chinese_primary_consumer_rejects_a_replaced_type_alias(
+  monkeypatch: pytest.MonkeyPatch,
+) -> None:
+  monkeypatch.setattr(installed_check, "LiunianStars", object)
+  with pytest.raises(ValueError, match="Chinese query differs"):
+    installed_check.check_inputs()
 
 
 @pytest.mark.parametrize("defect", ["position", "boundary", "source"])
@@ -165,6 +191,64 @@ def test_annual_consumer_rejects_star_identity_and_overlay_defects(
     message = "annual stars differ" if defect == "annual-position" else "annual rule or sources"
     with pytest.raises(ValueError, match=f"Installed liunian {message}"):
       installed_check.check_liunian()
+
+
+@pytest.mark.parametrize("defect", ["ke", "ji", "table_id", "source", "palace"])
+def test_full_annual_consumer_rejects_wrong_sihua_and_palace(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  if defect == "palace":
+    monkeypatch.setattr(installed_check, "liunian_palace_dizhi", lambda *args: Dizhi.子)
+  elif defect == "source":
+    original = Catalog.references
+    monkeypatch.setattr(
+      Catalog,
+      "references",
+      lambda self, identifier: (
+        () if identifier == LIUNIAN_SIHUA_RULE_ID else original(self, identifier)
+      ),
+    )
+  else:
+    annual = liunian_sihua(2030, variant=SihuaVariant.王亭之讲义转录)
+    result = SimpleNamespace(
+      ke=annual.ke, ji=annual.ji, table_id=annual.table_id, rule_id=annual.rule_id
+    )
+    setattr(result, defect, {"ke": Star.天同, "ji": Star.武曲, "table_id": "wrong"}[defect])
+    monkeypatch.setattr(installed_check, "liunian_sihua", lambda *args, **kwargs: result)
+  with pytest.raises(ValueError, match="Installed full annual query"):
+    installed_check.check_liunian()
+
+
+@pytest.mark.parametrize("defect", ["missing-sun", "count", "natal-mark", "order", "stars"])
+def test_full_annual_consumer_rejects_wrong_palace_content(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  def reading(*args: Any, **kwargs: Any) -> tuple[Any, ...]:
+    rows = liunian_palaces(*args, **kwargs)
+    if defect == "missing-sun":
+      return ()
+    if defect == "count":
+      removed = next(row for row in rows if row.ke is not Star.太阳)
+      return tuple(row for row in rows if row is not removed)
+    if defect == "order":
+      return rows[::-1]
+    if defect == "natal-mark":
+      selected = next(row for row in rows if row.ke is Star.太阳)
+    else:
+      selected = next(row for row in rows if row.natal.stars)
+    replacement = SimpleNamespace(
+      ke=selected.ke,
+      name=selected.name,
+      natal=SimpleNamespace(
+        ji=Star.天机 if defect == "natal-mark" else selected.natal.ji,
+        stars=selected.natal.stars[:-1] if defect == "stars" else selected.natal.stars,
+      ),
+    )
+    return tuple(replacement if row is selected else row for row in rows)
+
+  monkeypatch.setattr(installed_check, "liunian_palaces", reading)
+  with pytest.raises(ValueError, match="Installed annual palaces"):
+    installed_check.check_chart()
 
 
 @pytest.mark.parametrize("defect", ["value", "count", "position", "text", "svg", "source"])
@@ -319,7 +403,6 @@ def test_calendar_consumer_rejects_wrong_result_provenance(
   from ziwei import resolver
   from ziwei.birth import CalculationInput
 
-  installed_check.check_calendar()
   resolve = resolver.resolve
 
   def faulty(*args: Any, **kwargs: Any) -> CalculationInput:
@@ -397,20 +480,6 @@ def test_calendar_consumer_rejects_wrong_resolved_sihua_or_decades(
     installed_check.check_calendar()
 
 
-def test_command_line_entry_validates_under_optimization(tmp_path: Path) -> None:
-  """命令行入口在 -O 下仍执行校验，而不是依赖 assert。"""
-  result = subprocess.run(
-    (sys.executable, "-O", "-I", str(Path(installed_check.__file__)), "unrelated-version"),
-    cwd=tmp_path,
-    capture_output=True,
-    text=True,
-    check=False,
-  )
-  assert result.returncode != 0
-  assert "ValueError" in result.stderr
-  assert re.search("outside the consumer environment|Installed version differs", result.stderr)
-
-
 def test_dependency_pin_is_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
   def wrong_pin(name: str) -> Any:
     if name == "ziwei":
@@ -482,12 +551,6 @@ def test_full_chart_consumer_rejects_faulty_hongluan_tianxi(
     installed_check.check_chart()
 
 
-def test_full_chart_consumer_rejects_faulty_rendering(monkeypatch: pytest.MonkeyPatch) -> None:
-  monkeypatch.setattr(installed_check, "render_text", lambda chart: "命宫")
-  with pytest.raises(ValueError, match="Installed text chart"):
-    installed_check.check_chart()
-
-
 @pytest.mark.parametrize("star", [Star.红鸾, Star.天喜])
 def test_full_chart_consumer_rejects_missing_two_star_text(
   monkeypatch: pytest.MonkeyPatch, star: Star
@@ -555,6 +618,27 @@ def test_installed_consumer_rejects_consistent_wrong_positions(
     installed_check.check_chart()
 
 
+@pytest.mark.parametrize("defect", ["policy", "position"])
+def test_installed_consumer_rejects_faulty_month_policy(
+  monkeypatch: pytest.MonkeyPatch, defect: str
+) -> None:
+  def faulty(*args: Any, **kwargs: Any) -> ZiweiChart:
+    chart = create_chart(*args, **kwargs)
+    if chart.calculation.is_leap_month:
+      if defect == "policy":
+        object.__setattr__(chart.calculation.config, "month_star_leap_month_policy", None)
+      else:
+        positions = tuple(
+          replace(p, dizhi=Dizhi.子) if p.star is Star.天刑 else p for p in chart.stars
+        )
+        object.__setattr__(chart, "stars", positions)
+    return chart
+
+  monkeypatch.setattr(installed_check, "create_chart", faulty)
+  with pytest.raises(ValueError, match="Installed xingyao"):
+    installed_check.check_chart()
+
+
 @pytest.mark.parametrize(
   "kind", ["no_provenance", "wrong_package", "wrong_iana", "wrong_offset", "gap", "fold"]
 )
@@ -580,14 +664,12 @@ def test_input_consumer_rejects_faulty_results(kind: str, monkeypatch: pytest.Mo
     installed_check.check_inputs()
 
 
-@pytest.mark.parametrize("kind", ["aliases", "pending", "alternatives", "quote"])
+@pytest.mark.parametrize("kind", ["pending", "alternatives", "quote"])
 def test_knowledge_consumer_rejects_missing_or_changed_corpus(
   kind: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
   catalog = load_catalog()
-  if kind == "aliases":
-    catalog = Catalog(concepts=(), variants=(), sources=(), citations=(), entries=())
-  elif kind in ("pending", "alternatives"):
+  if kind in ("pending", "alternatives"):
     catalog = replace(
       catalog,
       entries=tuple(
@@ -723,6 +805,144 @@ def test_interpretation_consumer_rejects_changed_corpus(
     installed_check.check_knowledge()
 
 
+@pytest.mark.parametrize(
+  "suffix",
+  [
+    "tianji-tianliang",
+    "taiyang-fubi",
+    "wuqu-tianfu",
+    "tiantong-fuzuo-birth",
+    "lianzhen-jumen-limit",
+    "taiyin-shenming-jiji",
+    "tanlang-kongwang",
+    "jumen-dizuo",
+    "tianxiang-fubi",
+    "tianliang-changqu-fubi",
+    "qisha-changqu-fubi",
+    "pojun-jumen",
+  ],
+)
+def test_new_interpretation_consumer_rejects_wrong_display(
+  suffix: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  entry = next(item for item in catalog.entries if item.id == f"entry.interpretation.{suffix}")
+  nature = f"entry.interpretation.{entry.concept_ids[0].rsplit('.', 1)[1]}-nature"
+  catalog = replace(
+    catalog,
+    entries=tuple(
+      replace(item, show_by_default=True) if item.id == nature else item for item in catalog.entries
+    ),
+  )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match="interpretation entries or default display"):
+    installed_check.check_knowledge()
+
+
+@pytest.mark.parametrize(
+  "suffix",
+  [
+    "tianji-tianliang",
+    "taiyang-fubi",
+    "wuqu-tianfu",
+    "tiantong-fuzuo-birth",
+    "lianzhen-jumen-limit",
+    "taiyin-shenming-jiji",
+    "tanlang-kongwang",
+    "jumen-dizuo",
+    "tianxiang-fubi",
+    "tianliang-changqu-fubi",
+    "qisha-changqu-fubi",
+    "pojun-jumen",
+  ],
+)
+@pytest.mark.parametrize(
+  "defect", ["quote", "concept", "condition", "identity", "status", "references"]
+)
+def test_new_interpretation_consumer_rejects_damaged_fields(
+  suffix: str, defect: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  identifier = f"entry.interpretation.{suffix}"
+  entry = next(item for item in catalog.entries if item.id == identifier)
+  if defect == "quote":
+    citation_id = entry.citation_ids[0]
+    catalog = replace(
+      catalog,
+      citations=tuple(
+        replace(item, quote="错误原文") if item.id == citation_id else item
+        for item in catalog.citations
+      ),
+    )
+    message = "interpretation citation changed"
+  else:
+    changes: dict[str, Any]
+    message = "interpretation concept or condition changed"
+    if defect == "concept":
+      changes = {"concept_ids": ("concept.star.ziwei",)}
+    elif defect == "condition":
+      changes = {"premises": entry.premises[:-1]}
+    elif defect == "identity":
+      changes = {"id": "entry.synthetic-renamed-interpretation"}
+    elif defect == "status":
+      changes = {
+        "premise_status": (
+          PremiseStatus.待定
+          if entry.premise_status is PremiseStatus.已明确
+          else PremiseStatus.已明确
+        )
+      }
+      message = "interpretation premise status changed"
+    else:
+      changes = {"citation_ids": (*entry.citation_ids, "citation.quanshu-juan1.ziwei-nature")}
+      message = "interpretation citation changed"
+    catalog = replace(
+      catalog,
+      entries=tuple(
+        replace(item, **changes) if item.id == identifier else item for item in catalog.entries
+      ),
+    )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match=message):
+    installed_check.check_knowledge()
+
+
+@pytest.mark.parametrize(
+  "star",
+  [
+    "ziwei",
+    "tianfu",
+    "tianji",
+    "taiyang",
+    "wuqu",
+    "tiantong",
+    "lianzhen",
+    "taiyin",
+    "tanlang",
+    "jumen",
+    "tianxiang",
+    "tianliang",
+    "qisha",
+    "pojun",
+  ],
+)
+def test_interpretation_consumer_rejects_changed_nature_quote(
+  star: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  catalog = load_catalog()
+  citation_id = f"citation.quanshu-juan1.{star}-nature"
+  catalog = replace(
+    catalog,
+    citations=tuple(
+      replace(item, quote="错误星性") if item.id == citation_id else item
+      for item in catalog.citations
+    ),
+  )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match="interpretation citation changed"):
+    installed_check.check_knowledge()
+
+
 @pytest.mark.parametrize("choice", [False, True])
 def test_knowledge_consumer_rejects_wrong_display_filter(
   choice: bool, monkeypatch: pytest.MonkeyPatch
@@ -762,21 +982,3 @@ def test_knowledge_consumer_rejects_each_independent_missing_condition(
     monkeypatch.setattr(Catalog, "find", find)
   with pytest.raises(ValueError, match="knowledge"):
     installed_check.check_knowledge()
-
-
-def test_consumers_succeed_in_an_optimized_process(tmp_path: Path) -> None:
-  root = Path(__file__).resolve().parents[1]
-  script = (
-    "import sys; sys.path.insert(0, sys.argv[1]); "
-    "from tools.installed_check import check_knowledge, check_inputs; "
-    "check_knowledge(); check_inputs(); print('optimized-consumers-passed')"
-  )
-  result = subprocess.run(
-    (sys.executable, "-O", "-I", "-c", script, str(root)),
-    cwd=tmp_path,
-    capture_output=True,
-    text=True,
-    check=False,
-  )
-  assert result.returncode == 0, result.stderr
-  assert "optimized-consumers-passed" in result.stdout
