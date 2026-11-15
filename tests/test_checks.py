@@ -18,6 +18,7 @@ import pytest
 from markdown_it import MarkdownIt
 from packaging.specifiers import SpecifierSet
 
+from tests import artifact_builders
 from tools import artifacts, check, consumption
 from tools.artifacts import (
   built_artifacts,
@@ -27,6 +28,8 @@ from tools.artifacts import (
 )
 from tools.check import check_documents, check_examples, document_errors
 from tools.knowledge_reference import check_knowledge_reference
+from ziwei.knowledge import load_catalog
+from ziwei.knowledge.model import KnowledgeEntry
 
 PKG_INFO = "Name: ziwei\nVersion: 0.0.0\n"
 SOURCE = (
@@ -182,14 +185,74 @@ def docs(tmp_path: Path) -> Path:
   return tmp_path
 
 
-def write_sdist(path: Path, members: dict[str, str], base: str = "ziwei-0.0.0") -> Path:
-  with tarfile.open(path, "w:gz") as archive:
-    for name, text in members.items():
-      data = text.encode("utf-8")
-      info = tarfile.TarInfo(f"{base}/{name}")
-      info.size = len(data)
-      archive.addfile(info, io.BytesIO(data))
-  return path
+def source_tree(root: Path) -> Path:
+  for name in SOURCE:
+    (root / name).parent.mkdir(parents=True, exist_ok=True)
+    (root / name).write_bytes(f"{name}\n".encode())
+  (root / "LICENSE").write_bytes(b"license\n")
+  return root
+
+
+def build_sdist(
+  path: Path,
+  root: Path,
+  changes: dict[str, bytes | None] | None = None,
+  base: str | None = None,
+) -> Path:
+  return artifact_builders.build_sdist(path, root, SOURCE, "0.0.0", changes, base)
+
+
+def build_wheel(
+  path: Path,
+  root: Path,
+  changes: dict[str, bytes | None] | None = None,
+  metadata: str | None = None,
+) -> Path:
+  return artifact_builders.build_wheel(path, root, "0.0.0", changes, metadata)
+
+
+SITE = "https://example.test/site/"
+
+
+def built_site(tmp_path: Path, api: str, readme_fragment: str) -> tuple[Path, Path]:
+  root = tmp_path / "root"
+  root.mkdir()
+  (root / "pyproject.toml").write_text(
+    f'[project.urls]\nDocumentation = "{SITE}"\n', encoding="utf-8"
+  )
+  (root / "README.md").write_text(
+    f"[入口]({SITE}docs/api.html#chinese-domain-api)与[归月]({SITE}docs/stars.html#{readme_fragment})\n",
+    encoding="utf-8",
+  )
+  html = tmp_path / "html"
+  (html / "docs").mkdir(parents=True)
+  (html / "docs/api.html").write_text(api, encoding="utf-8")
+  (html / "docs/stars.html").write_text(
+    '<section id="month-star-policy"><span id="sec8"></span><h2>归月与失败边界</h2></section>',
+    encoding="utf-8",
+  )
+  return html, root
+
+
+API_PAGE = '<section id="chinese-domain-api"><span id="sec1"></span></section><dt id="id1"></dt>'
+
+
+def test_html_targets_accept_unique_ids_and_existing_readme_fragments(tmp_path: Path) -> None:
+  check.check_html_targets(*built_site(tmp_path, API_PAGE, "month-star-policy"))
+
+
+def test_html_targets_reject_a_repeated_id(tmp_path: Path) -> None:
+  api = API_PAGE.replace('id="sec1"', 'id="id1"')
+  with pytest.raises(ValueError, match=r"Duplicate HTML ids in docs/api\.html: id1"):
+    check.check_html_targets(*built_site(tmp_path, api, "month-star-policy"))
+
+
+@pytest.mark.parametrize("fragment", ["归月与失败边界", "%E5%BD%92%E6%9C%88", "sec9"])
+def test_html_targets_reject_a_readme_fragment_missing_from_the_site(
+  tmp_path: Path, fragment: str
+) -> None:
+  with pytest.raises(ValueError, match="README link target is missing"):
+    check.check_html_targets(*built_site(tmp_path, API_PAGE, fragment))
 
 
 def test_empty_document_tree(tmp_path: Path) -> None:
@@ -352,6 +415,7 @@ def checked_docs_source(sphinx_source: Path) -> Path:
   )
   for name in ("conf.py", "python-stdlib.inv"):
     shutil.copyfile(root / "docs" / name, sphinx_source / "docs" / name)
+  shutil.copyfile(root / "pyproject.toml", sphinx_source / "pyproject.toml")
   shutil.copytree(root / "docs/_static", sphinx_source / "docs/_static")
   (sphinx_source / "index.rst").unlink()
   (sphinx_source / "docs/index.rst").write_text(
@@ -560,89 +624,148 @@ def test_source_members_follow_the_tree(tmp_path: Path) -> None:
   assert {"tools/helper.sh", "docs/notes.txt"}.isdisjoint(members)
 
 
-@pytest.mark.parametrize("missing", SOURCE)
+def test_sdist_of_the_tested_tree_passes(tmp_path: Path) -> None:
+  root = source_tree(tmp_path / "root")
+  check_sdist(build_sdist(tmp_path / "ziwei-0.0.0.tar.gz", root), "0.0.0", SOURCE, root)
+
+
+@pytest.mark.parametrize("missing", [*SOURCE, "src/ziwei.egg-info/requires.txt"])
 def test_incomplete_sdist(tmp_path: Path, missing: str) -> None:
-  members = {"PKG-INFO": PKG_INFO, **dict.fromkeys(set(SOURCE) - {missing}, "")}
+  root = source_tree(tmp_path / "root")
+  sdist = build_sdist(tmp_path / "ziwei-0.0.0.tar.gz", root, {missing: None})
   with pytest.raises(ValueError, match=f"missing: .*{re.escape(missing)}"):
-    check_sdist(write_sdist(tmp_path / "ziwei-0.0.0.tar.gz", members), "0.0.0", SOURCE)
+    check_sdist(sdist, "0.0.0", SOURCE, root)
+
+
+@pytest.mark.parametrize(
+  "extra", ["src/ziwei/extra.py", ".review/notes.md", "@other/.review/note", "@.review/notes.md"]
+)
+def test_sdist_with_an_extra_file_is_rejected(tmp_path: Path, extra: str) -> None:
+  root = source_tree(tmp_path / "root")
+  sdist = build_sdist(tmp_path / "ziwei-0.0.0.tar.gz", root, {extra: b"x"})
+  with pytest.raises(ValueError, match="unexpected files"):
+    check_sdist(sdist, "0.0.0", SOURCE, root)
+
+
+@pytest.mark.parametrize("changed", ["src/ziwei/__init__.py", "tools/check.py"])
+def test_sdist_with_changed_bytes_is_rejected(tmp_path: Path, changed: str) -> None:
+  root = source_tree(tmp_path / "root")
+  sdist = build_sdist(tmp_path / "ziwei-0.0.0.tar.gz", root, {changed: b"changed\n"})
+  with pytest.raises(ValueError, match=f"differs from the tested source: {re.escape(changed)}"):
+    check_sdist(sdist, "0.0.0", SOURCE, root)
+
+
+def test_sdist_with_a_link_is_rejected(tmp_path: Path) -> None:
+  root = source_tree(tmp_path / "root")
+  sdist = build_sdist(tmp_path / "ziwei-0.0.0.tar.gz", root)
+  with tarfile.open(sdist) as archive:
+    members = [(member, archive.extractfile(member)) for member in archive.getmembers()]
+    contents = [(member, None if stream is None else stream.read()) for member, stream in members]
+  with tarfile.open(sdist, "w:gz") as archive:
+    for member, data in contents:
+      archive.addfile(member, None if data is None else io.BytesIO(data))
+    link = tarfile.TarInfo("ziwei-0.0.0/link")
+    link.type = tarfile.SYMTYPE
+    link.linkname = "/etc/passwd"
+    archive.addfile(link)
+  with pytest.raises(ValueError, match="only contain files and directories"):
+    check_sdist(sdist, "0.0.0", SOURCE, root)
 
 
 @pytest.mark.parametrize("name, version", [("ziwei", "9.0.0"), ("other", "0.0.0")])
 def test_wrong_sdist_identity(tmp_path: Path, name: str, version: str) -> None:
-  members = {"PKG-INFO": f"Name: {name}\nVersion: {version}\n", **dict.fromkeys(SOURCE, "")}
+  root = source_tree(tmp_path / "root")
+  pkg_info = f"Name: {name}\nVersion: {version}\n".encode()
+  sdist = build_sdist(tmp_path / "ziwei-0.0.0.tar.gz", root, {"PKG-INFO": pkg_info})
   with pytest.raises(ValueError, match="identity"):
-    check_sdist(write_sdist(tmp_path / "ziwei-0.0.0.tar.gz", members), "0.0.0", SOURCE)
+    check_sdist(sdist, "0.0.0", SOURCE, root)
 
 
 @pytest.mark.parametrize("base, with_metadata", [("ziwei-9.0.0", True), ("ziwei-0.0.0", False)])
 def test_sdist_without_versioned_metadata(tmp_path: Path, base: str, with_metadata: bool) -> None:
-  members = dict.fromkeys(SOURCE, "")
-  if with_metadata:
-    members["PKG-INFO"] = PKG_INFO
+  root = source_tree(tmp_path / "root")
+  changes: dict[str, bytes | None] = {} if with_metadata else {"PKG-INFO": None}
+  sdist = build_sdist(tmp_path / "ziwei-0.0.0.tar.gz", root, changes, base)
   with pytest.raises(ValueError, match="PKG-INFO"):
-    check_sdist(write_sdist(tmp_path / "ziwei-0.0.0.tar.gz", members, base), "0.0.0", SOURCE)
+    check_sdist(sdist, "0.0.0", SOURCE, root)
+
+
+def test_wheel_of_the_tested_tree_passes(tmp_path: Path) -> None:
+  root = source_tree(tmp_path / "root")
+  check_wheel(build_wheel(tmp_path / "test.whl", root), "0.0.0", root)
 
 
 @pytest.mark.parametrize(
-  "name",
-  ["ziwei-0.0.0/.review/notes.md", ".review/notes.md", "ziwei-0.0.0/.review", "other/.review/note"],
-)
-def test_sdist_review_material_is_rejected_outside_the_version_root(
-  tmp_path: Path, name: str
-) -> None:
-  path = write_sdist(
-    tmp_path / "ziwei-0.0.0.tar.gz", {"PKG-INFO": PKG_INFO, **dict.fromkeys(SOURCE, "")}
-  )
-  with tarfile.open(path) as archive:
-    members = []
-    for member in archive.getmembers():
-      stream = archive.extractfile(member)
-      assert stream is not None
-      with stream:
-        members.append((member, stream.read()))
-  with tarfile.open(path, "w:gz") as archive:
-    for member, data in members:
-      archive.addfile(member, io.BytesIO(data))
-    extra = tarfile.TarInfo(name)
-    extra.size = 1
-    archive.addfile(extra, io.BytesIO(b"x"))
-  with pytest.raises(ValueError, match="review material"):
-    check_sdist(path, "0.0.0", SOURCE)
-
-
-@pytest.mark.parametrize(
-  "missing", ["ziwei/__init__.py", "ziwei/py.typed", "a.dist-info/licenses/LICENSE"]
+  "missing",
+  ["ziwei/__init__.py", "ziwei/py.typed", "ziwei-0.0.0.dist-info/licenses/LICENSE"],
 )
 def test_incomplete_wheel(tmp_path: Path, missing: str) -> None:
-  wheel = tmp_path / "test.whl"
+  root = source_tree(tmp_path / "root")
+  wheel = build_wheel(tmp_path / "test.whl", root, {missing: None})
+  with pytest.raises(ValueError, match=f"missing: .*{re.escape(missing)}"):
+    check_wheel(wheel, "0.0.0", root)
+
+
+@pytest.mark.parametrize("extra", ["ziwei/extra.py", "ziwei-0.0.0.dist-info/extra.txt"])
+def test_wheel_with_an_extra_file_is_rejected(tmp_path: Path, extra: str) -> None:
+  root = source_tree(tmp_path / "root")
+  wheel = build_wheel(tmp_path / "test.whl", root, {extra: b"x"})
+  with pytest.raises(ValueError, match="unexpected files"):
+    check_wheel(wheel, "0.0.0", root)
+
+
+@pytest.mark.parametrize("changed", ["ziwei/__init__.py", "ziwei-0.0.0.dist-info/licenses/LICENSE"])
+def test_wheel_with_changed_bytes_is_rejected(tmp_path: Path, changed: str) -> None:
+  root = source_tree(tmp_path / "root")
+  wheel = build_wheel(tmp_path / "test.whl", root, {changed: b"changed\n"})
+  with pytest.raises(ValueError, match="differs from the tested source"):
+    check_wheel(wheel, "0.0.0", root)
+
+
+def test_wheel_with_a_stale_record_is_rejected(tmp_path: Path) -> None:
+  root = source_tree(tmp_path / "root")
+  wheel = build_wheel(tmp_path / "test.whl", root)
+  with ZipFile(wheel) as archive:
+    contents = {name: archive.read(name) for name in archive.namelist()}
+  record = "ziwei-0.0.0.dist-info/RECORD"
+  contents[record] = contents[record].replace(b"sha256=", b"sha256=A", 1)
   with ZipFile(wheel, "w") as archive:
-    for path in ("ziwei/__init__.py", "ziwei/py.typed", "a.dist-info/licenses/LICENSE"):
-      if path != missing:
-        archive.writestr(path, "")
-    archive.writestr("a.dist-info/METADATA", "Name: ziwei\nVersion: 0.0.0\n")
-  with pytest.raises(ValueError, match="missing"):
-    check_wheel(wheel, "0.0.0")
+    for name, data in contents.items():
+      archive.writestr(name, data)
+  with pytest.raises(ValueError, match="RECORD digest"):
+    check_wheel(wheel, "0.0.0", root)
 
 
 @pytest.mark.parametrize("name, version", [("ziwei", "9.0.0"), ("other", "0.0.0")])
 def test_wrong_wheel_identity(tmp_path: Path, name: str, version: str) -> None:
-  wheel = tmp_path / "test.whl"
-  with ZipFile(wheel, "w") as archive:
-    for path in ("ziwei/__init__.py", "ziwei/py.typed", "a.dist-info/licenses/LICENSE"):
-      archive.writestr(path, "")
-    archive.writestr("a.dist-info/METADATA", f"Name: {name}\nVersion: {version}\n")
+  root = source_tree(tmp_path / "root")
+  wheel = build_wheel(tmp_path / "test.whl", root, metadata=f"Name: {name}\nVersion: {version}\n")
   with pytest.raises(ValueError, match="identity"):
-    check_wheel(wheel, "0.0.0")
+    check_wheel(wheel, "0.0.0", root)
 
 
-@pytest.mark.parametrize("count", [0, 2])
-def test_wheel_metadata_count(tmp_path: Path, count: int) -> None:
-  wheel = tmp_path / "test.whl"
-  with ZipFile(wheel, "w") as archive:
-    for index in range(count):
-      archive.writestr(f"{index}.dist-info/METADATA", "Name: ziwei\nVersion: 0.0.0\n")
-  with pytest.raises(ValueError, match="one METADATA"):
-    check_wheel(wheel, "0.0.0")
+def test_wheel_repeating_a_member_is_rejected(tmp_path: Path) -> None:
+  root = source_tree(tmp_path / "root")
+  wheel = build_wheel(tmp_path / "test.whl", root)
+  with ZipFile(wheel, "a") as archive, pytest.warns(UserWarning, match="Duplicate"):
+    archive.writestr("ziwei/py.typed", b"")
+  with pytest.raises(ValueError, match="repeats a member"):
+    check_wheel(wheel, "0.0.0", root)
+
+
+def test_wheel_with_a_changed_knowledge_statement_is_rejected(tmp_path: Path) -> None:
+  """在真实源码上改坏天刑解释的陈述并重算RECORD，制品检查须拒绝。"""
+  root = Path(__file__).resolve().parents[1]
+  check_wheel(build_wheel(tmp_path / "base.whl", root), "0.0.0", root)
+  entry = load_catalog().get("entry.interpretation.tianxing-nature")
+  assert isinstance(entry, KnowledgeEntry)
+  data = (root / "src/ziwei/knowledge/data.py").read_bytes()
+  statement = entry.statement.encode()
+  assert data.count(statement) == 1
+  changed = data.replace(statement, statement[:-3] + "吉".encode())
+  wheel = build_wheel(tmp_path / "test.whl", root, {"ziwei/knowledge/data.py": changed})
+  with pytest.raises(ValueError, match=r"differs from the tested source: ziwei/knowledge/data\.py"):
+    check_wheel(wheel, "0.0.0", root)
 
 
 @pytest.mark.parametrize(
@@ -866,6 +989,9 @@ def test_main_runs_every_gate_in_order(
     check, "check_api_reference", lambda directory, root: calls.append("api_reference")
   )
   monkeypatch.setattr(
+    check, "check_html_targets", lambda directory, root: calls.append("html_targets")
+  )
+  monkeypatch.setattr(
     check, "check_knowledge_reference", lambda directory: calls.append("knowledge_reference")
   )
   monkeypatch.setattr(
@@ -895,6 +1021,7 @@ def test_main_runs_every_gate_in_order(
     "sphinx_report",
     ("examples", "report"),
     "api_reference",
+    "html_targets",
     "knowledge_reference",
     ("distribution", destination, alias_destination),
   ]

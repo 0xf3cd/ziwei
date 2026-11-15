@@ -1,12 +1,10 @@
 """发布前置与产物验证须在任何安装或上传之前拒绝缺陷。"""
 
-import io
 import json
 import os
 import re
 import subprocess
 import sys
-import tarfile
 from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
@@ -15,6 +13,7 @@ from zipfile import ZipFile
 import pytest
 import yaml
 
+from tests import artifact_builders
 from tools import artifacts, release
 
 VERSION = "0.1.0"
@@ -22,27 +21,26 @@ SHA = "a" * 40
 
 
 @pytest.fixture
-def bundle(tmp_path: Path) -> tuple[Path, release.Manifest]:
+def bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, release.Manifest]:
+  """在受测树副本上造制品；副本的版本号改为测试版本，release.ROOT指向这份副本。"""
+  source = tmp_path / "source"
+  for name in (*artifacts.source_members(release.ROOT), "LICENSE"):
+    (source / name).parent.mkdir(parents=True, exist_ok=True)
+    (source / name).write_bytes((release.ROOT / name).read_bytes())
+  pyproject = source / "pyproject.toml"
+  text = pyproject.read_text(encoding="utf-8")
+  pyproject.write_text(
+    re.sub(r'(?m)^version = ".*"$', f'version = "{VERSION}"', text, count=1), encoding="utf-8"
+  )
+  monkeypatch.setattr(release, "ROOT", source)
   built = tmp_path / "built"
   built.mkdir()
-  sdist = built / f"ziwei-{VERSION}.tar.gz"
-  with tarfile.open(sdist, "w:gz") as archive:
-    texts = dict.fromkeys(artifacts.source_members(release.ROOT), "")
-    texts["PKG-INFO"] = f"Name: ziwei\nVersion: {VERSION}\n"
-    for name, text in texts.items():
-      data = text.encode()
-      member = tarfile.TarInfo(f"ziwei-{VERSION}/{name}")
-      member.size = len(data)
-      archive.addfile(member, io.BytesIO(data))
-  wheel = built / f"ziwei-{VERSION}-py3-none-any.whl"
-  with ZipFile(wheel, "w") as archive:
-    archive.writestr(f"ziwei-{VERSION}.dist-info/METADATA", f"Name: ziwei\nVersion: {VERSION}\n")
-    for name in (
-      "ziwei/__init__.py",
-      "ziwei/py.typed",
-      f"ziwei-{VERSION}.dist-info/licenses/LICENSE",
-    ):
-      archive.writestr(name, "")
+  sdist = artifact_builders.build_sdist(
+    built / f"ziwei-{VERSION}.tar.gz", source, artifacts.source_members(source), VERSION
+  )
+  wheel = artifact_builders.build_wheel(
+    built / f"ziwei-{VERSION}-py3-none-any.whl", source, VERSION
+  )
   directory = tmp_path / "bundle"
   artifacts.preserve_artifacts(
     {path: artifacts.file_sha256(path) for path in (sdist, wheel)}, directory
@@ -226,7 +224,7 @@ def run_publish_script(
     ("checksum-symlink", "Artifact metadata must be regular files", None),
     ("manifest-symlink", "Artifact metadata must be regular files", None),
     ("wheel-identity", "Wheel identity differs", None),
-    ("wheel-typing", "Wheel is missing the package or typing marker", None),
+    ("wheel-typing", "Wheel is missing: ziwei/py.typed", None),
   ],
 )
 def test_bundle_contracts_at_both_real_entrypoints(
@@ -312,10 +310,7 @@ def test_release_cli_keeps_the_same_identity_and_bytes(
   with_alias: bool,
 ) -> None:
   directory, manifest = bundle
-  source = tmp_path / "source"
-  source.mkdir()
-  (source / "pyproject.toml").write_text('[project]\nversion = "0.1.0"\n')
-  monkeypatch.setattr(release, "ROOT", source)
+  source = release.ROOT
   for key, value in {
     "RELEASE_VERSION": VERSION,
     "RELEASE_SHA": SHA,

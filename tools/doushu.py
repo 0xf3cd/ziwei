@@ -4,10 +4,6 @@ from __future__ import annotations
 
 import argparse
 import ast
-import base64
-import csv
-import hashlib
-import io
 import json
 import os
 import re
@@ -24,7 +20,7 @@ from zipfile import ZipFile
 from packaging.specifiers import SpecifierSet
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from tools.artifacts import file_sha256
+from tools.artifacts import check_record, file_sha256
 from tools.consumption import run
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -194,22 +190,7 @@ def check_alias_wheel(wheel: Path, version: str, *, root: Path = ROOT) -> None:
       for k, v in {"Wheel-Version": "1.0", "Root-Is-Purelib": "true", "Tag": "py3-none-any"}.items()
     ):
       raise ValueError("Alias must be a pure Python wheel")
-    records = list(csv.reader(io.StringIO(archive.read(f"{info}/RECORD").decode())))
-    if any(len(row) != 3 for row in records) or len(records) != len(members):
-      raise ValueError("Malformed alias RECORD")
-    if {row[0] for row in records} != members:
-      raise ValueError("Alias RECORD member inventory differs")
-    for name, digest, size in records:
-      if name == f"{info}/RECORD":
-        if digest or size:
-          raise ValueError("Alias RECORD must not hash itself")
-        continue
-      content = archive.read(name)
-      actual_digest = (
-        base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
-      )
-      if digest != "sha256=" + actual_digest or size != str(len(content)):
-        raise ValueError("Alias RECORD digest or size differs")
+    check_record(archive, members, f"{info}/RECORD")
 
 
 def build_alias(directory: Path, *, root: Path = ROOT) -> Path:

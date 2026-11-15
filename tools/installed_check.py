@@ -31,7 +31,7 @@ from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan, 地支
 from ziwei.knowledge import load_catalog
-from ziwei.knowledge.model import Citation, EvidenceAspect, KnowledgeEntry, PremiseStatus, Source
+from ziwei.knowledge.model import EvidenceAspect, KnowledgeEntry, PremiseStatus, Source
 from ziwei.liunian import (
   LIUNIAN_STARS_RULE_ID,
   LiunianBoundary,
@@ -525,227 +525,23 @@ def check_knowledge() -> None:
     entry.show_by_default or not entry.recheck or not entry.tracking_url for entry in entries
   ):
     raise ValueError("Installed knowledge interpretation entries or default display changed")
-  expected_ids: set[str] = set()
-  for name, suffix, nature_quote, quote, condition, status in (
-    (
-      "紫微",
-      "ziwei-fubi",
-      "紫微屬土，乃中天之尊星為帝座，主掌造化樞機，人生主宰。",
-      "無輔弼同行則為孤君，雖美玉不足。",
-      "同行的具体范围待核",
-      PremiseStatus.待定,
-    ),
-    (
-      "天府",
-      "tianfu-kongwang",
-      "天府屬土，南斗主令第一星也。",
-      "若值空亡是為孤立，不可一例而推斷，大抵此星多主吉。",
-      "空亡的具体所指待核",
-      PremiseStatus.待定,
-    ),
-    (
-      "天机",
-      "tianji-tianliang",
-      "天機屬木，南斗第三益算之善星也。",
-      "或守於身，更逢天梁，必有高藝隨身。",
-      "守于身、更逢天梁成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "太阳",
-      "taiyang-fubi",
-      "太陽星屬火，日之精也。",
-      "若與左右同宮則為貴論。",
-      "与左右同宫成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "武曲",
-      "wuqu-tianfu",
-      "武曲北斗第六星，屬金，乃財帛宮主。",
-      "與天府同宮有壽",
-      "武曲与天府同宫。",
-      PremiseStatus.已明确,
-    ),
-    (
-      "天同",
-      "tiantong-fuzuo-birth",
-      "天同星屬水，乃南方第四星也，為福德宮之主宰。",
-      "遇左右昌梁貴顯，喜壬乙丙生人，巳亥得地。",
-      "遇左右昌梁、壬乙丙生人和巳亥得地",
-      PremiseStatus.待定,
-    ),
-    (
-      "廉贞",
-      "lianzhen-jumen-limit",
-      "廉貞屬火，北斗第五星也。",
-      "限逢巨門於陷地，則是非起於官司。",
-      "限逢巨门于陷地成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "太阴",
-      "taiyin-shenming-jiji",
-      "太陰乃水之精，為田宅主，化富，與日為配。",
-      "若在身命廟樂，吉集主富貴。",
-      "在身命庙乐、吉集成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "贪狼",
-      "tanlang-kongwang",
-      "貪狼北斗解厄之神，第一星也。屬水，化氣為桃花，為標準，乃主禍福之神。",
-      "喜見空亡，返主端正。",
-      "喜见空亡成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "巨门",
-      "jumen-dizuo",
-      "巨門屬水、金。北斗第二星也，為陰精之星，化氣為暗。",
-      "遇帝座則制其強。",
-      "遇帝座成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "天相",
-      "tianxiang-fubi",
-      "天相屬水，南斗第五星也。",
-      "此星若臨生旺之鄉，雖不逢帝座，若得左右，則職掌威權。",
-      "临生旺之乡、得左右成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "天梁",
-      "tianliang-changqu-fubi",
-      "天梁屬土，南斗第二星也。",
-      "得昌曲左右加會，位至臺省。",
-      "得昌曲左右加会成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "七杀",
-      "qisha-changqu-fubi",
-      "七殺南斗第六星也，屬火、金。",
-      "左右昌曲入廟拱照，掌生殺之權，富貴出眾。",
-      "左右昌曲入庙拱照成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "破军",
-      "pojun-jumen",
-      "破軍屬水，北斗第七星也，司夫妻、子息、奴僕之神。",
-      "與巨門同度則口舌爭鬥",
-      "与巨门同度成立",
-      PremiseStatus.待定,
-    ),
+  # 逐条内容由源码侧参考核对，制品检查确保安装的是同一份字节；
+  # 这里从安装包读一条主星解释和一条杂曜解释。
+  for identifier, quote in (
+    ("entry.interpretation.ziwei-fubi", "無輔弼同行則為孤君，雖美玉不足。"),
+    ("entry.interpretation.tianxing-rumiao", "入庙则吉。"),
   ):
-    (concept,) = catalog.find(name)
-    selected = catalog.filter_entries(concept_id=concept.id, source_id=source.id)
-    nature_id = f"entry.interpretation.{concept.id.rsplit('.', 1)[1]}-nature"
-    condition_id = f"entry.interpretation.{suffix}"
-    expected_ids.update((nature_id, condition_id))
-    by_id = {entry.id: entry for entry in selected}
-    if set(by_id) != {nature_id, condition_id} or len(selected) != 2:
-      raise ValueError("Installed knowledge interpretation concept or condition changed")
-    conditional = by_id[condition_id]
-    if not any(condition in premise for premise in conditional.premises):
-      raise ValueError("Installed knowledge interpretation concept or condition changed")
+    entry = catalog.get(identifier)
+    citations = catalog.references(identifier)
     if (
-      by_id[nature_id].premise_status is not PremiseStatus.已明确
-      or conditional.premise_status is not status
+      not isinstance(entry, KnowledgeEntry)
+      or entry.premise_status is not PremiseStatus.待定
+      or entry.statement == quote
+      or not citations
+      or citations[0].quote != quote
+      or citations[0].aspects != (EvidenceAspect.解释,)
     ):
-      raise ValueError("Installed knowledge interpretation premise status changed")
-    if any(
-      entry.statement == citation.quote
-      for entry in selected
-      for citation in catalog.references(entry.id)
-    ):
-      raise ValueError("Installed knowledge interpretation statement duplicates its citation")
-    for identifier, expected_quote in ((nature_id, nature_quote), (condition_id, quote)):
-      citations = catalog.references(identifier)
-      if (
-        len(citations) != 1
-        or citations[0].quote != expected_quote
-        or citations[0].aspects != (EvidenceAspect.解释,)
-      ):
-        raise ValueError("Installed knowledge interpretation citation changed")
-  for names, nature, condition, nature_quote, condition_quote, premise in (
-    (
-      ("地空", "地劫"),
-      "kongjie-nature",
-      "kongjie-shenming-jixiong",
-      "劫空为害最愁人，才智英雄误一身，",
-      "二星守身命，遇吉则吉，遇凶则凶。",
-      "守身命",
-    ),
-    (
-      ("天伤", "天使"),
-      "shangshi-nature",
-      "shangshi-tai-sui-erxian",
-      "天伤乃上天虚耗之神，天使乃上天传使之神。",
-      "太岁二限逢之不问得地否？只要吉多为福其祸稍轻，",
-      "吉多",
-    ),
-    (("天刑",), "tianxing-nature", "tianxing-rumiao", "天刑未必是凶星，", "入庙则吉。", "入庙"),
-    (
-      ("天姚",),
-      "tianyao-nature",
-      "tianyao-ziweijixing",
-      "天姚守身命，心性阴毒，多疑恐、善颜色、风流多婢、主淫。",
-      "或紫微吉星加，刚柔相济，主风骚，",
-      "吉星与加",
-    ),
-    (
-      ("天哭", "天虚"),
-      "kuxu-nature",
-      "kuxu-yulu",
-      "哭虚为恶曜，临命最非常。",
-      "丑卯申宫吉，遇禄名显扬。",
-      "遇禄",
-    ),
-  ):
-    concept_ids = tuple(catalog.find(name)[0].id for name in names)
-    pair = ("entry.interpretation." + nature, "entry.interpretation." + condition)
-    expected_ids.update(pair)
-    for concept_id in concept_ids:
-      if {e.id for e in catalog.filter_entries(concept_id=concept_id, source_id=source.id)} != set(
-        pair
-      ):
-        raise ValueError("Installed knowledge minor interpretation set changed")
-    for index, (identifier, expected_quote) in enumerate(
-      zip(pair, (nature_quote, condition_quote), strict=True)
-    ):
-      entry = catalog.get(identifier)
-      if (
-        not isinstance(entry, KnowledgeEntry)
-        or entry.concept_ids != concept_ids
-        or entry.variant_ids
-      ):
-        raise ValueError("Installed knowledge minor interpretation concept changed")
-      if entry.premise_status is not (PremiseStatus.已明确 if index == 0 else PremiseStatus.待定):
-        raise ValueError("Installed knowledge minor interpretation status changed")
-      if index == 1 and not any(premise in p for p in entry.premises):
-        raise ValueError("Installed knowledge minor interpretation condition changed")
-      citations = catalog.references(identifier)
-      expected_citations: tuple[str, ...] = (
-        identifier.replace("entry.interpretation.", "citation.quanshu-juan1."),
-      )
-      if nature == "kongjie-nature":
-        expected_citations += ("citation.quanshu.kongjie", "citation.jielan.tiankong-year")
-      primary = catalog.get(expected_citations[0])
-      if (
-        not isinstance(primary, Citation)
-        or entry.citation_ids != expected_citations
-        or {c.id for c in citations} != set(expected_citations)
-        or primary.quote != expected_quote
-        or primary.aspects != (EvidenceAspect.解释,)
-      ):
-        raise ValueError("Installed knowledge minor interpretation citation changed")
-      if entry.statement == expected_quote:
-        raise ValueError("Installed knowledge minor interpretation duplicates its quote")
-  if {e.id for e in entries} != expected_ids:
-    raise ValueError("Installed knowledge interpretation entries changed")
+      raise ValueError("Installed knowledge interpretation citation changed")
 
 
 if __name__ == "__main__":

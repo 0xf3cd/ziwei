@@ -10,6 +10,7 @@ import sys
 import tarfile
 import tempfile
 import tomllib
+from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -93,6 +94,45 @@ class ApiTargets(HTMLParser):
       target = dict(attrs).get("id")
       if target is not None:
         self.targets.add(target)
+
+
+class HtmlIds(HTMLParser):
+  """按出现次数收集页面中所有元素的id。"""
+
+  def __init__(self) -> None:
+    super().__init__()
+    self.ids: Counter[str] = Counter()
+
+  def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+    identifier = dict(attrs).get("id")
+    if identifier is not None:
+      self.ids[identifier] += 1
+
+
+def check_html_targets(directory: Path, root: Path = ROOT) -> None:
+  """每页id唯一；README中指向在线文档的片段须落在构建出的页面上。"""
+  errors: list[str] = []
+  page_ids: dict[str, Counter[str]] = {}
+  for page in sorted(directory.rglob("*.html")):
+    parser = HtmlIds()
+    parser.feed(page.read_text(encoding="utf-8"))
+    name = page.relative_to(directory).as_posix()
+    page_ids[name] = parser.ids
+    repeated = sorted(identifier for identifier, count in parser.ids.items() if count > 1)
+    if repeated:
+      errors.append(f"Duplicate HTML ids in {name}: {', '.join(repeated)}")
+  metadata = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+  site = metadata["project"]["urls"]["Documentation"]
+  for token in MarkdownIt("commonmark").parse((root / "README.md").read_text(encoding="utf-8")):
+    for child in token.children or ():
+      target = child.attrGet("href") if child.type == "link_open" else None
+      if not isinstance(target, str) or not target.startswith(site):
+        continue
+      url = urlsplit(target[len(site) :])
+      if url.fragment and unquote(url.fragment) not in page_ids.get(unquote(url.path), {}):
+        errors.append(f"README link target is missing from the built site: {target}")
+  if errors:
+    raise ValueError("\n".join(errors))
 
 
 def check_api_reference(directory: Path, root: Path = ROOT) -> None:
@@ -213,8 +253,8 @@ def check_distribution(
   run((sys.executable, "-m", "build", "--no-isolation", "--outdir", str(artifacts)), cwd=ROOT)
   sdist, wheel = built_artifacts(artifacts)
   hashes = {path: file_sha256(path) for path in (sdist, wheel)}
-  check_sdist(sdist, version, source_members(ROOT))
-  check_wheel(wheel, version)
+  check_sdist(sdist, version, source_members(ROOT), ROOT)
+  check_wheel(wheel, version, ROOT)
   run((sys.executable, "-m", "twine", "check", str(sdist), str(wheel)), cwd=ROOT)
   alias = alias_from_sdist(sdist, version, directory)
   alias_digest = file_sha256(alias)
@@ -267,6 +307,7 @@ def check_documentation(directory: Path) -> None:
   check_examples(sphinx_report(directory))
   html = directory / "html"
   check_api_reference(html, ROOT)
+  check_html_targets(html, ROOT)
   check_knowledge_reference(html)
   if not (html / "docs/index.html").is_file():
     raise ValueError("Missing documentation entry point: docs/index.html")

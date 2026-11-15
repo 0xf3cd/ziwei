@@ -80,17 +80,18 @@ def check_ci_policy(data: dict[str, Any]) -> None:
 
 
 def check_action_pins(workflow: str) -> None:
-  actions = [
-    step["uses"]
-    for job in load_workflow(workflow)["jobs"].values()
-    for step in job.get("steps", [])
-    if "uses" in step
+  """step级动作与job级可复用工作流都钉完整提交SHA；以./开头的本仓路径随调用方同一提交。"""
+  jobs = list(load_workflow(workflow)["jobs"].values())
+  references = [job["uses"] for job in jobs if "uses" in job] + [
+    step["uses"] for job in jobs for step in job.get("steps", []) if "uses" in step
   ]
-  require(actions, "Workflow must execute pinned actions")
-  require(
-    all(re.fullmatch(r"[\w-]+/[\w-]+@[0-9a-f]{40}", action) for action in actions),
-    "Action must use a full commit SHA",
-  )
+  require(references, "Workflow must reference actions or reusable workflows")
+  for reference in references:
+    require(
+      reference.startswith("./")
+      or re.fullmatch(r"[\w-]+/[\w.-]+(/[\w./-]+)?@[0-9a-f]{40}", reference),
+      f"Action or reusable workflow must use a full commit SHA: {reference}",
+    )
 
 
 def test_all_actions_use_full_commit_sha() -> None:
@@ -115,6 +116,50 @@ def test_named_floating_action_cannot_hide_from_the_pin_guard() -> None:
   defective = original + "\n      - name: Upload\n        uses: owner/action@latest\n"
   with pytest.raises(ValueError, match="full commit SHA"):
     check_action_pins(defective)
+
+
+SHA = "0" * 40
+REUSABLE = "owner/repo/.github/workflows/build.yml"
+
+
+def pin_workflow(job_reference: str | None, step_reference: str | None) -> str:
+  jobs = ""
+  if job_reference is not None:
+    jobs += f"  call:\n    uses: {job_reference}\n"
+  if step_reference is not None:
+    jobs += f"  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: {step_reference}\n"
+  return "on: push\njobs:\n" + jobs
+
+
+@pytest.mark.parametrize(
+  ("job_reference", "step_reference"),
+  [
+    (f"{REUSABLE}@{SHA}", None),
+    ("./.github/workflows/build.yml", None),
+    (f"{REUSABLE}@{SHA}", f"actions/checkout@{SHA}"),
+    (None, f"github/codeql-action/init@{SHA}"),
+  ],
+)
+def test_pin_guard_accepts_pinned_jobs_and_steps(
+  job_reference: str | None, step_reference: str | None
+) -> None:
+  check_action_pins(pin_workflow(job_reference, step_reference))
+
+
+@pytest.mark.parametrize(
+  ("job_reference", "step_reference"),
+  [
+    (f"{REUSABLE}@latest", None),
+    (f"{REUSABLE}@main", f"actions/checkout@{SHA}"),
+    (f"{REUSABLE}@{SHA}", "actions/checkout@v4"),
+    ("$/.github/workflows/build.yml", None),
+  ],
+)
+def test_pin_guard_rejects_floating_job_or_step_references(
+  job_reference: str | None, step_reference: str | None
+) -> None:
+  with pytest.raises(ValueError, match="full commit SHA"):
+    check_action_pins(pin_workflow(job_reference, step_reference))
 
 
 def test_each_ci_job_binds_uv_archive_checksum() -> None:
