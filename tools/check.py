@@ -98,7 +98,7 @@ class ApiTargets(HTMLParser):
 
 
 class PageTargets(HTMLParser):
-  """收集页面的全部id、落在节标题上的id，以及指向节的站内链接。"""
+  """收集页面的全部id、落在节标题上的id，以及Sphinx生成的节引用。"""
 
   def __init__(self) -> None:
     super().__init__()
@@ -124,14 +124,14 @@ class PageTargets(HTMLParser):
     if tag == "a":
       self.link = attributes.get("href") if "internal" in classes else None
     elif self.link is not None:
-      # Sphinx把节引用的文字放在std-ref里；对象引用放在代码元素里，落在签名上。
+      # Sphinx把节引用的文字放在std-ref里；对象引用落在签名上，不收。
       if "std-ref" in classes:
         self.section_links.append(self.link)
       self.link = None
 
 
 def check_html_targets(directory: Path, root: Path = ROOT) -> None:
-  """每页id唯一；站内节链接与README指向在线文档的片段都须落在节标题上。"""
+  """每页id唯一；Sphinx生成的节引用与README指向在线文档的片段都须落在节标题上。"""
   errors: list[str] = []
   pages: dict[str, PageTargets] = {}
   for page in sorted(directory.rglob("*.html")):
