@@ -22,7 +22,7 @@ EXEMPT_LINEAGES = frozenset(
     "lineage.yuanhai-changxian",
   }
 )
-# 规则建立时已超过上限的谱系，以当时总量为上限，只降不升。
+# 历史超出：规则建立时已超过上限的谱系，以当时总量为上限，只降不升，不算合规。
 HISTORICAL_CAPS = {
   "lineage.zhongzhou-wangtingzhi": 309,
   "lineage.jingcheng-golla": 229,
@@ -44,14 +44,15 @@ def quote_totals(catalog: Catalog) -> dict[str, int]:
   return totals
 
 
-def check_quote_budget(catalog: Catalog) -> None:
+def check_quote_budget(catalog: Catalog) -> list[str]:
+  """核各谱系的引文总量，返回历史超出的谱系。"""
   totals = quote_totals(catalog)
-  errors = [
-    f"{lineage}逐字引文共{total}字，超过上限{HISTORICAL_CAPS.get(lineage, LIMIT)}字；"
-    "缩短或删去该谱系的引文"
-    for lineage, total in sorted(totals.items())
-    if total > HISTORICAL_CAPS.get(lineage, LIMIT)
-  ]
+  errors = []
+  for lineage, total in sorted(totals.items()):
+    cap = HISTORICAL_CAPS.get(lineage, LIMIT)
+    if total > cap:
+      note = "（历史超出，只降不升）" if lineage in HISTORICAL_CAPS else ""
+      errors.append(f"{lineage}逐字引文共{total}字，超过上限{cap}字{note}；缩短或删去该谱系的引文")
   for lineage, cap in HISTORICAL_CAPS.items():
     total = totals.get(lineage, 0)
     if total <= LIMIT:
@@ -60,6 +61,7 @@ def check_quote_budget(catalog: Catalog) -> None:
       errors.append(f"{lineage}已降到{total}字，把HISTORICAL_CAPS中的上限同步改为{total}")
   if errors:
     raise ValueError("\n".join(errors))
+  return sorted(lineage for lineage, total in totals.items() if total > LIMIT)
 
 
 def with_citation(
@@ -95,16 +97,16 @@ def new_source(catalog: Catalog, lineage_id: str, layer: TextLayer = TextLayer.�
   )
 
 
-def test_catalog_quotes_stay_within_lineage_limits() -> None:
-  check_quote_budget(load_catalog())
+def test_catalog_stays_within_limits_apart_from_historical_overages() -> None:
+  assert check_quote_budget(load_catalog()) == sorted(HISTORICAL_CAPS)
 
 
 @pytest.mark.parametrize(
   ("defect", "reason"),
   [
-    ("grow-historical-source", "超过上限229字"),
+    ("grow-historical-source", "超过上限229字（历史超出"),
     ("new-lineage", "超过上限90字"),
-    ("join-historical-lineage", "超过上限309字"),
+    ("join-historical-lineage", "超过上限309字（历史超出"),
     ("grow-small-lineage", "超过上限90字"),
     ("modern-in-exempt-lineage", "只豁免原文录文"),
     ("relineage-into-exempt", "只豁免原文录文"),

@@ -152,6 +152,7 @@ def test_pin_guard_accepts_pinned_jobs_and_steps(
     (f"{REUSABLE}@latest", None),
     (f"{REUSABLE}@main", f"actions/checkout@{SHA}"),
     (f"{REUSABLE}@{SHA}", "actions/checkout@v4"),
+    (f"{REUSABLE}@abc1234", None),
     ("$/.github/workflows/build.yml", None),
   ],
 )
@@ -160,6 +161,14 @@ def test_pin_guard_rejects_floating_job_or_step_references(
 ) -> None:
   with pytest.raises(ValueError, match="full commit SHA"):
     check_action_pins(pin_workflow(job_reference, step_reference))
+
+
+def test_pin_guard_rejects_a_workflow_without_references() -> None:
+  workflow = (
+    "on: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n"
+  )
+  with pytest.raises(ValueError, match="must reference actions"):
+    check_action_pins(workflow)
 
 
 def test_each_ci_job_binds_uv_archive_checksum() -> None:

@@ -214,7 +214,9 @@ def build_wheel(
 SITE = "https://example.test/site/"
 
 
-def built_site(tmp_path: Path, api: str, readme_fragment: str) -> tuple[Path, Path]:
+def built_site(
+  tmp_path: Path, api: str, readme_fragment: str, guide_fragment: str = "sec1"
+) -> tuple[Path, Path]:
   root = tmp_path / "root"
   root.mkdir()
   (root / "pyproject.toml").write_text(
@@ -228,16 +230,27 @@ def built_site(tmp_path: Path, api: str, readme_fragment: str) -> tuple[Path, Pa
   (html / "docs").mkdir(parents=True)
   (html / "docs/api.html").write_text(api, encoding="utf-8")
   (html / "docs/stars.html").write_text(
-    '<section id="month-star-policy"><span id="sec8"></span><h2>归月与失败边界</h2></section>',
+    '<section id="sec8"><span id="month-star-policy"></span><h2>归月与失败边界</h2>'
+    '<span class="target" id="index-0"></span><dt id="ziwei.stars.month_star"></dt></section>',
+    encoding="utf-8",
+  )
+  (html / "docs/liunian.html").write_text(
+    f'<a class="reference internal" href="api.html#{guide_fragment}">'
+    '<span class="std std-ref">API</span></a>'
+    '<a class="reference internal" href="api.html#id1">'
+    '<code class="xref py"><span class="pre">f</span></code></a>',
     encoding="utf-8",
   )
   return html, root
 
 
-API_PAGE = '<section id="chinese-domain-api"><span id="sec1"></span></section><dt id="id1"></dt>'
+API_PAGE = (
+  '<section id="sec1"><span id="chinese-domain-api"></span><h2>中文领域入口</h2></section>'
+  '<dt id="id1"></dt>'
+)
 
 
-def test_html_targets_accept_unique_ids_and_existing_readme_fragments(tmp_path: Path) -> None:
+def test_html_targets_accept_unique_ids_and_links_to_section_headings(tmp_path: Path) -> None:
   check.check_html_targets(*built_site(tmp_path, API_PAGE, "month-star-policy"))
 
 
@@ -247,12 +260,25 @@ def test_html_targets_reject_a_repeated_id(tmp_path: Path) -> None:
     check.check_html_targets(*built_site(tmp_path, api, "month-star-policy"))
 
 
-@pytest.mark.parametrize("fragment", ["归月与失败边界", "%E5%BD%92%E6%9C%88", "sec9"])
-def test_html_targets_reject_a_readme_fragment_missing_from_the_site(
+@pytest.mark.parametrize(
+  "fragment", ["归月与失败边界", "%E5%BD%92%E6%9C%88", "sec9", "index-0", "ziwei.stars.month_star"]
+)
+def test_html_targets_reject_a_readme_fragment_off_a_section_heading(
   tmp_path: Path, fragment: str
 ) -> None:
-  with pytest.raises(ValueError, match="README link target is missing"):
+  with pytest.raises(ValueError, match="README link does not land on a section heading"):
     check.check_html_targets(*built_site(tmp_path, API_PAGE, fragment))
+
+
+@pytest.mark.parametrize("fragment", ["id1", "sec9"])
+def test_html_targets_reject_a_guide_section_link_off_a_section_heading(
+  tmp_path: Path, fragment: str
+) -> None:
+  message = (
+    f"Section link in docs/liunian.html does not land on a section heading: api.html#{fragment}"
+  )
+  with pytest.raises(ValueError, match=re.escape(message)):
+    check.check_html_targets(*built_site(tmp_path, API_PAGE, "month-star-policy", fragment))
 
 
 def test_empty_document_tree(tmp_path: Path) -> None:
@@ -722,17 +748,26 @@ def test_wheel_with_changed_bytes_is_rejected(tmp_path: Path, changed: str) -> N
     check_wheel(wheel, "0.0.0", root)
 
 
-def test_wheel_with_a_stale_record_is_rejected(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+  ("old", "new", "message"),
+  [
+    (b"sha256=", b"sha256=A", "RECORD digest"),
+    (b"RECORD,,", b"RECORD,sha256=A,1", "must not hash itself"),
+  ],
+)
+def test_wheel_with_a_wrong_record_row_is_rejected(
+  tmp_path: Path, old: bytes, new: bytes, message: str
+) -> None:
   root = source_tree(tmp_path / "root")
   wheel = build_wheel(tmp_path / "test.whl", root)
   with ZipFile(wheel) as archive:
     contents = {name: archive.read(name) for name in archive.namelist()}
   record = "ziwei-0.0.0.dist-info/RECORD"
-  contents[record] = contents[record].replace(b"sha256=", b"sha256=A", 1)
+  contents[record] = contents[record].replace(old, new, 1)
   with ZipFile(wheel, "w") as archive:
     for name, data in contents.items():
       archive.writestr(name, data)
-  with pytest.raises(ValueError, match="RECORD digest"):
+  with pytest.raises(ValueError, match=message):
     check_wheel(wheel, "0.0.0", root)
 
 

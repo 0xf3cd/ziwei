@@ -77,6 +77,12 @@ def test_prepared_bundle_preserves_original_checksums(
     release.prepare_bundle(directory, VERSION, SHA)
 
 
+def test_tested_tree_is_checked_out_with_lf() -> None:
+  """制品在Linux构建，各平台消费时与本地检出逐字节比对；Windows检出也须是LF。"""
+  members = artifacts.source_members(release.ROOT)
+  assert [name for name in members if b"\r" in (release.ROOT / name).read_bytes()] == []
+
+
 @pytest.fixture
 def publish_script() -> str:
   workflow: dict[str, Any] = yaml.load(

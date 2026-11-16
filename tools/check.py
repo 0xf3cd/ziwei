@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import os
+import posixpath
 import re
 import shutil
 import sys
@@ -96,31 +97,61 @@ class ApiTargets(HTMLParser):
         self.targets.add(target)
 
 
-class HtmlIds(HTMLParser):
-  """按出现次数收集页面中所有元素的id。"""
+class PageTargets(HTMLParser):
+  """收集页面的全部id、落在节标题上的id，以及指向节的站内链接。"""
 
   def __init__(self) -> None:
     super().__init__()
     self.ids: Counter[str] = Counter()
+    self.sections: set[str] = set()
+    self.section_links: list[str] = []
+    self.before_heading = False
+    self.link: str | None = None
 
   def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-    identifier = dict(attrs).get("id")
+    attributes = dict(attrs)
+    identifier = attributes.get("id")
     if identifier is not None:
       self.ids[identifier] += 1
+    if tag == "section":
+      self.before_heading = True
+    # 节自身的id与标题之前的标签都定位到节标题。
+    if identifier is not None and self.before_heading and tag in {"section", "span"}:
+      self.sections.add(identifier)
+    if re.fullmatch(r"h[1-6]", tag):
+      self.before_heading = False
+    classes = (attributes.get("class") or "").split()
+    if tag == "a":
+      self.link = attributes.get("href") if "internal" in classes else None
+    elif self.link is not None:
+      # Sphinx把节引用的文字放在std-ref里；对象引用放在代码元素里，落在签名上。
+      if "std-ref" in classes:
+        self.section_links.append(self.link)
+      self.link = None
 
 
 def check_html_targets(directory: Path, root: Path = ROOT) -> None:
-  """每页id唯一；README中指向在线文档的片段须落在构建出的页面上。"""
+  """每页id唯一；站内节链接与README指向在线文档的片段都须落在节标题上。"""
   errors: list[str] = []
-  page_ids: dict[str, Counter[str]] = {}
+  pages: dict[str, PageTargets] = {}
   for page in sorted(directory.rglob("*.html")):
-    parser = HtmlIds()
+    parser = PageTargets()
     parser.feed(page.read_text(encoding="utf-8"))
     name = page.relative_to(directory).as_posix()
-    page_ids[name] = parser.ids
+    pages[name] = parser
     repeated = sorted(identifier for identifier, count in parser.ids.items() if count > 1)
     if repeated:
       errors.append(f"Duplicate HTML ids in {name}: {', '.join(repeated)}")
+
+  def lands_on_section(path: str, fragment: str) -> bool:
+    return path in pages and unquote(fragment) in pages[path].sections
+
+  for name, parser in pages.items():
+    for link in parser.section_links:
+      url = urlsplit(link)
+      path = posixpath.normpath(posixpath.join(posixpath.dirname(name), unquote(url.path)))
+      if url.fragment and not lands_on_section(path if url.path else name, url.fragment):
+        errors.append(f"Section link in {name} does not land on a section heading: {link}")
   metadata = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
   site = metadata["project"]["urls"]["Documentation"]
   for token in MarkdownIt("commonmark").parse((root / "README.md").read_text(encoding="utf-8")):
@@ -129,8 +160,8 @@ def check_html_targets(directory: Path, root: Path = ROOT) -> None:
       if not isinstance(target, str) or not target.startswith(site):
         continue
       url = urlsplit(target[len(site) :])
-      if url.fragment and unquote(url.fragment) not in page_ids.get(unquote(url.path), {}):
-        errors.append(f"README link target is missing from the built site: {target}")
+      if url.fragment and not lands_on_section(unquote(url.path), url.fragment):
+        errors.append(f"README link does not land on a section heading: {target}")
   if errors:
     raise ValueError("\n".join(errors))
 
