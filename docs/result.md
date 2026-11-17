@@ -61,10 +61,10 @@ True
 | `shengong`、`bureau` | 身宫地支、五行局 |
 | `stars` | 每颗星的`star`与所在`dizhi` |
 | `sihua` | 生年四化的`lu`、`quan`、`ke`、`ji`四颗星；落宫从`stars`查 |
-| `decades` | 行运方向、年龄计法（虚岁）和十二限，每限有地支与首尾包含的起止虚岁 |
-| `brightness` | 所选亮度表中十四主星的`level` |
-| `yunxian` | 所选虚岁的小限、童限、大限地支 |
-| `liunian` | 所选纪年的流年十二宫、禄存、擎羊、陀罗与年度四化 |
+| `decades` | 行运方向`direction`、年龄计法`age_convention`（`虚岁`）和十二限`periods`；每限有`dizhi`与首尾包含的`start_age`、`end_age` |
+| `brightness` | 所选亮度表中十四主星的`star`与`level` |
+| `yunxian` | 所选虚岁`age`及其小限`xiaoxian`、童限`tongxian`、大限`decade`地支 |
+| `liunian` | 所选纪年`ganzhi_year`、流年十二宫`palaces`（每宫有`name`、`dizhi`）、`lucun`、`qingyang`、`tuoluo`地支与年度四化`sihua` |
 
 后三层只在导出时选择后出现。`result_of()`的`ages`或`years`传`None`时省略该层，
 传空序列时写出空数组。`yunxian`中`tongxian`为`null`表示该岁不在所选边界的童限内，
@@ -74,13 +74,13 @@ True
 
 结果不含出生资料、三个口径、所选四化表或亮度表、童限边界、规则标识和软件版本，
 也没有格式版本号。同一份结果读回后，看不出亮度来自哪张表、四化按哪张表查得。
-需要留档时，另行保存出生资料与配置。
+需要留档时，另行保存出生资料、配置和导出时的选择。
 
 ## 读取时检查什么
 
 `loads()`拒绝未知或缺少的键、错类型（布尔值和小数不当整数）、不认识的枚举值、重复键、
 `NaN`与`Infinity`，也拒绝层内互相矛盾的读数：星曜重复、四化星不在`stars`中、
-大限不相接或方向与地支走向不符、运限的大限不覆盖该岁等。除`NaN`、`Infinity`和JSON语法错误外，
+大限不相接或方向与地支走向不符、运限的大限不覆盖该岁等。除`NaN`、`Infinity`、`-Infinity`和JSON语法错误外，
 错误消息以JSON路径开头：
 
 ```{doctest}

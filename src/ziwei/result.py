@@ -1,8 +1,8 @@
 """把已有命盘的读数存为结果记录，并与JSON文本互转。
 
-结果只含读数，不含出生资料、口径、所选表、规则标识或版本；这些随运行时命盘对象保留，
-需要留存时另行保存。读取只核结果内部的引用与重复读数，不调用历法，也不按现行规则重算，
-规则日后修正时旧结果仍可读回。
+结果只含读数，不含出生资料、口径、所选表、规则标识或版本，需要留存时由调用方另行保存。
+读取只核结果内部的引用与重复读数，不调用历法，也不按现行规则重算，规则日后修正时旧结果
+仍可读回。
 """
 
 from __future__ import annotations
@@ -631,8 +631,8 @@ def loads(text: str) -> ChartResult:
   """读回结果JSON文本，不调用历法，也不重新排盘。
 
   未知或缺少的键、错类型、不认识的枚举值、重复键与层内引用矛盾都抛ValueError，
-  消息以JSON路径开头，例如``$.yunxian[1].decade``。NaN、Infinity与不合JSON语法的文本
-  也抛ValueError，消息不带路径。
+  消息以JSON路径开头，例如``$.yunxian[1].decade``。NaN、Infinity、-Infinity
+  与不合JSON语法的文本也抛ValueError，消息不带路径。
   """
   if not isinstance(text, str):
     raise TypeError("结果JSON须为 str")

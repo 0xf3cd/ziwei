@@ -262,6 +262,7 @@ MUTATIONS: list[tuple[str, Callable[[Document], None], str]] = [
   ("parity", _wrong_parity, "$.palaces[0].dizhi: 宫干支阴阳不相配"),
   ("palace-order", lambda d: _swap_names(d["palaces"]), "$.palaces[0].name: 须按宫名序"),
   ("palace-repeat", _repeat_dizhi, "$.palaces: 各宫地支不得重复"),
+  ("palace-count", lambda d: d["palaces"].pop(), "$.palaces: 须有12宫，实际11宫"),
   ("star-repeat", lambda d: d["stars"].append(d["stars"][0]), "$.stars: 星曜不得重复"),
   ("sihua-unplaced", lambda d: _remove_star(d, Star.廉贞), "$.sihua.lu: 须是本结果星位中的星"),
   ("sihua-repeat", lambda d: d["sihua"].update(ji=d["sihua"]["lu"]), "$.sihua.ji: 与lu是同一颗星"),

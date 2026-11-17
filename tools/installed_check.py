@@ -449,7 +449,7 @@ def check_chart() -> None:
 
 
 def check_result(chart: ZiweiChart) -> None:
-  """写出结果JSON，用标准库读成字典核宫位、星位、生年四化与所选层，再经包内读取往返。"""
+  """写出结果JSON，用标准库读成字典核宫位、星位与生年四化，查所选层已写出，再经包内读取往返。"""
 
   def export() -> ChartResult:
     return result_of(
