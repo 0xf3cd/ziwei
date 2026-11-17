@@ -5,6 +5,19 @@
 本页记录各版本源码的功能与兼容变化。是否已经公开发行，以
 [PyPI](https://pypi.org/project/ziwei/)和[GitHub Releases](https://github.com/0xf3cd/ziwei/releases)为准。
 
+## 0.6.0
+
+### 新增
+
+- `ziwei.result`把已有命盘的读数导出为结果记录并与JSON文本互转：本命十二宫、身宫、五行局、
+  星位、生年四化与大限，以及导出时选择的亮度、运限和流年。结果不含出生资料、口径、所选表、
+  规则标识或版本；读回时不调用历法、不重新排盘，也不按现行规则重算。字段与读取检查见[结果JSON](result.md)。
+
+### 兼容变化
+
+- 移除`ziwei.render.render_svg()`，`doushu.render`中的同名入口随之移除。需要图形盘面时，
+  读取结果JSON后自行绘制；文本盘面`render_text()`保留。
+
 ## 0.5.0
 
 ### 新增
@@ -115,7 +128,7 @@
 - **按宫查询**：`ziwei.chart.palace_view()`返回已有命盘中一宫的星曜、生年四化及身宫标记；
   `ziwei.palaces.opposite_dizhi()`与`sanfang_sizheng()`查询对宫和三方四正。用法见[按宫查询](chart.md#按宫读取)。
 - **静态SVG**：`ziwei.render.render_svg()`显示十二宫、28星、生年四化、身宫与大限，
-  可突出选定宫位的三方四正。原文本盘面保留，见[SVG盘面](chart.md#静态svg)。
+  可突出选定宫位的三方四正。原文本盘面保留。SVG入口已在0.6.0移除，见上文0.6.0的兼容变化。
 - **输入与时间边界**：公开值对象更早拒绝非法类型、值域及字段组合，完整盘进一步核对组件关系。
   民用钟面标签与需要瞬间的消歧路径分别说明，补齐立春、真太阳时跨日和算法范围端点的检查。
   具体行为见[出生输入](birth.md)、[时区与历法](calendar.md)和[解析层](resolver.md)。

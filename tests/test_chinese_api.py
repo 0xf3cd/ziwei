@@ -21,6 +21,7 @@ from ziwei.config import POLICY_ENUMS, 口径选项
 from ziwei.ganzhi import Dizhi, Ganzhi, Tiangan, 地支
 from ziwei.liunian import LiunianBoundary, liunian_on_date, liunian_sihua, 流年星曜
 from ziwei.palaces import PalaceName
+from ziwei.result import result_of
 from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star
 from ziwei.tongxian import TongxianBoundary, tongxian_at_age
@@ -46,6 +47,9 @@ ALIASES = {
   "tongxian": "童限边界:TongxianBoundary 童限:Tongxian",
   "yunxian": "运限:Yunxian",
   "chart": "紫微命盘:ZiweiChart 宫位视图:PalaceView 流年叠读:LiunianView 流年宫位:LiunianPalaceView",
+  "result": "命盘结果:ChartResult 结果宫位:ResultPalace 结果星位:ResultStar 结果四化:ResultSihua "
+  "结果亮度:ResultBrightness 结果大限:ResultDecade 结果大限组:ResultDecades 结果运限:ResultYunxian "
+  "结果流年宫位:ResultLiunianPalace 结果流年:ResultLiunian",
 }
 PROPERTIES = {
   "birth.CalculationInput": "原始记录:record 农历年:lunar_year 农历月:month 农历日:day "
@@ -73,6 +77,17 @@ PROPERTIES = {
   "chart.LiunianView": "流年:liunian 本命宫:natal",
   "chart.LiunianPalaceView": "纪年:ganzhi_year 宫名:name 地支:dizhi 本命宫:natal 流年四化:sihua "
   "化禄:lu 化权:quan 化科:ke 化忌:ji",
+  "result.ResultPalace": "宫名:name 天干:tiangan 地支:dizhi",
+  "result.ResultStar": "星曜:star 地支:dizhi",
+  "result.ResultSihua": "化禄:lu 化权:quan 化科:ke 化忌:ji",
+  "result.ResultBrightness": "星曜:star 等级:level",
+  "result.ResultDecade": "地支:dizhi 起始虚岁:start_age 终止虚岁:end_age",
+  "result.ResultDecades": "行运方向:direction 各限:periods",
+  "result.ResultYunxian": "虚岁:age 小限:xiaoxian 童限:tongxian 大限:decade",
+  "result.ResultLiunianPalace": "宫名:name 地支:dizhi",
+  "result.ResultLiunian": "纪年:ganzhi_year 十二宫:palaces 禄存:lucun 擎羊:qingyang 陀罗:tuoluo 流年四化:sihua",
+  "result.ChartResult": "十二宫:palaces 身宫:shengong 五行局:bureau 星位:stars 生年四化:sihua "
+  "大限:decades 亮度:brightness 运限:yunxian 流年:liunian",
 }
 
 
@@ -112,6 +127,14 @@ def result_samples(lunar_chart: ZiweiChart) -> dict[str, tuple[Any, ...]]:
   unknown = replace(values, record=replace(record, shichen=None, gender=性别.未知), shichen=None)
   table = BrightnessTable.全书卷二录文
   boundary = TongxianBoundary.起限当岁不含
+  saved = result_of(
+    chart,
+    brightness_table=table,
+    ages=(1, 6),
+    tongxian_boundary=boundary,
+    years=(2024, 2030),
+    liunian_sihua_variant=SihuaVariant.王亭之讲义转录,
+  )
   return {
     "birth.CalculationInput": (values, unknown),
     "ganzhi.Tiangan": tuple(Tiangan),
@@ -151,6 +174,16 @@ def result_samples(lunar_chart: ZiweiChart) -> dict[str, tuple[Any, ...]]:
       *liunian_palaces(chart, 2030),
       *liunian_palaces(chart, 2028, sihua_variant=SihuaVariant.王亭之讲义转录),
     ),
+    "result.ResultPalace": saved.palaces,
+    "result.ResultStar": saved.stars,
+    "result.ResultSihua": (saved.sihua,),
+    "result.ResultBrightness": saved.brightness or (),
+    "result.ResultDecade": saved.decades.periods,
+    "result.ResultDecades": (saved.decades,),
+    "result.ResultYunxian": saved.yunxian or (),
+    "result.ResultLiunianPalace": (saved.liunian or ())[0].palaces,
+    "result.ResultLiunian": saved.liunian or (),
+    "result.ChartResult": (saved, result_of(chart)),
   }
 
 
@@ -201,8 +234,8 @@ def test_type_and_property_mapping_has_no_unplanned_chinese_exports() -> None:
   for module, exports in actual.items():
     chinese = {name for name in exports if not name.isascii()}
     assert chinese == {name for name, _ in pairs(ALIASES.get(module.removeprefix("ziwei."), ""))}
-  assert sum(len(pairs(names)) for names in ALIASES.values()) == 42
-  assert sum(len(pairs(names)) for names in PROPERTIES.values()) == 92
+  assert sum(len(pairs(names)) for names in ALIASES.values()) == 52
+  assert sum(len(pairs(names)) for names in PROPERTIES.values()) == 129
 
 
 def test_existing_constructor_and_error_contracts_keep_their_names() -> None:
