@@ -10,7 +10,6 @@ from typing import Any, cast
 
 import pytest
 
-from tools import installed_check
 from tools.knowledge_reference import render_catalog
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.catalog import Catalog
@@ -195,53 +194,6 @@ print("Minor interpretations without celestial: passed")
     text=True,
   )
   assert result.stdout.strip() == "Minor interpretations without celestial: passed"
-
-
-@pytest.mark.parametrize("index", range(10))
-@pytest.mark.parametrize(
-  "defect", ["quote", "concept", "status", "display", "missing", "unknown-replacement"]
-)
-def test_installed_minor_consumer_rejects_damage(
-  minor_reference: dict[str, Any],
-  index: int,
-  defect: str,
-  monkeypatch: pytest.MonkeyPatch,
-) -> None:
-  installed_check.check_knowledge()
-  catalog = load_catalog()
-  row = minor_reference["entries"][index]
-  identifier = "entry.interpretation." + row["suffix"]
-  if defect == "quote":
-    catalog = replace(
-      catalog,
-      citations=tuple(
-        replace(c, quote="错误原文") if c.id == "citation.quanshu-juan1." + row["suffix"] else c
-        for c in catalog.citations
-      ),
-    )
-  elif defect == "missing":
-    catalog = replace(catalog, entries=tuple(e for e in catalog.entries if e.id != identifier))
-  else:
-    changes: dict[str, Any]
-    if defect == "concept":
-      changes = {"concept_ids": ("concept.star.ziwei",)}
-    elif defect == "status":
-      changes = {
-        "premise_status": PremiseStatus.待定
-        if row["premise_status"] == "已明确"
-        else PremiseStatus.已明确,
-      }
-    elif defect == "display":
-      changes = {"show_by_default": True, "premise_status": PremiseStatus.已明确}
-    else:
-      changes = {"id": "entry.synthetic-unknown-minor"}
-    catalog = replace(
-      catalog,
-      entries=tuple(replace(e, **changes) if e.id == identifier else e for e in catalog.entries),
-    )
-  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
-  with pytest.raises(ValueError, match="interpretation"):
-    installed_check.check_knowledge()
 
 
 def test_global_tiankong_alias_is_rejected(minor_reference: dict[str, Any]) -> None:

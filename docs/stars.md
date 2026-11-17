@@ -140,6 +140,7 @@ True
 没有执行选项。定位来源见[哭虚](knowledge-reference.md#entry.star.tianku-tianxu-year-branch)与
 [固定伤使](knowledge-reference.md#entry.star.tianshang-tianshi-fixed)条目。
 
+(month-star-policy)=
 ## 归月与失败边界
 
 `leap_month_policy`选择命身取月；`month_star_leap_month_policy`可另选辅弼、月马与刑姚取月，

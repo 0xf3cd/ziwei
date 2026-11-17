@@ -110,8 +110,8 @@ def verify_bundle(directory: Path, expected: Manifest) -> None:
     path = packages / name
     if path.is_symlink() or not path.is_file() or file_sha256(path) != digest:
       raise ValueError("Artifact bytes differ from trusted build outputs")
-  check_sdist(packages / expected.filenames[0], expected.version, source_members(ROOT))
-  check_wheel(packages / expected.filenames[1], expected.version)
+  check_sdist(packages / expected.filenames[0], expected.version, source_members(ROOT), ROOT)
+  check_wheel(packages / expected.filenames[1], expected.version, ROOT)
 
 
 def prepare_bundle(directory: Path, version: str, source_sha: str) -> Manifest:

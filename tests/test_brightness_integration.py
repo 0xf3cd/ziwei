@@ -30,6 +30,8 @@ from ziwei.render import render_svg, render_text
 from ziwei.sihua import SihuaVariant
 from ziwei.stars import MAJOR_STARS, Star
 
+FIXTURES = Path(__file__).parent / "fixtures"
+
 TABLE = BrightnessTable.全书卷二录文
 SVG = "{http://www.w3.org/2000/svg}"
 pytestmark = pytest.mark.usefixtures("unload_celestial")
@@ -238,40 +240,8 @@ def test_brightness_reference_rejects_an_inapplicable_reading(
 def test_brightness_validation_and_knowledge_do_not_require_native_calendar(
   tmp_path: Path, mode: tuple[str, ...]
 ) -> None:
-  script = r"""
-import sys
-from importlib.abc import MetaPathFinder
-class Block(MetaPathFinder):
-  def find_spec(self, fullname, path=None, target=None):
-    if fullname.split('.')[0] in ('celestial_calendar', 'tzdata', 'zoneinfo') or fullname in (
-        'ziwei.birth', 'ziwei.calendar', 'ziwei.chart', 'ziwei.timezone'):
-      raise RuntimeError('unexpected boundary: ' + fullname)
-sys.meta_path.insert(0, Block())
-from ziwei.brightness import BrightnessReading, BrightnessLevel, BrightnessTable, star_brightness
-from ziwei.ganzhi import Dizhi
-from ziwei.stars import Star
-from ziwei.knowledge import load_catalog
-table = BrightnessTable.全书卷二录文
-if star_brightness(Star.紫微, Dizhi.辰, table=table).level is not BrightnessLevel.得地:
-  raise RuntimeError('wrong brightness')
-if not load_catalog().references(table.table_id):
-  raise RuntimeError('missing table references')
-cases = [lambda: star_brightness('紫微', Dizhi.辰, table=table),
-         lambda: star_brightness(Star.紫微, '辰', table=table),
-         lambda: star_brightness(Star.紫微, Dizhi.辰, table='全书'),
-         lambda: BrightnessReading(Star.紫微, Dizhi.辰, table, None),
-         lambda: BrightnessReading(Star.红鸾, Dizhi.子, table, BrightnessLevel.平和)]
-for action in cases:
-  try:
-    action()
-  except (TypeError, ValueError):
-    pass
-  else:
-    raise RuntimeError('accepted invalid brightness')
-print('brightness isolated; checked=5')
-"""
   result = subprocess.run(
-    (sys.executable, *mode, "-I", "-c", script),
+    (sys.executable, *mode, "-I", str(FIXTURES / "brightness_isolation.py")),
     cwd=tmp_path,
     capture_output=True,
     text=True,

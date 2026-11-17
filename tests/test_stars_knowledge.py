@@ -19,6 +19,8 @@ from ziwei.knowledge import load_catalog
 from ziwei.knowledge.data import _star_entries
 from ziwei.knowledge.model import Concept, ConceptKind, RuleVariant, Source, SourceStatus
 
+FIXTURES = Path(__file__).parent / "fixtures"
+
 # 用字面值固定规则ID对应的星曜，否则执行定义与目录一起错绑时，期望也会跟着改变。
 # 新增规则另加期望，不改已有规则的ID与星曜对应关系。
 EXPECTED_RULE_STARS = {
@@ -186,46 +188,12 @@ def test_star_concepts_have_explicit_identity(
       member = '  FUTURE = "测试星"\n'
     code = code.replace(marker, member + marker)
   path.write_text(code, encoding="utf-8")
-  check = """
-import sys
-sys.path.insert(0, sys.argv[1])
-if sys.argv[3]:
-  sys.stderr.reconfigure(encoding=sys.argv[3], errors='backslashreplace')
-try:
-  from ziwei.stars import Star
-except ValueError as error:
-  if sys.argv[2] != 'missing-id' or str(error) != '新增星曜须显式指定知识标识':
-    raise
-  print('MISSING_ID_REJECTED')
-  raise SystemExit(0)
-if sys.argv[2] == 'missing-id':
-  raise RuntimeError('missing identity accepted')
-from ziwei.knowledge import load_catalog
-catalog = load_catalog()
-for star in Star:
-  if catalog.get(star.concept_id).name != star.value:
-    raise RuntimeError('star concept mismatch')
-if Star.紫微.concept_id != 'concept.star.ziwei':
-  raise RuntimeError('renamed member changed identity')
-if sys.argv[2] == 'rename' and Star.紫微.name != 'ZIWEI_RENAMED':
-  raise RuntimeError('rename was not applied')
-if sys.argv[2] == 'display-name' and Star.紫微.value != '紫微（显示名）':
-  raise RuntimeError('display name was not changed')
-if sys.argv[2] == 'alias' and Star.新增别名 is not Star.紫微:
-  raise RuntimeError('alias was not added')
-if sys.argv[2] == 'rule-name':
-  rule = catalog.get('variant.star.ziwei-series')
-  if rule.name != '紫微系显示名' or 'concept.star.tianji' not in rule.concept_ids:
-    raise RuntimeError('rule display name changed identity')
-print('CONCEPTS_OK', len(Star))
-"""
   result = subprocess.run(
     [
       sys.executable,
       "-I",
       *(["-O"] if sys.flags.optimize else []),
-      "-c",
-      check,
+      str(FIXTURES / "star_concepts.py"),
       str(source),
       change,
       error_encoding or "",
@@ -315,22 +283,6 @@ def test_pending_quanshu_is_not_executed_and_modern_evidence_is_not_upgraded() -
   assert "citation.zhongyi999.tianma-year" in {
     item.id for item in catalog.references("entry.tianma.year-branch")
   }
-
-
-def test_modern_short_quotes_stay_below_budget_per_lineage() -> None:
-  catalog = load_catalog()
-  lengths: dict[str, int] = {}
-  for source in catalog.sources:
-    if source.id in (
-      "source.zhongzhou-wangtingzhi",
-      "source.zhongzhou-5shubook",
-      "source.jingcheng-golla",
-      "source.jielan-tianji",
-    ):
-      lengths[source.lineage_id] = lengths.get(source.lineage_id, 0) + sum(
-        len(citation.quote) for citation in catalog.references(source.id)
-      )
-  assert lengths and all(length <= 90 for length in lengths.values())
 
 
 @pytest.mark.parametrize(

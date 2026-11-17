@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import base64
+import csv
 import hashlib
+import io
 import re
 import shutil
 import tarfile
@@ -17,6 +20,7 @@ SOURCE_FILES = (
   ".github/workflows/release.yml",
   "pyproject.toml",
   "uv.lock",
+  "MANIFEST.in",
   "LICENSE",
   "README.md",
   "AGENTS.md",
@@ -35,6 +39,16 @@ SOURCE_PATTERNS = (
   "docs/**/*.inv",
   "docs/**/*.css",
 )
+# setuptools据源码另生成、随sdist分发的文件。
+SDIST_GENERATED = (
+  "PKG-INFO",
+  "setup.cfg",
+  "src/ziwei.egg-info/PKG-INFO",
+  "src/ziwei.egg-info/SOURCES.txt",
+  "src/ziwei.egg-info/dependency_links.txt",
+  "src/ziwei.egg-info/requires.txt",
+  "src/ziwei.egg-info/top_level.txt",
+)
 
 
 def distribution_filenames(version: str) -> tuple[str, str]:
@@ -50,39 +64,95 @@ def source_members(root: Path) -> tuple[str, ...]:
   return tuple(sorted(members))
 
 
-def check_sdist(sdist: Path, expected_version: str, members: Sequence[str]) -> None:
-  """校验sdist身份与内容，拒绝缺文件或夹带审阅材料。"""
+def check_sdist(sdist: Path, expected_version: str, members: Sequence[str], root: Path) -> None:
+  """校验sdist身份与精确文件集合，源码成员须与受测工作树逐字节相同。"""
   base = f"ziwei-{expected_version}"
   with tarfile.open(sdist) as archive:
-    names = archive.getnames()
-    stream = archive.extractfile(f"{base}/PKG-INFO") if f"{base}/PKG-INFO" in names else None
-    if stream is None:
+    entries = archive.getmembers()
+    if any(not (entry.isfile() or entry.isdir()) for entry in entries):
+      raise ValueError("Sdist may only contain files and directories")
+    files = {entry.name: entry for entry in entries if entry.isfile()}
+
+    def read(name: str) -> bytes:
+      stream = archive.extractfile(files[f"{base}/{name}"])
+      if stream is None:
+        raise ValueError(f"Sdist member is not a regular file: {name}")
+      with stream:
+        return stream.read()
+
+    if f"{base}/PKG-INFO" not in files:
       raise ValueError("Sdist directory or PKG-INFO differs from project metadata")
-    with stream:
-      metadata = Parser().parsestr(stream.read().decode("utf-8"))
-  if metadata["Name"] != "ziwei" or metadata["Version"] != expected_version:
-    raise ValueError("Sdist identity differs from project metadata")
-  missing = [member for member in members if f"{base}/{member}" not in names]
-  if missing:
-    raise ValueError(f"Sdist is missing: {', '.join(missing)}")
-  if any(".review" in Path(name).parts for name in names):
-    raise ValueError("Sdist carries review material")
+    metadata = Parser().parsestr(read("PKG-INFO").decode("utf-8"))
+    if metadata["Name"] != "ziwei" or metadata["Version"] != expected_version:
+      raise ValueError("Sdist identity differs from project metadata")
+    expected = {f"{base}/{name}" for name in (*members, *SDIST_GENERATED)}
+    missing = sorted(name.removeprefix(f"{base}/") for name in expected - files.keys())
+    if missing:
+      raise ValueError(f"Sdist is missing: {', '.join(missing)}")
+    extra = sorted(files.keys() - expected)
+    if extra:
+      raise ValueError(f"Sdist carries unexpected files: {', '.join(extra)}")
+    for name in members:
+      if read(name) != (root / name).read_bytes():
+        raise ValueError(f"Sdist file differs from the tested source: {name}")
 
 
-def check_wheel(wheel: Path, expected_version: str) -> None:
-  """校验wheel内容与元数据。"""
+def package_files(root: Path) -> tuple[str, ...]:
+  """列出主包wheel应携带的源码文件，路径相对src。"""
+  source = root / "src"
+  return tuple(
+    sorted(
+      path.relative_to(source).as_posix()
+      for path in (source / "ziwei").rglob("*")
+      if path.is_file()
+      and "__pycache__" not in path.parts
+      and (path.suffix == ".py" or path.name == "py.typed")
+    )
+  )
+
+
+def check_record(archive: ZipFile, members: set[str], record: str) -> None:
+  """核RECORD逐成员列出摘要与大小，且不为自身记摘要。"""
+  rows = list(csv.reader(io.StringIO(archive.read(record).decode("utf-8"))))
+  if any(len(row) != 3 for row in rows) or len(rows) != len(members):
+    raise ValueError("Malformed wheel RECORD")
+  if {row[0] for row in rows} != members:
+    raise ValueError("Wheel RECORD member inventory differs")
+  for name, digest, size in rows:
+    if name == record:
+      if digest or size:
+        raise ValueError("Wheel RECORD must not hash itself")
+      continue
+    content = archive.read(name)
+    actual = base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
+    if digest != "sha256=" + actual or size != str(len(content)):
+      raise ValueError(f"Wheel RECORD digest or size differs: {name}")
+
+
+def check_wheel(wheel: Path, expected_version: str, root: Path) -> None:
+  """校验wheel身份与精确成员，包文件与许可证须与受测工作树逐字节相同。"""
+  info = f"ziwei-{expected_version}.dist-info"
+  expected = {name: (root / "src" / name).read_bytes() for name in package_files(root)}
+  expected[f"{info}/licenses/LICENSE"] = (root / "LICENSE").read_bytes()
+  generated = {f"{info}/{name}" for name in ("METADATA", "WHEEL", "RECORD", "top_level.txt")}
+  members = {*expected, *generated}
   with ZipFile(wheel) as archive:
     names = archive.namelist()
-    metadata_paths = [name for name in names if name.endswith(".dist-info/METADATA")]
-    if len(metadata_paths) != 1:
-      raise ValueError("Wheel must contain one METADATA file")
-    metadata = Parser().parsestr(archive.read(metadata_paths[0]).decode("utf-8"))
+    if len(names) != len(set(names)):
+      raise ValueError("Wheel repeats a member")
+    missing = sorted(members - set(names))
+    if missing:
+      raise ValueError(f"Wheel is missing: {', '.join(missing)}")
+    extra = sorted(set(names) - members)
+    if extra:
+      raise ValueError(f"Wheel carries unexpected files: {', '.join(extra)}")
+    metadata = Parser().parsestr(archive.read(f"{info}/METADATA").decode("utf-8"))
     if metadata["Name"] != "ziwei" or metadata["Version"] != expected_version:
       raise ValueError("Wheel identity differs from project metadata")
-    if "ziwei/py.typed" not in names or "ziwei/__init__.py" not in names:
-      raise ValueError("Wheel is missing the package or typing marker")
-    if not any(name.endswith(".dist-info/licenses/LICENSE") for name in names):
-      raise ValueError("Wheel is missing its license")
+    for name, content in expected.items():
+      if archive.read(name) != content:
+        raise ValueError(f"Wheel file differs from the tested source: {name}")
+    check_record(archive, members, f"{info}/RECORD")
 
 
 def built_artifacts(directory: Path) -> tuple[Path, Path]:

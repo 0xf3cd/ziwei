@@ -371,7 +371,11 @@ def test_sphinx_hook_only_expands_reference_page() -> None:
   assert calls == [
     ("source-read", conf.insert_knowledge_reference),
     ("env-updated", conf.register_knowledge_targets),
+    ("env-before-read-docs", conf.separate_heading_ids),
   ]
+  settings = SimpleNamespace(settings={"auto_id_prefix": "id"})
+  conf.separate_heading_ids(cast(Any, App()), cast(Any, settings), [])
+  assert settings.settings == {"auto_id_prefix": "sec"}
   environment = SimpleNamespace(metadata={})
   conf.register_knowledge_targets(cast(Any, App()), cast(Any, environment))
   slugs = environment.metadata["docs/knowledge-reference"]["myst_slugs"]
