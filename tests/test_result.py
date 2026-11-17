@@ -3,10 +3,10 @@
 import json
 import subprocess
 import sys
-from collections.abc import Callable
-from copy import deepcopy
+from collections.abc import Callable, Sequence
+from dataclasses import fields, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import pytest
 
@@ -15,7 +15,21 @@ from ziwei.brightness import BrightnessTable
 from ziwei.chart import ZiweiChart, chart_brightness, liunian_palaces
 from ziwei.ganzhi import Dizhi
 from ziwei.liunian import liunian_sihua, liunian_stars
-from ziwei.result import ChartResult, ResultStar, ResultYunxian, dumps, loads, result_of
+from ziwei.result import (
+  ChartResult,
+  ResultBrightness,
+  ResultDecade,
+  ResultDecades,
+  ResultLiunian,
+  ResultLiunianPalace,
+  ResultPalace,
+  ResultSihua,
+  ResultStar,
+  ResultYunxian,
+  dumps,
+  loads,
+  result_of,
+)
 from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star
 from ziwei.tongxian import TongxianBoundary
@@ -29,6 +43,7 @@ VARIANT = SihuaVariant.王亭之讲义转录
 AGES = (1, 4, 30, 60)
 YEARS = (2024, 2025)
 Document = dict[str, Any]
+_T = TypeVar("_T")
 
 
 @pytest.fixture
@@ -227,6 +242,17 @@ MUTATIONS: list[tuple[str, Callable[[Document], None], str]] = [
   ("string-age", lambda d: d["yunxian"][0].update(age="1"), "$.yunxian[0].age: 须为整数"),
   ("bool-age", lambda d: d["yunxian"][0].update(age=True), "$.yunxian[0].age: 须为整数"),
   ("float-age", lambda d: d["yunxian"][0].update(age=1.0), "$.yunxian[0].age: 须为整数"),
+  ("zero-age", lambda d: d["yunxian"][0].update(age=0), "$.yunxian[0].age: 虚岁须为正整数"),
+  (
+    "zero-start-age",
+    lambda d: d["decades"]["periods"][0].update(start_age=0),
+    "$.decades.periods[0].start_age: 虚岁须为正整数",
+  ),
+  (
+    "zero-year",
+    lambda d: d["liunian"][0].update(ganzhi_year=0),
+    "$.liunian[0].ganzhi_year: 纪年须为正整数",
+  ),
   ("unknown-star", lambda d: d["stars"][0].update(star="紫薇"), "$.stars[0].star: 不认识的值"),
   ("member-name", lambda d: d["stars"][0].update(star="ZIWEI"), "$.stars[0].star: 不认识的值"),
   ("astral-star", lambda d: d["stars"][0].update(star="\U00020000"), "$.stars[0].star: 不认识"),
@@ -329,14 +355,6 @@ def test_reading_keeps_results_that_current_rules_would_not_produce(full: ChartR
   assert result.stars[0].dizhi is full.stars[1].dizhi
 
 
-def test_reading_does_not_compute_or_access_calendar(
-  full: ChartResult, forbid_computation: None
-) -> None:
-  text = dumps(full)
-  before = deepcopy(full)
-  assert loads(text) == before
-
-
 @pytest.mark.parametrize("mode", [(), ("-O",)])
 def test_reading_in_a_process_without_birth_or_calendar_modules(
   full: ChartResult, tmp_path: Path, mode: tuple[str, ...]
@@ -351,8 +369,35 @@ def test_reading_in_a_process_without_birth_or_calendar_modules(
   assert completed.returncode == 0, completed.stderr
 
 
-def test_direct_construction_rejects_wrong_types_without_a_json_path() -> None:
-  with pytest.raises(TypeError, match=r"^age: 须为整数"):
-    ResultYunxian(age=True, xiaoxian=Dizhi.子, tongxian=None, decade=None)
-  with pytest.raises(TypeError, match=r"^star: 须为Star"):
-    ResultStar(star="紫微", dizhi=Dizhi.子)  # type: ignore[arg-type]
+def first(items: Sequence[_T] | None) -> _T:
+  assert items
+  return items[0]
+
+
+# 每类读数记录从完整结果中取一个实例。
+SAMPLES: dict[type, Callable[[ChartResult], Any]] = {
+  ResultPalace: lambda r: r.palaces[0],
+  ResultStar: lambda r: r.stars[0],
+  ResultSihua: lambda r: r.sihua,
+  ResultBrightness: lambda r: first(r.brightness),
+  ResultDecade: lambda r: r.decades.periods[0],
+  ResultDecades: lambda r: r.decades,
+  ResultYunxian: lambda r: first(r.yunxian),
+  ResultLiunianPalace: lambda r: first(r.liunian).palaces[0],
+  ResultLiunian: lambda r: first(r.liunian),
+  ChartResult: lambda r: r,
+}
+# age_convention是字面量，错值抛ValueError，见MUTATIONS的age-convention。
+TYPED_FIELDS = [
+  (kind, item.name) for kind in SAMPLES for item in fields(kind) if item.name != "age_convention"
+]
+
+
+@pytest.mark.parametrize(
+  ("kind", "name"), TYPED_FIELDS, ids=[f"{kind.__name__}.{name}" for kind, name in TYPED_FIELDS]
+)
+def test_direct_construction_rejects_wrong_types_without_a_json_path(
+  full: ChartResult, kind: type, name: str
+) -> None:
+  with pytest.raises(TypeError, match=rf"^{name}(\[0\])?: 须为"):
+    replace(SAMPLES[kind](full), **{name: "紫微"})

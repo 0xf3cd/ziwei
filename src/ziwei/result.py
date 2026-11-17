@@ -1,7 +1,8 @@
 """把已有命盘的读数存为结果记录，并与JSON文本互转。
 
-结果只含读数，不含出生资料、口径、所选表、规则标识或版本；这些留在运行时命盘对象与档案里。
-读取只核结果内部的引用与重复读数，不调用历法，也不按现行规则重算，规则日后修正时旧结果仍可读回。
+结果只含读数，不含出生资料、口径、所选表、规则标识或版本；这些随运行时命盘对象保留，
+需要留存时另行保存。读取只核结果内部的引用与重复读数，不调用历法，也不按现行规则重算，
+规则日后修正时旧结果仍可读回。
 """
 
 from __future__ import annotations
@@ -205,8 +206,6 @@ class ResultDecades:
     periods = _items(self.periods, ResultDecade, "periods")
     if len(periods) != len(Dizhi):
       raise ValueError(f"periods: 须有12限，实际{len(periods)}限")
-    if len({period.dizhi for period in periods}) != len(periods):
-      raise ValueError("periods: 各限地支不得重复")
     branches = tuple(Dizhi)
     step = 1 if self.direction is Direction.FORWARD else -1
     for index, (before, after) in enumerate(pairwise(periods), start=1):
@@ -460,9 +459,9 @@ def result_of(
 ) -> ChartResult:
   """从已有命盘取读数。
 
-  可选层传None表示不导出该层，传空序列导出空层。导出ages须同时选tongxian_boundary；
-  只给tongxian_boundary或liunian_sihua_variant而不导出对应层时抛ValueError。
-  所选表、边界与变体决定读数，但不写入结果。
+  brightness_table、ages、years传None时不导出对应层；ages或years传空序列时导出空层。
+  导出ages须同时选tongxian_boundary；只给tongxian_boundary或liunian_sihua_variant
+  而不导出对应层时抛ValueError。所选表、边界与变体决定读数，但不写入结果。
   """
   from ziwei.chart import ZiweiChart, chart_brightness, liunian_palaces
   from ziwei.liunian import liunian_sihua, liunian_stars
@@ -631,8 +630,9 @@ def _decode(kind: object, value: object, path: str) -> object:
 def loads(text: str) -> ChartResult:
   """读回结果JSON文本，不调用历法，也不重新排盘。
 
-  未知或缺少的键、错类型、不认识的枚举值、重复键、NaN与Infinity，以及层内引用矛盾，
-  都抛ValueError，消息以JSON路径开头，例如``$.yunxian[1].decade``。
+  未知或缺少的键、错类型、不认识的枚举值、重复键与层内引用矛盾都抛ValueError，
+  消息以JSON路径开头，例如``$.yunxian[1].decade``。NaN、Infinity与不合JSON语法的文本
+  也抛ValueError，消息不带路径。
   """
   if not isinstance(text, str):
     raise TypeError("结果JSON须为 str")

@@ -5,11 +5,12 @@ import sys
 from copy import deepcopy
 from dataclasses import asdict, replace
 from pathlib import Path
+from typing import Never
 from unicodedata import east_asian_width
 
 import pytest
 
-from ziwei import render
+from ziwei import calendar, chart, render, resolver, timezone
 from ziwei.birth import Gender, LunarBirthRecord
 from ziwei.chart import ZiweiChart, create_chart
 from ziwei.config import ChartConfig
@@ -93,6 +94,45 @@ def test_body_palace_marker_is_not_always_on_minggong(chart_choices: ChartConfig
     if "身宫" in cell
   ]
   assert marked == ["福德 丁卯 身宫"]
+
+
+@pytest.fixture
+def forbid_computation(monkeypatch: pytest.MonkeyPatch) -> None:
+  """让排盘、解析、历法与时区入口一经调用即失败，并使原生历法与时区数据无法导入。
+
+  测试须先取得命盘等输入，再请求本夹具。
+  """
+
+  def forbidden(*args: object, **kwargs: object) -> Never:
+    raise AssertionError("调用了计算或资源入口")
+
+  for owner, names in (
+    (
+      chart,
+      ("resolve", "create_chart", "place_stars", "shengnian_sihua", "place_decades", "chart_frame"),
+    ),
+    (resolver, ("resolve",)),
+    (
+      calendar,
+      (
+        "validate_lunar_date",
+        "gregorian_to_lunar",
+        "lunar_to_gregorian",
+        "lichun_jd",
+        "utc_to_ut1_jd",
+        "apparent_solar",
+        "celestial_version",
+      ),
+    ),
+    (timezone, ("_load_zone", "current_timezone_data", "resolve_civil_time")),
+  ):
+    for name in names:
+      monkeypatch.setattr(owner, name, forbidden)
+  for name in tuple(sys.modules):
+    if name.split(".")[0] in ("celestial_calendar", "tzdata"):
+      monkeypatch.delitem(sys.modules, name)
+  monkeypatch.setitem(sys.modules, "celestial_calendar", None)
+  monkeypatch.setitem(sys.modules, "tzdata", None)
 
 
 @pytest.mark.usefixtures("unload_celestial")
