@@ -3,7 +3,6 @@
 from dataclasses import replace
 from datetime import date, time, timedelta
 from typing import Any
-from xml.etree.ElementTree import fromstring
 
 import pytest
 
@@ -15,7 +14,7 @@ from ziwei.config import ChartConfig, YearBoundary
 from ziwei.ganzhi import Dizhi
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import KnowledgeEntry, RuleVariant
-from ziwei.render import render_svg, render_text
+from ziwei.render import render_text
 from ziwei.resolver import resolve
 from ziwei.sihua import SihuaVariant
 from ziwei.stars import (
@@ -170,13 +169,11 @@ def test_new_stars_render_and_annual_natal_consumption(chart_choices: ChartConfi
   )
   assert len(chart.stars) == len(set(p.star for p in chart.stars)) == 36
   assert tuple(p.star for p in chart.stars[-4:]) == (Star.天哭, Star.天虚, Star.天伤, Star.天使)
-  text, svg = render_text(chart), fromstring(render_svg(chart))
+  text = render_text(chart)
   brightness = chart_brightness(chart, table=BrightnessTable.全书卷二录文)
   for p in chart.stars[-4:]:
     assert text.count(p.star.value) == 1
     assert p in palace_view(chart, p.dizhi).星位
-    (cell,) = [n for n in svg if n.get("data-dizhi") == p.dizhi.name.lower()]
-    assert any(n.get("class") == "star" and n.text == p.star.value for n in cell)
     (reading,) = [r for r in brightness if r.star is p.star]
     assert reading.level is None
   rows = liunian_palaces(chart, 2030, sihua_variant=SihuaVariant.王亭之讲义转录)

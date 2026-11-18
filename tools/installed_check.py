@@ -1,12 +1,12 @@
 """隔离验证已安装的包。"""
 
+import json
 import sys
 from dataclasses import replace
 from datetime import UTC, date, datetime, time, timedelta
 from importlib import import_module
 from importlib.metadata import distribution
 from pathlib import Path
-from xml.etree.ElementTree import fromstring
 
 import ziwei
 from ziwei.birth import (
@@ -44,7 +44,8 @@ from ziwei.liunian import (
   流年星曜,
 )
 from ziwei.palaces import Palace, PalaceName, effective_month
-from ziwei.render import render_svg, render_text
+from ziwei.render import render_text
+from ziwei.result import ChartResult, dumps, loads, result_of
 from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
 from ziwei.stars import Star
 from ziwei.timezone import AmbiguousTimeError, IanaTimezone, NonexistentTimeError
@@ -349,38 +350,7 @@ def check_chart() -> None:
     part in text for part in ("命宫", "甲子", "大限 4-13虚岁", "紫微", "右弼[科]", "红鸾", "天喜")
   ):
     raise ValueError("Installed text chart is incomplete")
-  image = fromstring(render_svg(chart, selected_palace=PalaceName.命宫))
-  namespace = "{http://www.w3.org/2000/svg}"
-  if image.tag != namespace + "svg":
-    raise ValueError("Installed SVG chart has the wrong root")
-  cells = [node for node in image.findall(namespace + "g") if "data-dizhi" in node.attrib]
-  stars = [node for cell in cells for node in cell if node.get("class") == "star"]
-  if len(cells) != 12 or len(stars) != len(Star):
-    raise ValueError("Installed SVG chart is incomplete")
-  for star, branch in expected_pair:
-    if not any(
-      cell.attrib["data-dizhi"] == branch.name.lower()
-      and any(node.get("class") == "star" and node.text == star.value for node in cell)
-      for cell in cells
-    ):
-      raise ValueError("Installed SVG chart lost hongluan/tianxi placement")
-  roles = {
-    cell.attrib["data-dizhi"]: cell.attrib["class"].split()[1]
-    for cell in cells
-    if len(cell.attrib["class"].split()) == 2
-  }
-  if roles != {"zi": "selected", "chen": "sanhe", "shen": "sanhe", "wu": "opposite"}:
-    raise ValueError("Installed SVG chart has incorrect selected-palace relationships")
-  selected_cell = next(cell for cell in cells if cell.attrib["data-dizhi"] == "zi")
-  labels = {
-    node.attrib["class"]: node.text
-    for node in selected_cell
-    if node.get("class") in ("ganzhi", "decade")
-  }
-  if labels != {"ganzhi": "甲子", "decade": "大限 4-13虚岁"} or not any(
-    node.text == "右弼[科]" for node in stars
-  ):
-    raise ValueError("Installed SVG chart lost palace content")
+  check_result(chart)
   # 论坛《排命盘口诀》1954例第6至9步的独立星位；大限按同页规则推得，不由待测实现生成。
   reference = create_chart(
     LunarBirthRecord(
@@ -438,12 +408,9 @@ def check_chart() -> None:
     (item.star, item.dizhi) for item in chart.stars
   ):
     raise ValueError("Installed brightness changed chart positions")
-  bright_text = render_text(chart, brightness_table=table)
-  bright_image = fromstring(render_svg(chart, brightness_table=table))
-  grades = bright_image.findall(f".//{namespace}text[@class='brightness']")
-  if table.value not in bright_text.splitlines()[0] or len(grades) != 14:
-    raise ValueError("Installed brightness displays are incomplete")
-  print("Installed brightness: named table queried; text and SVG consumed")
+  if table.value not in render_text(chart, brightness_table=table).splitlines()[0]:
+    raise ValueError("Installed brightness text display is incomplete")
+  print("Installed brightness: named table queried; text consumed")
   mixed = create_chart(
     LunarBirthRecord(
       year=2023, month=2, day=16, is_leap_month=True, shichen=Dizhi.子, gender=Gender.女
@@ -478,13 +445,48 @@ def check_chart() -> None:
       raise ValueError("Installed minor star palace query differs")
     if render_text(mixed).count(position.star.value) != 1:
       raise ValueError("Installed minor star text is incomplete")
-    image = fromstring(render_svg(mixed))
-    if (
-      sum(node.text == position.star.value for node in image.iter() if node.get("class") == "star")
-      != 1
-    ):
-      raise ValueError("Installed minor star SVG is incomplete")
   print("Installed full chart: calculated, rendered; independent positions and decades checked")
+
+
+def check_result(chart: ZiweiChart) -> None:
+  """写出结果JSON，用标准库读成字典核宫位、星位与生年四化，查所选层已写出，再经包内读取往返。"""
+
+  def export() -> ChartResult:
+    return result_of(
+      chart,
+      brightness_table=BrightnessTable.全书卷二录文,
+      ages=(1, 30),
+      tongxian_boundary=TongxianBoundary.起限当岁不含,
+      years=(2026,),
+      liunian_sihua_variant=SihuaVariant.王亭之讲义转录,
+    )
+
+  saved = dumps(export())
+  document = json.loads(saved)
+  if [(item["name"], item["tiangan"] + item["dizhi"]) for item in document["palaces"]] != [
+    (palace.name.value, str(palace.ganzhi)) for palace in chart.palaces
+  ]:
+    raise ValueError("Installed result JSON lost palace readings")
+  if [(item["star"], item["dizhi"]) for item in document["stars"]] != [
+    (position.star.value, position.dizhi.value) for position in chart.stars
+  ]:
+    raise ValueError("Installed result JSON lost star positions")
+  if document["sihua"] != {
+    "lu": chart.sihua.lu.value,
+    "quan": chart.sihua.quan.value,
+    "ke": chart.sihua.ke.value,
+    "ji": chart.sihua.ji.value,
+  }:
+    raise ValueError("Installed result JSON lost natal sihua")
+  if (
+    len(document["brightness"]) != 14
+    or [item["age"] for item in document["yunxian"]] != [1, 30]
+    or document["liunian"][0]["sihua"] is None
+  ):
+    raise ValueError("Installed result JSON lost selected layers")
+  if loads(saved) != export():
+    raise ValueError("Installed result JSON did not read back")
+  print("Installed result JSON: written, read as plain JSON and read back")
 
 
 def check_knowledge() -> None:

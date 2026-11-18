@@ -1,5 +1,6 @@
 """安装后消费者的拒绝用例。"""
 
+import json
 import sys
 from dataclasses import asdict, replace
 from importlib.metadata import distribution, version
@@ -45,7 +46,7 @@ from ziwei.liunian import (
   流年星曜,
 )
 from ziwei.palaces import PalaceName
-from ziwei.render import render_svg, render_text
+from ziwei.render import render_text
 from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star, place_stars
 from ziwei.timezone import TimezoneData
@@ -251,7 +252,7 @@ def test_full_annual_consumer_rejects_wrong_palace_content(
     installed_check.check_chart()
 
 
-@pytest.mark.parametrize("defect", ["value", "count", "position", "text", "svg", "source"])
+@pytest.mark.parametrize("defect", ["value", "count", "position", "text", "source"])
 def test_brightness_consumer_rejects_wrong_values_displays_or_missing_source(
   monkeypatch: pytest.MonkeyPatch, defect: str
 ) -> None:
@@ -271,18 +272,12 @@ def test_brightness_consumer_rejects_wrong_values_displays_or_missing_source(
       return (*values[1:], values[0])
 
     monkeypatch.setattr(installed_check, "chart_brightness", readings)
-  elif defect in ("text", "svg"):
-    original_display = render_text if defect == "text" else render_svg
+  elif defect == "text":
 
     def display(*args: Any, **kwargs: Any) -> str:
-      value = original_display(*args, **kwargs)
-      return (
-        value.replace(BrightnessTable.全书卷二录文.value, "")
-        if defect == "text"
-        else value.replace('class="brightness"', 'class="absent"')
-      )
+      return render_text(*args, **kwargs).replace(BrightnessTable.全书卷二录文.value, "")
 
-    monkeypatch.setattr(installed_check, "render_" + defect, display)
+    monkeypatch.setattr(installed_check, "render_text", display)
   else:
     original_references = Catalog.references
 
@@ -562,38 +557,43 @@ def test_full_chart_consumer_rejects_missing_two_star_text(
     installed_check.check_chart()
 
 
-@pytest.mark.parametrize("defect", ["root", "palace", "star", "highlight", "content", "hongluan"])
-def test_full_chart_consumer_rejects_faulty_svg(
-  monkeypatch: pytest.MonkeyPatch, defect: str
+@pytest.mark.parametrize(
+  ("defect", "message"),
+  [
+    ("palace", "lost palace readings"),
+    ("star", "lost star positions"),
+    ("sihua", "lost natal sihua"),
+    ("layer", "lost selected layers"),
+    ("readback", "did not read back"),
+  ],
+)
+def test_full_chart_consumer_rejects_faulty_result_json(
+  monkeypatch: pytest.MonkeyPatch, defect: str, message: str
 ) -> None:
-  from xml.etree.ElementTree import fromstring, tostring
+  from ziwei.result import dumps, loads
 
-  from ziwei.render import render_svg
-
-  def faulty(*args: Any, **kwargs: Any) -> str:
-    root = fromstring(render_svg(*args, **kwargs))
-    cells = [cell for cell in root if "data-dizhi" in cell.attrib]
-    if defect == "root":
-      root.tag = "wrong"
-    elif defect == "palace":
-      root.remove(cells[0])
+  def faulty_dumps(result: Any) -> str:
+    document = json.loads(dumps(result))
+    if defect == "palace":
+      document["palaces"][0]["tiangan"] = (
+        "乙" if document["palaces"][0]["tiangan"] == "甲" else "甲"
+      )
     elif defect == "star":
-      cell = next(cell for cell in cells if any(node.get("class") == "star" for node in cell))
-      cell.remove(next(node for node in cell if node.get("class") == "star"))
-    elif defect == "highlight":
-      next(cell for cell in cells if cell.get("class") == "palace selected").set("class", "palace")
-    elif defect == "hongluan":
-      for node in root.iter():
-        if node.get("class") == "star" and node.text == "红鸾":
-          node.text = "天喜"
-    else:
-      for node in root.iter():
-        if node.get("class") == "ganzhi":
-          node.text = "wrong"
-    return tostring(root, encoding="unicode")
+      document["stars"][0]["dizhi"] = "丑" if document["stars"][0]["dizhi"] == "子" else "子"
+    elif defect == "sihua":
+      document["sihua"]["lu"], document["sihua"]["ji"] = (
+        document["sihua"]["ji"],
+        document["sihua"]["lu"],
+      )
+    elif defect == "layer":
+      document["yunxian"] = document["yunxian"][:1]
+    return json.dumps(document, ensure_ascii=False)
 
-  monkeypatch.setattr(installed_check, "render_svg", faulty)
-  with pytest.raises(ValueError, match="Installed SVG chart"):
+  if defect == "readback":
+    monkeypatch.setattr(installed_check, "loads", lambda text: replace(loads(text), liunian=()))
+  else:
+    monkeypatch.setattr(installed_check, "dumps", faulty_dumps)
+  with pytest.raises(ValueError, match="Installed result JSON " + message):
     installed_check.check_chart()
 
 

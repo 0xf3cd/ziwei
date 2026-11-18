@@ -119,7 +119,7 @@ True
 ```
 
 这个位置与iLuck九月直接例相同。两星没有生年四化或本库亮度等级；从完整盘按宫读取时仍是普通星位，
-文本与SVG盘面都会显示这两颗星。定位依据见[刑姚条目](knowledge-reference.md#entry.star.tianxing-tianyao-month)。
+文本盘面会显示这两颗星。定位依据见[刑姚条目](knowledge-reference.md#entry.star.tianxing-tianyao-month)。
 
 ## 天哭天虚与固定法天伤天使
 

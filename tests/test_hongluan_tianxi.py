@@ -3,7 +3,6 @@
 from dataclasses import replace
 from datetime import date, time, timedelta
 from typing import Any
-from xml.etree.ElementTree import fromstring
 
 import pytest
 
@@ -21,7 +20,7 @@ from ziwei.knowledge.model import (
   SourceStatus,
   TextLayer,
 )
-from ziwei.render import render_svg, render_text
+from ziwei.render import render_text
 from ziwei.sihua import SihuaVariant
 from ziwei.stars import Star, place_hongluan_tianxi, place_stars
 from ziwei.timezone import FixedOffset
@@ -165,7 +164,7 @@ def test_resolved_year_boundary_is_consumed_without_a_two_star_boundary(
 
 
 @pytest.mark.usefixtures("unload_celestial")
-def test_two_stars_reach_complete_chart_palace_queries_and_both_displays(
+def test_two_stars_reach_complete_chart_palace_queries_and_text_display(
   chart_choices: ChartConfig,
 ) -> None:
   """合成乙丑正月初一子时，只借直接年支例的两星位置，不称外部完整盘验证。"""
@@ -179,13 +178,8 @@ def test_two_stars_reach_complete_chart_palace_queries_and_both_displays(
   assert len(chart.stars) == len({p.star for p in chart.stars}) == len(Star)
   assert {p.star for p in chart.stars} == set(Star)
   text = render_text(chart)
-  root = fromstring(render_svg(chart))
-  namespace = "{http://www.w3.org/2000/svg}"
   for star, branch in ((Star.红鸾, Dizhi.寅), (Star.天喜, Dizhi.申)):
     placement = next(p for p in chart.stars if p.star is star)
     assert placement.dizhi is branch and placement.rule_id == RULE_ID
     assert any(p is placement for p in palace_view(chart, branch).stars)
     assert text.count(star.value) == 1
-    cell = root.find(f"{namespace}g[@data-dizhi='{branch.name.lower()}']")
-    assert cell is not None
-    assert [node.text for node in cell if node.get("class") == "star"].count(star.value) == 1
