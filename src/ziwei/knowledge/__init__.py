@@ -1,5 +1,7 @@
 """独立知识目录；显式加载语料，不导入命盘或历法适配。"""
 
+from typing import Final
+
 from ziwei.knowledge.catalog import Catalog
 
 
@@ -14,3 +16,7 @@ def load_catalog() -> Catalog:
     citations=CITATIONS,
     entries=ENTRIES,
   )
+
+
+#: load_catalog的中文入口。
+加载目录: Final = load_catalog

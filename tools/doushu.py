@@ -378,6 +378,11 @@ def check_alias_typing(directory: Path) -> None:
     "def annual_rows(value: PrimaryChart) -> tuple[流年宫位, ...]:\n"
     "  return liunian_palaces(value, 2030, sihua_variant=SihuaVariant.王亭之讲义转录)\n"
     "def annual_row(value: 流年宫位) -> LiunianPalaceView:\n  return value\n"
+    "from doushu.knowledge import 加载目录\n"
+    "from doushu.knowledge.catalog import 知识目录\n"
+    "knowledge: 知识目录 = 加载目录().读取主题('concept.star.tiankong')\n"
+    "selection: Catalog = knowledge.选取条目([item.id for item in knowledge.检索条目('子年')])\n"
+    "document = selection.转为字典()\n"
   )
   env = {k: v for k, v in os.environ.items() if k not in {"MYPYPATH", "PYTHONPATH"}}
   env["PYTHONUTF8"] = "1"
@@ -403,6 +408,8 @@ def check_alias_typing(directory: Path) -> None:
     (positive + "流年星曜(纪年=2024)\n", 1, "[call-arg]"),
     (positive + "流年四化(2030)\n", 1, "[call-arg]"),
     (positive + "annual_marks.化科 = Star.天府\n", 1, "[misc]"),
+    (positive + "knowledge.读取主题(1)\n", 1, "[arg-type]"),
+    (positive + "knowledge.检索条目('月', source_id=knowledge.concepts[0])\n", 1, "[arg-type]"),
   ):
     source.write_text(text, encoding="utf-8")
     result = subprocess.run(command, cwd=directory, env=env, capture_output=True, encoding="utf-8")

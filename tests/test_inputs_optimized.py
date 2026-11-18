@@ -71,4 +71,4 @@ def test_knowledge_is_independent_and_validates_without_asserts(
     check=False,
   )
   assert result.returncode == 0, result.stderr
-  assert "checked=10" in result.stdout
+  assert "checked=15" in result.stdout

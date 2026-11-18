@@ -46,6 +46,8 @@ ALIASES = {
   "xiaoxian": "小限:Xiaoxian",
   "tongxian": "童限边界:TongxianBoundary 童限:Tongxian",
   "yunxian": "运限:Yunxian",
+  "knowledge": "加载目录:load_catalog",
+  "knowledge.catalog": "知识目录:Catalog",
   "chart": "紫微命盘:ZiweiChart 宫位视图:PalaceView 流年叠读:LiunianView 流年宫位:LiunianPalaceView",
   "result": "命盘结果:ChartResult 结果宫位:ResultPalace 结果星位:ResultStar 结果四化:ResultSihua "
   "结果亮度:ResultBrightness 结果大限:ResultDecade 结果大限组:ResultDecades 结果运限:ResultYunxian "
@@ -234,7 +236,7 @@ def test_type_and_property_mapping_has_no_unplanned_chinese_exports() -> None:
   for module, exports in actual.items():
     chinese = {name for name in exports if not name.isascii()}
     assert chinese == {name for name, _ in pairs(ALIASES.get(module.removeprefix("ziwei."), ""))}
-  assert sum(len(pairs(names)) for names in ALIASES.values()) == 52
+  assert sum(len(pairs(names)) for names in ALIASES.values()) == 54
   assert sum(len(pairs(names)) for names in PROPERTIES.values()) == 129
 
 

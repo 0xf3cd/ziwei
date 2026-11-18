@@ -46,6 +46,13 @@ _BRIGHTNESS_DEFINITION = (
 )
 
 CONCEPTS = (
+  Concept(
+    id="concept.star.tiankong",
+    name="年支天空",
+    aliases=("年支天空星",),
+    kind=ConceptKind.星曜,
+    related_ids=(Star.地空.concept_id,),
+  ),
   *(
     Concept(
       id=star.concept_id,
@@ -2758,6 +2765,21 @@ def _star_entries(rules: tuple[StarRule, ...]) -> tuple[KnowledgeEntry, ...]:
 
 
 ENTRIES = (
+  KnowledgeEntry(
+    id="entry.star.tiankong-year",
+    statement="《紫微斗数捷览》安天空星诀按生年支安天空，子年例落丑宫。",
+    concept_ids=("concept.star.tiankong",),
+    variant_ids=(),
+    citation_ids=("citation.jielan.tiankong-year",),
+    premises=("按该章太岁前一位的查法读取年支天空。",),
+    premise_status=PremiseStatus.已明确,
+    show_by_default=False,
+    curation=CurationStatus.已整理,
+    limits="本条只登记一路电子录文的称名与查法，纸本未校，尚无计算实现。"
+    "它与《全书》时系空劫诀称作天空的地空分开，不把天空设为地空的全局别名。",
+    recheck="取得《紫微斗数捷览》纸本安天空星诀，核对太岁前一位与子年丑宫例。",
+    tracking_url=_SOURCE_RESEARCH_URL,
+  ),
   KnowledgeEntry(
     id="entry.interpretation.kongjie-nature",
     statement="《诸星问答论》天空地劫节的歌曰以劫空为害形容二星。",
