@@ -132,6 +132,7 @@ def test_each_search_field_and_no_cross_field_matches(field: str) -> None:
   entry = replace(entry, statement="FieldEnd", limits="FieldStart")
   catalog = replace(catalog, entries=(entry,))
   assert catalog.search_entries("FieldEndFieldStart") == ()
+  assert catalog.search_entries("FieldEnd FieldStart") == ()
 
 
 def test_search_does_not_convert_scripts_or_search_names() -> None:
@@ -162,6 +163,7 @@ def test_search_does_not_search_variant_descriptions(field: str) -> None:
   }
   variant = replace(catalog.variants[0], **change)
   catalog = replace(catalog, variants=(variant, *catalog.variants[1:]))
+  assert any(variant.id in entry.variant_ids for entry in catalog.entries)
   assert catalog.search_entries("VariantOnlyNeedle") == ()
 
 

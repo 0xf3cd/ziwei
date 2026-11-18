@@ -2121,7 +2121,7 @@ CITATIONS = (
     quote="又名“地空”",
     layer=TextLayer.今人说明,
     aspects=(EvidenceAspect.查法,),
-    limits="时系天空的称名来自今人按语，不是古籍白文，不把同名年系天空也当作地空。",
+    limits="这条引文是论坛按语，说明时系天空又名地空。不把按年支安的同名天空当作地空。",
   ),
   Citation(
     id="citation.jingcheng.birth-month",
