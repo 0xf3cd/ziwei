@@ -146,17 +146,20 @@ def test_search_does_not_convert_scripts_or_search_names() -> None:
   catalog = replace(
     catalog,
     entries=(entry,),
-    concepts=tuple(replace(c, name="NameOnly") for c in catalog.concepts),
+    concepts=tuple(replace(c, name="NameOnly", aliases=("AliasOnly",)) for c in catalog.concepts),
   )
   assert catalog.search_entries("繁體") == (entry,)
   assert catalog.search_entries("繁体") == ()
   assert catalog.search_entries("NameOnly") == ()
+  assert catalog.search_entries("AliasOnly") == ()
 
 
-@pytest.mark.parametrize("field", ["definition", "scope"])
+@pytest.mark.parametrize("field", ["name", "aliases", "definition", "scope"])
 def test_search_does_not_search_variant_descriptions(field: str) -> None:
   catalog = load_catalog()
-  change: dict[str, Any] = {field: "VariantOnlyNeedle"}
+  change: dict[str, Any] = {
+    field: ("VariantOnlyNeedle",) if field == "aliases" else "VariantOnlyNeedle",
+  }
   variant = replace(catalog.variants[0], **change)
   catalog = replace(catalog, variants=(variant, *catalog.variants[1:]))
   assert catalog.search_entries("VariantOnlyNeedle") == ()
@@ -170,6 +173,7 @@ def test_search_does_not_join_sequence_elements(field: str) -> None:
   catalog = replace(catalog, entries=(entry,))
   assert catalog.search_entries("ElementStart") == (entry,)
   assert catalog.search_entries("ElementEndElementStart") == ()
+  assert catalog.search_entries("ElementEnd ElementStart") == ()
 
 
 @pytest.mark.parametrize("index", [1, 2])
@@ -321,8 +325,19 @@ def test_json_consumer_preserves_every_field_and_returns_independent_containers(
   )
   assert any(v["option"] is None for v in document["variants"])
   assert any(e["alternatives"] == [] for e in document["entries"])
+  another = catalog.to_dict()
+  containers: list[object] = []
+  for exported in (document, another):
+    containers.append(exported)
+    for records in exported.values():
+      containers.append(records)
+      for record in records:
+        containers.append(record)
+        containers.extend(value for value in record.values() if isinstance(value, list))
+  assert len({id(value) for value in containers}) == len(containers)
   document["concepts"][0]["related_ids"].clear()
   document["entries"][0]["premises"].clear()
+  _check_document(another, catalog)
   _check_document(catalog.to_dict(), catalog)
 
 

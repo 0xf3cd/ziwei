@@ -254,11 +254,12 @@ class Catalog:
     show_by_default: bool | None = None,
     curation: CurationStatus | None = None,
   ) -> tuple[KnowledgeEntry, ...]:
-    """在条目与所引文字中查子串，并对条目取筛选条件的交集。
+    """在条目及其引用的引文中查子串，并对条目取筛选条件的交集。
 
     搜索陈述、前提、例外、备选、限度、复核动作及引文的原文、定位、限度。
     source_id筛选引用该来源的条目，正文仍在条目及其全部引文中匹配。
-    忽略查询首尾空白和大小写，不转换简繁；空查询拒绝，未命中返回空元组。
+    忽略查询首尾空白和大小写，不转换简繁；未命中返回空元组。
+    查询不是字符串时抛TypeError，去除首尾空白后为空时抛ValueError。
     """
     _text(text, "查询正文")
     key = text.strip().casefold()
@@ -294,7 +295,8 @@ class Catalog:
   def select_entries(self, entry_ids: Sequence[str]) -> Catalog:
     """按条目标识取子目录，附齐所需引用；重复标识去重，空序列返回空目录。
 
-    保留原目录顺序。未知标识或错种类标识按get及查询参数的规则失败。
+    保留原目录顺序。标识不是字符串时抛TypeError，格式非法时抛ValueError。
+    格式合法但不存在时抛KeyError；已存在但不是条目标识时抛ValueError。
     """
     identifiers = _freeze(entry_ids, str, "条目标识")
     for identifier in identifiers:
@@ -350,9 +352,12 @@ class Catalog:
     )
 
   def to_dict(self) -> dict[str, list[dict[str, object]]]:
-    """返回五组可由json.dumps编码的记录；字段名沿用值类型。
+    """返回可由json.dumps编码的知识记录字典。
 
-    枚举写值、日期写ISO日期、元组写数组。返回容器可独立修改，不影响目录。
+    五组键为concepts、variants、sources、citations、entries。
+    每条记录的键名沿用Concept、KnowledgeEntry等记录类型的字段名。
+    枚举写值、日期写ISO日期、元组写数组；None与空值保留。
+    返回容器可独立修改，不影响目录。
     """
     return {
       group.name: [

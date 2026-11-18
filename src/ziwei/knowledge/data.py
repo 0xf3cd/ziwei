@@ -2776,7 +2776,7 @@ ENTRIES = (
     show_by_default=False,
     curation=CurationStatus.已整理,
     limits="本条只登记一路电子录文的称名与查法，纸本未校，尚无计算实现。"
-    "它与《全书》时系空劫诀称作天空的地空分开，不把天空设为地空的全局别名。",
+    "《全书》卷二的天空按生时安，对应本库地空。本条按年支安的天空与它分开，不把天空设为地空的全局别名。",
     recheck="取得《紫微斗数捷览》纸本安天空星诀，核对太岁前一位与子年丑宫例。",
     tracking_url=_SOURCE_RESEARCH_URL,
   ),

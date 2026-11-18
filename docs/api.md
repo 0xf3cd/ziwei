@@ -34,7 +34,7 @@ assert LunarBirthRecord.__module__ == "ziwei.birth"
 ## 中文领域入口
 
 下表的中文类型名与原名指向同一对象；中文结果属性读取原字段或property。构造关键字、函数名、
-规则标识仍用原名；知识目录的中文入口见[查询指南](knowledge.md#给前端读取)。表中模块名省略`ziwei.`前缀，例如`性别`从`ziwei.birth`导入；
+规则标识仍用原名；知识目录的中文入口见[查询指南](knowledge.md#中文入口)。表中模块名省略`ziwei.`前缀，例如`性别`从`ziwei.birth`导入；
 也可从对应的`doushu.*`模块导入。
 
 | 模块 | 中文类型名 → 原类型名 |
