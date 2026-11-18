@@ -291,6 +291,7 @@ def test_pending_quanshu_is_not_executed_and_modern_evidence_is_not_upgraded() -
   assert "天空" not in {item.name for item in catalog.list_concepts(kind=ConceptKind.星曜)}
   assert catalog.find("天空") == ()
   (tiankong,) = catalog.find("年支天空")
+  assert catalog.find("年支天空星") == (tiankong,)
   assert tiankong.id == "concept.star.tiankong"
   assert tiankong.id not in {star.concept_id for star in stars.Star}
   assert catalog.list_variants(concept_id=tiankong.id) == ()

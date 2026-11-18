@@ -153,6 +153,49 @@ def test_search_does_not_convert_scripts_or_search_names() -> None:
   assert catalog.search_entries("NameOnly") == ()
 
 
+@pytest.mark.parametrize("field", ["definition", "scope"])
+def test_search_does_not_search_variant_descriptions(field: str) -> None:
+  catalog = load_catalog()
+  change: dict[str, Any] = {field: "VariantOnlyNeedle"}
+  variant = replace(catalog.variants[0], **change)
+  catalog = replace(catalog, variants=(variant, *catalog.variants[1:]))
+  assert catalog.search_entries("VariantOnlyNeedle") == ()
+
+
+@pytest.mark.parametrize("field", ["premises", "exceptions", "alternatives"])
+def test_search_does_not_join_sequence_elements(field: str) -> None:
+  catalog = load_catalog().select_entries(["entry.star.tiankong-year"])
+  change: dict[str, Any] = {field: ("ElementEnd", "ElementStart")}
+  entry = replace(catalog.entries[0], **change)
+  catalog = replace(catalog, entries=(entry,))
+  assert catalog.search_entries("ElementStart") == (entry,)
+  assert catalog.search_entries("ElementEndElementStart") == ()
+
+
+@pytest.mark.parametrize("index", [1, 2])
+@pytest.mark.parametrize("field", ["quote", "locator", "limits"])
+def test_search_all_citations_after_filtering_entries_by_source(index: int, field: str) -> None:
+  catalog = load_catalog().select_entries(["entry.star.tiankong-year"])
+  first = catalog.citations[0]
+  other_source = replace(catalog.sources[0], id="source.other")
+  citations = [
+    first,
+    replace(first, id="citation.other-second", source_id=other_source.id),
+    replace(first, id="citation.other-third", source_id=other_source.id),
+  ]
+  change: dict[str, Any] = {field: "OtherSourceNeedle"}
+  citations[index] = replace(citations[index], **change)
+  entry = replace(catalog.entries[0], citation_ids=tuple(item.id for item in citations))
+  catalog = replace(
+    catalog,
+    entries=(entry,),
+    citations=tuple(citations),
+    sources=(*catalog.sources, other_source),
+  )
+  assert catalog.search_entries("OtherSourceNeedle") == (entry,)
+  assert catalog.search_entries("OtherSourceNeedle", source_id=first.source_id) == (entry,)
+
+
 def test_selection_closes_variant_school_and_concept_references() -> None:
   catalog = load_catalog()
   identifiers = ["entry.liunian.sihua-wangtingzhi-lecture", "entry.brightness.quanshu-juan2"]
@@ -257,18 +300,21 @@ def test_selection_rejects_invalid_identifiers(
 def _check_document(document: dict[str, Any], catalog: Catalog) -> None:
   expected = json.loads(json.dumps(asdict(catalog), default=date.isoformat))
   assert document == expected
-  records = {record["id"]: record for group in document.values() for record in group}
-  for record in records.values():
-    for field in ("concept_ids", "related_ids", "school_ids", "variant_ids", "citation_ids"):
-      for target in record.get(field, []):
-        assert target in records, (record["id"], target)
-    if "source_id" in record:
-      assert record["source_id"] in records
+
+
+@pytest.mark.parametrize("concept_id", [concept.id for concept in load_catalog().concepts])
+def test_every_topic_preserves_entries_and_exported_fields(concept_id: str) -> None:
+  catalog = load_catalog()
+  topic = catalog.topic(concept_id)
+  assert topic.get(concept_id) == catalog.get(concept_id)
+  assert topic.entries == catalog.filter_entries(concept_id=concept_id)
+  _check_document(topic.to_dict(), topic)
 
 
 def test_json_consumer_preserves_every_field_and_returns_independent_containers() -> None:
   catalog = load_catalog()
-  document = json.loads(json.dumps(catalog.to_dict(), ensure_ascii=False))
+  document: dict[str, Any] = catalog.to_dict()
+  assert json.loads(json.dumps(document, ensure_ascii=False)) == document
   _check_document(document, catalog)
   assert document["sources"][0]["checked_on"] is None or isinstance(
     document["sources"][0]["checked_on"], str
