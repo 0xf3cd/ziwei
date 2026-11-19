@@ -246,20 +246,26 @@ def test_check_rejects_misbinding_and_lost_conditions(
     _check_entries(damaged, reference)
 
 
-def test_check_rejects_same_section_statement_swap(reference: dict[str, Any]) -> None:
+@pytest.mark.parametrize(
+  ("target_suffix", "source_suffix"),
+  [("hualu-nature", "hualu-kequan"), ("hualu-kequan", "hualu-nature")],
+)
+def test_check_rejects_same_section_statement_swap(
+  reference: dict[str, Any], target_suffix: str, source_suffix: str
+) -> None:
   catalog = load_catalog()
   _check_entries(catalog, reference)
-  nature = catalog.get("entry.interpretation.hualu-nature")
-  conditional = catalog.get("entry.interpretation.hualu-kequan")
-  assert isinstance(nature, KnowledgeEntry) and isinstance(conditional, KnowledgeEntry)
+  target = catalog.get(f"entry.interpretation.{target_suffix}")
+  source = catalog.get(f"entry.interpretation.{source_suffix}")
+  assert isinstance(target, KnowledgeEntry) and isinstance(source, KnowledgeEntry)
   damaged = replace(
     catalog,
     entries=tuple(
-      replace(entry, statement=conditional.statement) if entry == nature else entry
+      replace(entry, statement=source.statement) if entry == target else entry
       for entry in catalog.entries
     ),
   )
-  with pytest.raises(AssertionError, match=r"entry\.interpretation\.hualu-nature.*statement"):
+  with pytest.raises(AssertionError, match=rf"entry\.interpretation\.{target_suffix}.*statement"):
     _check_entries(damaged, reference)
 
 
