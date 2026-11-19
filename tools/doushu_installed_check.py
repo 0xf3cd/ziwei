@@ -86,6 +86,26 @@ def main(version: str, expectations: Path, first: str) -> None:
     )
     if len(entries) != 2 or any(entry.show_by_default for entry in entries):
       raise ValueError("Alias star interpretation query differs")
+  for name, suffixes in (
+    ("流年昌曲", ("liunian-changqu",)),
+    ("化祿", ("hualu-nature", "hualu-kequan")),
+    ("火星", ("huoxing-nature", "huoxing-tanlang", "yangtuohuoling-general")),
+  ):
+    (concept,) = catalog.find(name)
+    entries = tuple(
+      e for e in catalog.topic(concept.id).entries if e.id.startswith("entry.interpretation.")
+    )
+    if {e.id for e in entries} != {"entry.interpretation." + suffix for suffix in suffixes}:
+      raise ValueError("Alias annual, sihua or shared interpretation query differs")
+    document = json.loads(json.dumps(catalog.select_entries([e.id for e in entries]).to_dict()))
+    if (
+      any(
+        e["show_by_default"] or not e["premises"] or not e["citation_ids"]
+        for e in document["entries"]
+      )
+      or not document["citations"]
+    ):
+      raise ValueError("Alias interpretation JSON lost conditions or citations")
   if any(n == "celestial_calendar" or n.startswith("celestial_calendar.") for n in sys.modules):
     raise ValueError("Alias import or knowledge query initialized the native calendar")
   annual_api = import_module("doushu.liunian")
