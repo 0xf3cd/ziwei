@@ -540,7 +540,7 @@ def check_knowledge() -> None:
     entry.show_by_default or not entry.recheck or not entry.tracking_url for entry in entries
   ):
     raise ValueError("Installed knowledge interpretation entries or default display changed")
-  # 全量内容由源码侧参考核对；这里消费主星、杂曜、年度、四化与合论代表条目。
+  # 全量内容由源码侧参考核对；这里消费主星、杂曜、年度、四化与总论代表条目。
   for identifier, quote in (
     ("entry.interpretation.ziwei-fubi", "無輔弼同行則為孤君，雖美玉不足。"),
     ("entry.interpretation.tianxing-rumiao", "入庙则吉。"),

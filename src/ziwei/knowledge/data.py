@@ -3167,7 +3167,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.wenqu-luchan",
-    statement="《诸星问答论》文曲节先说忌入土宫、限临蹭蹬，随后以禄存、化禄来缠转为不可作凶论。",
+    statement="《诸星问答论》文曲节说忌入土宫、限临蹭蹬。",
     concept_ids=(Star.文曲.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.wenqu-luchan",),
@@ -3183,7 +3183,7 @@ ENTRIES = (
   KnowledgeEntry(
     id="entry.interpretation.liunian-changqu",
     statement="《诸星问答论》流年昌曲答曰在大小二限、三合及多组吉曜条件下谈科甲，"
-    "并分别说俱全为大吉、二三拱照亦高中及巳酉得地不能耐久。",
+    "并分别说俱全为大吉、二三拱照亦高中。",
     concept_ids=("concept.liunian.changqu",),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.liunian-changqu",),
@@ -3198,8 +3198,8 @@ ENTRIES = (
     curation=CurationStatus.已整理,
     exceptions=("末句说二星在巳酉得地不富即贵，但不能耐久。",),
     alternatives=("流年禄可能指年度禄存，待核。", "流年禄可能指年度化禄，待核。"),
-    limits="本条保留流年禄原称，候选读法未穷尽；同书另有流祿称谓，与本句关系未定。"
-    "只收本节答曰，未将后续歌曰作为本条年度断言的依据；不绑定本命昌曲位置或年度安星规则。",
+    limits="本条保留流年禄原称，候选读法未穷尽。同书另有流祿称谓，与本句关系未定。"
+    "只收本节答曰，未将后续歌曰作为本条年度断言的依据。不绑定本命昌曲位置或年度安星规则。",
     recheck="对照卷一流年昌曲节纸本及注释，核俱全与二三拱照的关系、流年禄所指；"
     "并核同书奏書博士與流祿、奏書博士並流祿两处用例与本句是否同义。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
@@ -3220,8 +3220,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.zuofu-zifu",
-    statement="《诸星问答论》左辅节以紫府禄权三合冲照论文武大贵，"
-    "又两次说火忌冲破，分别论富贵不久与中局。",
+    statement="《诸星问答论》左辅节以紫府禄权三合冲照论文武大贵。",
     concept_ids=(Star.左辅.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.zuofu-zifu",),
@@ -3250,7 +3249,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.youbi-zifu",
-    statement="《诸星问答论》右弼节在紫府吉星同垣时论财官文武，又在羊陀火忌冲破时论下局。",
+    statement="《诸星问答论》右弼节在紫府吉星同垣时论财官文武。",
     concept_ids=(Star.右弼.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.youbi-zifu",),
@@ -3279,8 +3278,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.kuiyue-xianbu",
-    statement="《诸星问答论》魁钺合节在限步巡逢的语境中分别说生男、生女，"
-    "并限定四十以后逢墓库不依此断。",
+    statement="《诸星问答论》魁钺合节在限步巡逢的语境中分别说生男、生女。",
     concept_ids=(Star.天魁.concept_id, Star.天钺.concept_id),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.kuiyue-xianbu",),
@@ -3309,7 +3307,8 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.lucun-dushou",
-    statement="《诸星问答论》禄存节以独守命而无吉化论看财奴，随后分别说遇吉恶、陷空及火铃空劫。",
+    statement="《诸星问答论》禄存节以独守命而无吉化论看财奴。"
+    "后文另说逢吉逞其权、遇恶败其迹，落陷空不能为福，更凑火铃空劫则巧艺安身。",
     concept_ids=(Star.禄存.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.lucun-dushou",),
@@ -3317,7 +3316,6 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("原文另说逢吉逞其权、遇恶败其迹，落陷空不能为福，更凑火铃空劫则巧艺安身。",),
     limits="吉化不自动等同禄权科，陷空不自动等同地空；本条不是年度流禄或化禄的解释。",
     recheck="核禄存节纸本及同书吉化、陷空、权的用例，确认独守命的关系范围与后续条件。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
@@ -3338,8 +3336,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.tianma-erxian",
-    statement="《诸星问答论》天马节说大小二限临之、更遇禄存紫府及流昌必利，"
-    "随后列多种同宫称名，末句说以上犯此数者俱主灾病。",
+    statement="《诸星问答论》天马节说大小二限临之、更遇禄存紫府及流昌必利，随后列多种同宫称名。",
     concept_ids=(Star.天马.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.tianma-erxian",),
@@ -3573,7 +3570,6 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("相邻下一行限定三方无杀破、中年后始兴。",),
     limits="不将诗句截为火贪相会即贵，不从本库主星亮度推火星旺地或判定中年年龄。",
     recheck="核火星歌诀纸本跨行分句及注释，确认旺地所指、三方无杀破与中年后作用范围。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
@@ -3606,7 +3602,7 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("前段另说羊陀凑合其刑大不清；后段遇贪狼不宁。",),
+    exceptions=("前段另说羊陀凑合其刑大不清。",),
     limits="两个不连续段各有引文；未用旺地解释消除两段差别。"
     "富贵不可论保留原称，其语义待核；不生成铃星亮度或铃贪格局。",
     recheck="核铃星歌诀纸本及注释，比较贪狼会与或遇贪狼宿两段，"

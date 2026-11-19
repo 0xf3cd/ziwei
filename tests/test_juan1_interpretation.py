@@ -209,8 +209,8 @@ def test_new_topics_keep_annual_and_sihua_meanings_separate() -> None:
     ("lucun-dushou", "premises", "无吉化", "有吉化"),
     ("tianma-erxian", "limits", "折鞭马", "吉马"),
     ("huoxing-tanlang", "premises", "三方无杀破", "无附加条件"),
-    ("huoxing-tanlang", "exceptions", "中年后始兴", "少年即兴"),
-    ("lingxing-tanlang", "exceptions", "贪狼不宁", "贪狼必吉"),
+    ("huoxing-tanlang", "statement", "中年后始兴", "少年即兴"),
+    ("lingxing-tanlang", "statement", "官禄不宁", "官禄必吉"),
     ("huaji-sisha", "premises", "同宫又兼四杀共处", "单逢化忌"),
     ("liunian-changqu", "alternatives", "待核", "已定"),
     ("hualu-nature", "statement", "化禄节", "化忌节"),
@@ -243,6 +243,23 @@ def test_check_rejects_misbinding_and_lost_conditions(
     entries=tuple(replace(e, **changes) if e == entry else e for e in catalog.entries),
   )
   with pytest.raises(AssertionError):
+    _check_entries(damaged, reference)
+
+
+def test_check_rejects_same_section_statement_swap(reference: dict[str, Any]) -> None:
+  catalog = load_catalog()
+  _check_entries(catalog, reference)
+  nature = catalog.get("entry.interpretation.hualu-nature")
+  conditional = catalog.get("entry.interpretation.hualu-kequan")
+  assert isinstance(nature, KnowledgeEntry) and isinstance(conditional, KnowledgeEntry)
+  damaged = replace(
+    catalog,
+    entries=tuple(
+      replace(entry, statement=conditional.statement) if entry == nature else entry
+      for entry in catalog.entries
+    ),
+  )
+  with pytest.raises(AssertionError, match=r"entry\.interpretation\.hualu-nature.*statement"):
     _check_entries(damaged, reference)
 
 
