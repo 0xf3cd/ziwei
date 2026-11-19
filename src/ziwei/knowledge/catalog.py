@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, fields
+from datetime import date
 from enum import StrEnum
 from typing import TypeAlias, TypeVar
 
@@ -26,6 +28,19 @@ from ziwei.knowledge.model import (
 #: 目录查询返回的记录值类型。
 Record: TypeAlias = Concept | RuleVariant | Source | Citation | KnowledgeEntry
 _R = TypeVar("_R", bound=Record)
+_JsonValue: TypeAlias = str | bool | list["_JsonValue"] | None
+
+
+def _json_value(value: object) -> _JsonValue:
+  if isinstance(value, StrEnum):
+    return value.value
+  if value is None or isinstance(value, str | bool):
+    return value
+  if isinstance(value, date):
+    return value.isoformat()
+  if isinstance(value, tuple):
+    return [_json_value(item) for item in value]
+  raise TypeError(f"知识字段不支持JSON表示：{type(value).__name__}")
 
 
 def _filter_enum(value: StrEnum | None, expected: type[StrEnum]) -> None:
@@ -227,3 +242,130 @@ class Catalog:
         aspect is None or any(aspect in citation.aspects for citation in self.references(item.id))
       )
     )
+
+  def search_entries(
+    self,
+    text: str,
+    *,
+    concept_id: str | None = None,
+    variant_id: str | None = None,
+    source_id: str | None = None,
+    premise_status: PremiseStatus | None = None,
+    show_by_default: bool | None = None,
+    curation: CurationStatus | None = None,
+  ) -> tuple[KnowledgeEntry, ...]:
+    """在条目及其引用的引文中查子串，并对条目取筛选条件的交集。
+
+    搜索陈述、前提、例外、备选、限度、复核动作及引文的原文、定位、限度。
+    source_id筛选引用该来源的条目，正文仍在条目及其全部引文中匹配。
+    忽略查询首尾空白和大小写，不转换简繁；未命中返回空元组。
+    查询不是字符串时抛TypeError，去除首尾空白后为空时抛ValueError。
+    """
+    _text(text, "查询正文")
+    key = text.strip().casefold()
+    entries = self.filter_entries(
+      concept_id=concept_id,
+      variant_id=variant_id,
+      source_id=source_id,
+      premise_status=premise_status,
+      show_by_default=show_by_default,
+      curation=curation,
+    )
+    return tuple(
+      entry
+      for entry in entries
+      if any(
+        key in value.casefold()
+        for value in (
+          entry.statement,
+          *entry.premises,
+          *entry.exceptions,
+          *entry.alternatives,
+          entry.limits,
+          entry.recheck,
+          *(
+            value
+            for citation in self.references(entry.id)
+            for value in (citation.quote, citation.locator, citation.limits)
+          ),
+        )
+      )
+    )
+
+  def select_entries(self, entry_ids: Sequence[str]) -> Catalog:
+    """按条目标识取子目录，附齐所需引用；重复标识去重，空序列返回空目录。
+
+    保留原目录顺序。标识不是字符串时抛TypeError，格式非法时抛ValueError。
+    格式合法但不存在时抛KeyError；已存在但不是条目标识时抛ValueError。
+    """
+    identifiers = _freeze(entry_ids, str, "条目标识")
+    for identifier in identifiers:
+      self._require(identifier, KnowledgeEntry)
+    selected = set(identifiers)
+    return self._subset(tuple(entry for entry in self.entries if entry.id in selected))
+
+  def topic(self, concept_id: str) -> Catalog:
+    """读取一个概念及其条目、变体和出处，条目归属沿用filter_entries。
+
+    沿概念related_ids的出边补齐概念记录，不反查入边，也不据此扩展条目或变体。
+    所有记录保留原目录顺序。
+    """
+    concept = self._require(concept_id, Concept)
+    return self._subset(
+      self.filter_entries(concept_id=concept_id),
+      concepts=(concept,),
+      variants=self.list_variants(concept_id=concept_id),
+    )
+
+  def _subset(
+    self,
+    entries: tuple[KnowledgeEntry, ...],
+    *,
+    concepts: tuple[Concept, ...] = (),
+    variants: tuple[RuleVariant, ...] = (),
+  ) -> Catalog:
+    variant_ids = {variant.id for variant in variants}
+    variant_ids.update(identifier for entry in entries for identifier in entry.variant_ids)
+    selected_variants = tuple(item for item in self.variants if item.id in variant_ids)
+    concept_ids = {concept.id for concept in concepts}
+    concept_ids.update(identifier for entry in entries for identifier in entry.concept_ids)
+    concept_ids.update(
+      identifier
+      for variant in selected_variants
+      for identifier in (*variant.concept_ids, *variant.school_ids)
+    )
+    pending = list(concept_ids)
+    while pending:
+      for identifier in self._require(pending.pop(), Concept).related_ids:
+        if identifier not in concept_ids:
+          concept_ids.add(identifier)
+          pending.append(identifier)
+    citation_ids = {identifier for entry in entries for identifier in entry.citation_ids}
+    citations = tuple(item for item in self.citations if item.id in citation_ids)
+    source_ids = {citation.source_id for citation in citations}
+    return Catalog(
+      concepts=tuple(item for item in self.concepts if item.id in concept_ids),
+      variants=selected_variants,
+      sources=tuple(item for item in self.sources if item.id in source_ids),
+      citations=citations,
+      entries=entries,
+    )
+
+  def to_dict(self) -> dict[str, list[dict[str, object]]]:
+    """返回可由json.dumps编码的知识记录字典。
+
+    五组键为concepts、variants、sources、citations、entries。
+    每条记录的键名沿用Concept、KnowledgeEntry等记录类型的字段名。
+    枚举写值、日期写ISO日期、元组写数组；None与空值保留。
+    返回容器可独立修改，不影响目录。
+    """
+    return {
+      group.name: [
+        {field.name: _json_value(getattr(record, field.name)) for field in fields(record)}
+        for record in getattr(self, group.name)
+      ]
+      for group in fields(self)
+    }
+
+
+知识目录: TypeAlias = Catalog

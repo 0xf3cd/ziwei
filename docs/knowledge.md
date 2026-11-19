@@ -104,6 +104,101 @@ True
 每条引用的`locator`给出所见来源中的定位，`quote`保存短引；用`source_id`再读取来源记录、版本和核验状态。
 一般查询仍需处理多个匹配或多个规则；电子录文已核与纸本底本已核的区别见下方[来源状态](#状态需要分开表达)。
 
+### 阅读主题与检索正文
+
+`topic(concept_id)`把一个概念的条目、变体和出处放进新的`Catalog`。例如读取闰月主题，
+可同时看各条说法的前提、备选读法及原引：
+
+```{doctest}
+>>> topic = catalog.topic("concept.policy.leap-month")
+>>> pending = topic.get("entry.leap-month.month-stars-scope")
+>>> pending.alternatives
+('闰月例只约束命宫与身宫', '闰月例同时约束其他月系星')
+>>> topic.references(pending.id)[0].source_id
+'source.quanshu-wikisource'
+>>> matches = catalog.search_entries("六辛逢虎马")
+>>> [entry.id for entry in matches]
+['entry.star.kuiyue-quanshu-pending']
+>>> selected = catalog.select_entries([entry.id for entry in matches])
+>>> selected.entries == matches
+True
+```
+
+“六辛逢虎马”只在原引中命中。`search_entries()`搜索条目的陈述、前提、例外、备选读法、
+限度和复核动作，以及条目引用的引文原文、定位和限度；不搜索概念名或变体说明，名称仍用`find()`。
+查询忽略首尾空白与大小写，不转换简繁；无命中返回空元组。
+查询不是字符串时抛`TypeError`，去除首尾空白后为空时抛`ValueError`。
+筛选参数与`filter_entries()`相同，条件对条目取交集。`source_id`只要求条目引用该来源，
+命中文字仍可来自条目本身或它引用的其他来源。下例限定闰月主题和论坛来源，
+命中的原引却来自同一条目引用的《精成》网页；用`references()`可以读到它：
+
+```{doctest}
+>>> entry, = catalog.search_entries(
+...   "寅午戌月馬在申", concept_id="concept.policy.leap-month", source_id="source.zhongyi999-paimingpan",
+... )
+>>> entry.id
+'entry.tianma.month-branch'
+>>> reference, = (item for item in catalog.references(entry.id) if "寅午戌月馬在申" in item.quote)
+>>> reference.source_id, reference.quote
+('source.jingcheng-golla', '寅午戌月馬在申')
+```
+
+`topic()`的条目归属沿用`filter_entries()`，包含条目自身及其变体关联的概念与流派。
+返回值还带该概念的所有变体，包括尚无条目引用的变体。`select_entries()`只带选中条目引用的变体；
+重复条目标识去重，空序列返回空目录。两者均保留原目录顺序。
+标识不是字符串时抛`TypeError`，格式非法时抛`ValueError`，格式合法但不存在时抛`KeyError`。
+已存在但种类不符时抛`ValueError`：`topic()`要求概念标识，`select_entries()`要求条目标识。
+
+要比较同名变体，可先用`find("庚干四化")`取得三个变体，再分别用`filter_entries(variant_id=...)`取条目，
+最后用`select_entries()`读取各自的出处。
+
+为使结果中的标识都能在结果内解析，两者均带齐条目、变体、引文和来源的引用，
+并沿`Concept.related_ids`出边补齐概念记录。补入的概念不带来其他条目或变体，也不反查概念入边。
+例如闰月主题可带命宫概念，但不会因此收进所有命宫条目。
+
+### 给前端读取
+
+`to_dict()`返回`concepts`、`variants`、`sources`、`citations`、`entries`五组完整记录，
+以稳定ID相连。每条记录的键名与`Concept`、`KnowledgeEntry`等记录类型的字段名一致；
+枚举写既有值，日期写ISO日期，元组写数组，
+`None`、空字符串与空数组分别保留。返回容器可独立修改。
+
+下面沿用上节的闰月目录`topic`和待决条目`pending`：
+
+```{doctest}
+>>> import json
+>>> document = json.loads(json.dumps(topic.to_dict(), ensure_ascii=False))
+>>> entry = next(item for item in document["entries"] if item["id"] == pending.id)
+>>> entry["premise_status"], entry["show_by_default"]
+('前提待定', False)
+>>> entry["alternatives"] == list(pending.alternatives)
+True
+```
+
+显示时沿条目→引文→来源读取，并同时展示条件、例外和限度。`lineage_id`相同表示同路材料，
+不同也不能据此认定独立。例如月马条目引用的两页分属两个谱系标识，条目`limits`仍明确按一路文本计。
+输出不计算独立来源数、不判规则冲突或命盘适用性。这是知识展示数据，与[命盘结果JSON](result.md)分别使用；
+当前没有知识JSON导入接口。
+
+### 中文入口
+
+用`from ziwei.knowledge import 加载目录`加载目录，目录类型也可从`ziwei.knowledge.catalog`导入`知识目录`。
+下列中文名与英文名指向同一对象，接受相同参数；`doushu.knowledge`及其对应子模块同样可用。
+
+| 英文名 | 中文名 |
+|---|---|
+| `load_catalog` | `加载目录` |
+| `Catalog` | `知识目录` |
+
+目录方法使用英文名，如`topic()`、`search_entries()`和`to_dict()`。
+
+### 只有知识的星曜
+
+知识概念可以多于已实现星曜。`catalog.topic("concept.star.tiankong")`可读取“年支天空”的
+子年丑宫例，当前没有对应`Star`成员或安星实现。完整名称查询用“年支天空”，
+不将无上下文的“天空”当成全局别名；与时系地空的称名区别见
+[`entry.star.tiankong-year`](knowledge-reference.md#entry.star.tiankong-year)的`limits`。
+
 ### 按星曜和来源查解释
 
 《紫微斗數全書》卷一的《诸星问答论》提供十四主星各一条星性描述（书中如何称述星曜）和一条带条件解释，共28条；
@@ -189,7 +284,7 @@ True
 来源谱系的归组标识另用`lineage.`前缀。
 
 已有标识不因显示名称、简繁字形、Python成员名或别名变化而改变，也不按列表序号生成。
-星曜概念的标识由`Star.concept_id`显式声明。
+已实现星曜的概念标识由`Star.concept_id`显式声明；知识专有概念在目录中声明。
 [安星结果](stars.md)中的`StarPlacement.rule_id`保存所用规则的标识，与知识目录中相应规则变体的标识一致。
 修改解释措辞不另建身份；新增含义不同的概念或规则时分配新的标识，不把旧标识改用于另一种含义。
 

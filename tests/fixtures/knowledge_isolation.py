@@ -23,6 +23,7 @@ class Block(MetaPathFinder):
 
 sys.meta_path.insert(0, Block())
 from dataclasses import replace
+import json
 from ziwei.config import DayRollover
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import Concept, ConceptKind
@@ -30,6 +31,18 @@ from ziwei.knowledge.model import Concept, ConceptKind
 c = load_catalog()
 if len(c.find("庚干四化")) != 3 or not c.references("entry.tianma.year-branch"):
   raise RuntimeError("knowledge lookup did not run")
+topic = c.topic("concept.star.tiankong")
+if [entry.id for entry in topic.search_entries("前一位丑宫即安天空")] != [
+  "entry.star.tiankong-year"
+]:
+  raise RuntimeError("independent topic or quote search did not run")
+if (
+  json.loads(json.dumps(c.select_entries([topic.entries[0].id]).to_dict()))["entries"][0][
+    "premises"
+  ]
+  == []
+):
+  raise RuntimeError("knowledge JSON lost its premises")
 cases = [
   lambda: Concept(id="concept.x", name="x", kind="星曜"),
   lambda: Concept(id="not an id", name="x", kind=ConceptKind.星曜),
@@ -49,6 +62,11 @@ cases = [
     ),
   ),
   lambda: replace(c.citations[0], layer="原文"),
+  lambda: c.topic("source.quanshu-wikisource"),
+  lambda: c.search_entries("  "),
+  lambda: c.search_entries("闰月", show_by_default=1),
+  lambda: c.select_entries("entry.star.tiankong-year"),
+  lambda: c.select_entries(["concept.star.tiankong"]),
 ]
 for action in cases:
   try:

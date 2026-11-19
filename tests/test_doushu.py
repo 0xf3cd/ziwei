@@ -78,7 +78,7 @@ def test_public_inventory_matches_documented_contract() -> None:
   actual = {module: set(names) for module, names in doushu.public_exports(ROOT).items()}
   documented = {module: set(names) for module, names in doushu.documented_exports(ROOT).items()}
   assert actual == documented
-  assert actual["ziwei.knowledge"] == {"load_catalog"}
+  assert actual["ziwei.knowledge"] == {"load_catalog", "加载目录"}
   assert {"Gender", "LunarBirthRecord", "BirthRecord"} <= actual["ziwei.birth"]
   sources = doushu.forwarding_sources(ROOT)
   assert "doushu/knowledge/data.py" not in sources
@@ -551,6 +551,8 @@ TYPING_RESULTS = [
   (1, "error [call-arg]"),
   (1, "error [call-arg]"),
   (1, "error [misc]"),
+  (1, "error [arg-type]"),
+  (1, "error [arg-type]"),
 ]
 
 

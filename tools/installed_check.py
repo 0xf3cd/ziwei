@@ -494,6 +494,16 @@ def check_knowledge() -> None:
   catalog = load_catalog()
   if not catalog.find("天馬") or len(catalog.find("庚干四化")) != 3:
     raise ValueError("Installed knowledge corpus or aliases are incomplete")
+  topic = catalog.topic("concept.star.tiankong")
+  matches = topic.search_entries("前一位丑宫即安天空")
+  if [entry.id for entry in matches] != ["entry.star.tiankong-year"]:
+    raise ValueError("Installed independent knowledge topic or quote search failed")
+  document = json.loads(json.dumps(catalog.select_entries([matches[0].id]).to_dict()))
+  if (
+    document["citations"][0]["quote"] != "前一位丑宫即安天空"
+    or not document["entries"][0]["premises"]
+  ):
+    raise ValueError("Installed knowledge JSON lost its citation or premises")
   for choice in (False, True):
     expected = tuple(item for item in catalog.entries if item.show_by_default is choice)
     if catalog.filter_entries(show_by_default=choice) != expected:

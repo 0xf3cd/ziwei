@@ -121,10 +121,14 @@ def test_rule_display_names_do_not_change_position_identities(
 
 def test_every_star_and_rule_is_queryable_without_birth() -> None:
   catalog = load_catalog()
-  assert len(catalog.list_concepts(kind=ConceptKind.星曜)) == len(stars.Star)
+  implemented_ids = {star.concept_id for star in stars.Star}
+  assert {item.id for item in catalog.list_concepts(kind=ConceptKind.星曜)} - implemented_ids == {
+    "concept.star.tiankong",
+  }
   for star in stars.Star:
     concept = catalog.get(star.concept_id)
     assert isinstance(concept, Concept)
+    assert concept.kind is ConceptKind.星曜
     assert concept.name == star.value
     assert concept in catalog.find(star.value)
     assert catalog.references(star.concept_id)
@@ -145,6 +149,26 @@ def test_every_star_and_rule_is_queryable_without_birth() -> None:
 def test_rule_meaning_does_not_include_configuration_defaults() -> None:
   for rule in stars.STAR_RULES:
     assert all("默认" not in text for text in (rule.definition, rule.scope, *rule.conditions))
+
+
+@pytest.mark.parametrize("defect", ["missing", "kind", "name", "extra"])
+def test_star_mapping_check_rejects_defects(monkeypatch: pytest.MonkeyPatch, defect: str) -> None:
+  from ziwei.knowledge import data
+
+  concepts = data.CONCEPTS
+  if defect == "missing":
+    concepts = tuple(item for item in concepts if item.id != stars.Star.紫微.concept_id)
+  elif defect == "extra":
+    concepts = (*concepts, Concept(id="concept.star.extra", name="额外星", kind=ConceptKind.星曜))
+  else:
+    changes: dict[str, Any] = {"kind": ConceptKind.宫位} if defect == "kind" else {"name": "错名"}
+    concepts = tuple(
+      replace(item, **changes) if item.id == stars.Star.紫微.concept_id else item
+      for item in concepts
+    )
+  monkeypatch.setattr(data, "CONCEPTS", concepts)
+  with pytest.raises((AssertionError, KeyError)):
+    test_every_star_and_rule_is_queryable_without_birth()
 
 
 @pytest.mark.parametrize(
@@ -266,6 +290,12 @@ def test_pending_quanshu_is_not_executed_and_modern_evidence_is_not_upgraded() -
   assert "六辛逢虎马" in quotes and "丙丁猪狗位" in quotes and "壬癸免蛇藏" in quotes
   assert "天空" not in {item.name for item in catalog.list_concepts(kind=ConceptKind.星曜)}
   assert catalog.find("天空") == ()
+  (tiankong,) = catalog.find("年支天空")
+  assert catalog.find("年支天空星") == (tiankong,)
+  assert tiankong.id == "concept.star.tiankong"
+  assert tiankong.id not in {star.concept_id for star in stars.Star}
+  assert catalog.list_variants(concept_id=tiankong.id) == ()
+  assert catalog.references(tiankong.id)[0].quote == "前一位丑宫即安天空"
   old = catalog.get("source.zhongzhou-wangtingzhi")
   new = catalog.get("source.zhongzhou-5shubook")
   assert isinstance(old, Source) and isinstance(new, Source)
