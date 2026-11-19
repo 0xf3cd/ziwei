@@ -3190,6 +3190,7 @@ ENTRIES = (
     premises=(
       "年度语境：命逢流年昌曲、大小二限逢之、三合拱照太阳及又照流年禄。",
       "小限太岁逢魁钺、左右、台座、日月、科权禄马三方拱照；原文另要求此数星俱全。",
+      "原文另限定以流年科甲为主。",
       "命限值之而其余吉曜二三拱照是另一个说法，不能与俱全条件合并。",
     ),
     premise_status=PremiseStatus.待定,
@@ -3294,7 +3295,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.lucun-nature",
-    statement="《诸星问答论》称禄存为北斗第三星、真人之宿，并说主贵爵、掌寿基。",
+    statement="《诸星问答论》禄存节称禄存为北斗第三星、真人之宿，并说主贵爵、掌寿基。",
     concept_ids=(Star.禄存.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.lucun-nature",),
@@ -3338,7 +3339,7 @@ ENTRIES = (
   KnowledgeEntry(
     id="entry.interpretation.tianma-erxian",
     statement="《诸星问答论》天马节说大小二限临之、更遇禄存紫府及流昌必利，"
-    "随后列多种同宫称名，并以以上犯此数者俱主灾病收束。",
+    "随后列多种同宫称名，末句说以上犯此数者俱主灾病。",
     concept_ids=(Star.天马.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.tianma-erxian",),
@@ -3346,9 +3347,9 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("同段将禄马交驰与折鞭马连称，末句又说以上犯此数者俱主灾病，流年值之依此断。",),
+    exceptions=("末句说以上犯此数者俱主灾病，流年值之依此断。",),
     limits="流昌身份与末句指代范围未裁；不把有利句脱离后文，也不校改禄马交驰又曰折鞭马。"
-    "本条不绑定本命文昌位置或年度安星规则。",
+    "同段将禄马交驰与折鞭马连称。本条不绑定本命文昌位置或年度安星规则。",
     recheck="对照天马节纸本，查流昌同书用例及注释以核是否专指年度文昌、与大小二限如何衔接；"
     "核禄马交驰、折鞭马连称及以上犯此数者所指。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
@@ -3377,8 +3378,8 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("后文另论小限、大限及女人吉凑、杀凑，不以本句覆盖那些条件。",),
-    limits="不把相逢补成同宫，不将本段强加给某一生年或年度四化表。",
+    limits="不把相逢补成同宫，不将本段强加给某一生年或年度四化表。"
+    "后文另论小限、大限及女人吉凑、杀凑，不以本句覆盖那些条件。",
     recheck="核化禄节纸本及注释，确认身命官禄的并列范围、科权相逢与后续限运句的关系。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
   ),
@@ -3428,8 +3429,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.huake-quanlu",
-    statement="《诸星问答论》化科节在守身命、权禄相逢时论宰臣之贵，"
-    "如逢恶曜又称文章秀士、群英师范。",
+    statement="《诸星问答论》化科节在守身命、权禄相逢时论宰臣之贵。",
     concept_ids=("concept.sihua.huake",),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.huake-quanlu",),
@@ -3437,8 +3437,9 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("如逢恶曜，原文另有文章秀士之说；女命及虽四杀冲破段不与本条合并。",),
-    limits="末句与科星拱照冲同论的指代未裁，不据此给本条添加同宫或拱照判据。",
+    exceptions=("如逢恶曜，原文仍称文章秀士、群英师范。",),
+    limits="女命及虽四杀冲破段不与本条合并。"
+    "末句与科星拱照冲同论的指代未裁，不据此给本条添加同宫或拱照判据。",
     recheck="核化科节纸本分段及注释，确认相逢、如逢恶曜与末句科星拱照冲的适用关系。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
   ),
@@ -3458,8 +3459,8 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.huaji-sisha",
-    statement="《诸星问答论》化忌节在会紫府昌曲左右科权禄、与忌同宫又兼四杀共处时，"
-    "说即发财亦不佳、功名亦不成就。",
+    statement="《诸星问答论》化忌节说，若会紫府、昌曲、左右、科权禄，与忌同宫又兼四杀共处，"
+    "即发财亦不佳、功名亦不成就。",
     concept_ids=("concept.sihua.huaji",),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.huaji-sisha",),
@@ -3467,7 +3468,7 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("紧接的如单逢四杀、耗使、劫空为另一组条件，不删单逢而并入本条。",),
+    exceptions=("紧接另有如单逢四杀、耗使、劫空的一组条件，原文说主奔波带疾。",),
     limits="不将本句缩成化忌出现即不佳，也不把四杀共处补成已实现的命盘匹配条件。",
     recheck="核化忌节纸本与注释，确认如会、同宫又兼四杀及单逢两组条件的边界。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
@@ -3488,7 +3489,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.qingyang-rumiao",
-    statement="《诸星问答论》擎羊节对女人入庙加吉论上局，对杀耗冲破论刑克下局。",
+    statement="《诸星问答论》擎羊节对女人入庙加吉论上局。",
     concept_ids=(Star.擎羊.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.qingyang-rumiao",),
@@ -3496,7 +3497,7 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("原句紧接杀耗冲破多主刑克下局，不能只留入庙上局。",),
+    exceptions=("杀耗冲破时，原文说多主刑克下局。",),
     limits="不把本节四墓生人不忌或火忌冲破的忌字绑定化忌，也不以主星亮度表代填擎羊庙位。",
     recheck="核擎羊节纸本的女人段、入庙判据与杀耗称名，并对读不忌、火忌两处句法。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
@@ -3517,7 +3518,7 @@ ENTRIES = (
   ),
   KnowledgeEntry(
     id="entry.interpretation.tuoluo-rumiao",
-    statement="《诸星问答论》陀罗节分别说辰戌丑未生人、在庙、文人武人及陷地加杀的情形。",
+    statement="《诸星问答论》陀罗节说辰戌丑未生人为福、在庙财官论；文人不耐久，武人横发高迁。",
     concept_ids=(Star.陀罗.concept_id,),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.tuoluo-rumiao",),
@@ -3525,14 +3526,15 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("文人不耐久与武人横发高迁分述；后文若陷地加杀又说刑克招凶、二姓延生及女人不利。",),
+    exceptions=("若陷地加杀，原文又说刑克招凶、二姓延生及女人不利。",),
     limits="不把生人直接限定为生年支，不为陀罗补亮度表，也不将历史人物分类用于自动判盘。",
     recheck="核陀罗节纸本及注释，确认四墓生人、在庙与文武分述的连接，查陷地加杀的范围。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.interpretation.yangtuo-general",
-    statement="《诸星问答论》羊陀总论说怕临兄弟、田宅、父母，并接忌三合临身命、合昌曲左右的条件。",
+    statement="《诸星问答论》羊陀二星总论说怕临兄弟、田宅、父母三宫；"
+    "随后说忌三合临身命，合昌曲、左右有暗痣、眼痣。",
     concept_ids=(Star.擎羊.concept_id, Star.陀罗.concept_id),
     variant_ids=(),
     citation_ids=("citation.quanshu-juan1.yangtuo-general",),
@@ -3540,9 +3542,9 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("同篇随后还列日月、贪狼、火铃等组合及二限句，本条不概括整篇。",),
     limits="前文有羊化气曰刑、陀化气曰忌，但各句所指及关系仍待核；"
-    "忌不自动关联化忌，提及星不变成条目主体。",
+    "忌不自动关联化忌，提及星不变成条目主体。"
+    "同篇随后还列日月、贪狼、火铃等组合及二限句，本条不概括整篇。",
     recheck="核羊陀总论纸本断句与注释，查刑、忌、暗、权、耗、贪、杀等简称的同书用例，"
     "确认三宫及三合句分别作用于何星。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
@@ -3571,7 +3573,7 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("相邻下一行限定三方无杀破、中年后始兴，不删年龄与无杀破条件。",),
+    exceptions=("相邻下一行限定三方无杀破、中年后始兴。",),
     limits="不将诗句截为火贪相会即贵，不从本库主星亮度推火星旺地或判定中年年龄。",
     recheck="核火星歌诀纸本跨行分句及注释，确认旺地所指、三方无杀破与中年后作用范围。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
@@ -3593,7 +3595,7 @@ ENTRIES = (
   KnowledgeEntry(
     id="entry.interpretation.lingxing-tanlang",
     statement="《诸星问答论》铃星歌曰前段说贪狼会、庙地财官贵与陷地孤贫，"
-    "后段又说遇贪狼官禄不宁及居旺地富贵。",
+    "后段又说遇贪狼官禄不宁、若逢居旺地富贵不可论。",
     concept_ids=(Star.铃星.concept_id,),
     variant_ids=(),
     citation_ids=(
@@ -3604,14 +3606,17 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("前段另说羊陀凑合其刑大不清；后段遇贪狼不宁，不能只选前段有利说法。",),
-    limits="两个不连续段各有引文；未用旺地解释消除两段差别，也不生成铃星亮度或铃贪格局。",
-    recheck="核铃星歌诀纸本及注释，比较贪狼会与或遇贪狼宿两段，确认庙陷、旺地与羊陀句的范围。",
+    exceptions=("前段另说羊陀凑合其刑大不清；后段遇贪狼不宁。",),
+    limits="两个不连续段各有引文；未用旺地解释消除两段差别。"
+    "富贵不可论保留原称，其语义待核；不生成铃星亮度或铃贪格局。",
+    recheck="核铃星歌诀纸本及注释，比较贪狼会与或遇贪狼宿两段，"
+    "确认庙陷、旺地与羊陀句的范围及富贵不可论的含义。",
     tracking_url=_INTERPRETATION_RESEARCH_URL,
   ),
   KnowledgeEntry(
     id="entry.interpretation.yangtuohuoling-general",
-    statement="《诸星问答论》四星总论提武曲并贪狼，又在疾厄若逢之的条件下作不利称述。",
+    statement="《诸星问答论》羊陀火铃四星总论先说武曲并贪狼、一世招凶恶，"
+    "再说疾厄若逢之、四时不离着。",
     concept_ids=(
       Star.擎羊.concept_id,
       Star.陀罗.concept_id,
@@ -3624,7 +3629,7 @@ ENTRIES = (
     premise_status=PremiseStatus.待定,
     show_by_default=False,
     curation=CurationStatus.已整理,
-    exceptions=("末句另说只宜山寺僧、金谷常安乐，不以不利分句代替整句。",),
+    exceptions=("末句另说只宜山寺僧、金谷常安乐。",),
     limits="并与逢之的对象、四星是否须同时出现未裁，不拆为四条单星结论；"
     "武曲、贪狼为提及对象，不挂为本条主体，前文刑忌也不绑定化忌。",
     recheck="核四星总论纸本与注释，确认标题主体、武曲并贪狼与疾厄逢之的指代，"

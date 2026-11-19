@@ -1,4 +1,4 @@
-"""卷一十八节的原引、主体、必要条件与主题消费。"""
+"""核对卷一十八节的原引、主体、条目中须保留的语义片段与主题消费。"""
 
 import json
 import subprocess
@@ -80,7 +80,7 @@ def _check_entries(catalog: Catalog, reference: dict[str, Any]) -> None:
     assert entry.statement and entry.premises and entry.limits and entry.recheck
     assert entry.recheck != "以后再研究。"
     assert entry.tracking_url == "https://github.com/0xf3cd/ziwei/issues/11"
-    # 只核必要片段；整段含义与措辞仍需对照上下文审阅。
+    assert row["required"]["statement"] and row["required"]["premises"]
     for field, fragments in row["required"].items():
       value = getattr(entry, field)
       text = "\n".join(value) if isinstance(value, tuple) else value
@@ -92,7 +92,7 @@ def _check_entries(catalog: Catalog, reference: dict[str, Any]) -> None:
       assert citation.layer is TextLayer.原文
       assert citation.aspects == (EvidenceAspect.解释,)
       assert citation.quote == expected["quote"] and citation.quote != entry.statement
-      assert citation.locator.startswith("诸星问答论/" + row["section"] + "/")
+      assert citation.locator == "诸星问答论/" + row["section"] + "/" + expected["part"]
       assert citation.limits
       spans = expected["spans"]
       assert all(0 <= s["start"] < s["end"] for s in spans)
@@ -207,12 +207,18 @@ def test_new_topics_keep_annual_and_sihua_meanings_separate() -> None:
     ("youbi-zifu", "exceptions", "下局", "上局"),
     ("kuiyue-xianbu", "exceptions", "四十以后", "任何年龄"),
     ("lucun-dushou", "premises", "无吉化", "有吉化"),
-    ("tianma-erxian", "exceptions", "折鞭马", "吉马"),
+    ("tianma-erxian", "limits", "折鞭马", "吉马"),
     ("huoxing-tanlang", "premises", "三方无杀破", "无附加条件"),
     ("huoxing-tanlang", "exceptions", "中年后始兴", "少年即兴"),
     ("lingxing-tanlang", "exceptions", "贪狼不宁", "贪狼必吉"),
     ("huaji-sisha", "premises", "同宫又兼四杀共处", "单逢化忌"),
     ("liunian-changqu", "alternatives", "待核", "已定"),
+    ("hualu-nature", "statement", "化禄节", "化忌节"),
+    ("wenchang-nature", "premises", "文昌节答曰", "无关的非空文字"),
+    ("liunian-changqu", "premises", "以流年科甲为主", "无须流年科甲"),
+    ("yangtuo-general", "statement", "暗痣、眼痣", "其他结果"),
+    ("yangtuohuoling-general", "statement", "一世招凶恶", "一世无凶恶"),
+    ("lingxing-tanlang", "statement", "富贵不可论", "富贵"),
   ],
 )
 def test_check_rejects_misbinding_and_lost_conditions(
@@ -225,6 +231,9 @@ def test_check_rejects_misbinding_and_lost_conditions(
   value = getattr(entry, field)
   if field == "concept_ids":
     changed = value[:-1] if old == "drop" else (*value, new)
+  elif isinstance(value, str):
+    assert old in value
+    changed = value.replace(old, new)
   else:
     assert any(old in text for text in value)
     changed = tuple(text.replace(old, new) for text in value)
@@ -249,6 +258,7 @@ def test_check_rejects_misbinding_and_lost_conditions(
     "status",
     "missing",
     "second-quote",
+    "locator",
   ],
 )
 def test_check_rejects_source_and_record_damage(reference: dict[str, Any], defect: str) -> None:
@@ -256,7 +266,17 @@ def test_check_rejects_source_and_record_damage(reference: dict[str, Any], defec
   _check_entries(catalog, reference)
   citation = catalog.get("citation.quanshu-juan1.huoxing-tanlang")
   assert isinstance(citation, Citation)
-  if defect in ("character", "newline", "source", "layer"):
+  if defect == "locator":
+    original = catalog.get("citation.quanshu-juan1.wenchang-nature")
+    assert isinstance(original, Citation) and original.locator.endswith("答曰首分句")
+    catalog = replace(
+      catalog,
+      citations=tuple(
+        replace(c, locator=c.locator.replace("答曰首分句", "答曰末句")) if c == original else c
+        for c in catalog.citations
+      ),
+    )
+  elif defect in ("character", "newline", "source", "layer"):
     citation_changes: dict[str, dict[str, Any]] = {
       "character": {"quote": citation.quote.replace("贪", "貪")},
       "newline": {"quote": citation.quote.replace("\n\t", "")},

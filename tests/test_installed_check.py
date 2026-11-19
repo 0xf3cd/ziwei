@@ -800,7 +800,7 @@ def test_interpretation_consumer_rejects_changed_corpus(
 
 
 @pytest.mark.parametrize("suffix", ["liunian-changqu", "hualu-kequan", "yangtuohuoling-general"])
-@pytest.mark.parametrize("defect", ["concept", "quote", "exception"])
+@pytest.mark.parametrize("defect", ["concept", "quote", "detail"])
 def test_new_interpretation_consumer_rejects_damage(
   suffix: str, defect: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -817,7 +817,11 @@ def test_new_interpretation_consumer_rejects_damage(
     )
   else:
     changes: dict[str, Any] = (
-      {"concept_ids": ("concept.star.tianji",)} if defect == "concept" else {"exceptions": ()}
+      {"concept_ids": ("concept.star.tianji",)}
+      if defect == "concept"
+      else {"limits": "范围说明已丢失"}
+      if suffix == "hualu-kequan"
+      else {"exceptions": ()}
     )
     catalog = replace(
       catalog,

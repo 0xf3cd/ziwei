@@ -556,9 +556,23 @@ def check_knowledge() -> None:
       or citations[0].aspects != (EvidenceAspect.解释,)
     ):
       raise ValueError("Installed knowledge interpretation citation changed")
-  for name, query, suffix, concept_ids in (
-    ("流年昌曲", "不能耐久", "liunian-changqu", ("concept.liunian.changqu",)),
-    ("化祿", "科权相逢必作大臣之职", "hualu-kequan", ("concept.sihua.hualu",)),
+  for name, query, suffix, concept_ids, detail_field, fragment in (
+    (
+      "流年昌曲",
+      "不能耐久",
+      "liunian-changqu",
+      ("concept.liunian.changqu",),
+      "exceptions",
+      "不能耐久",
+    ),
+    (
+      "化祿",
+      "科权相逢必作大臣之职",
+      "hualu-kequan",
+      ("concept.sihua.hualu",),
+      "limits",
+      "小限、大限",
+    ),
     (
       "火星",
       "金谷常安乐",
@@ -569,6 +583,8 @@ def check_knowledge() -> None:
         "concept.star.huoxing",
         "concept.star.lingxing",
       ),
+      "exceptions",
+      "山寺僧",
     ),
   ):
     (concept,) = catalog.find(name)
@@ -577,10 +593,12 @@ def check_knowledge() -> None:
       raise ValueError("Installed interpretation topic or quote search changed")
     document = json.loads(json.dumps(catalog.select_entries([matches[0].id]).to_dict()))
     entry_data = document["entries"][0]
+    detail = entry_data[detail_field]
+    detail_text = " ".join(detail) if isinstance(detail, list) else detail
     if (
       entry_data["concept_ids"] != list(concept_ids)
       or not entry_data["premises"]
-      or not entry_data["exceptions"]
+      or fragment not in detail_text
       or entry_data["premise_status"] != PremiseStatus.待定.value
       or query not in document["citations"][0]["quote"]
     ):
