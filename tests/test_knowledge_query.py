@@ -367,14 +367,7 @@ def test_json_consumer_rejects_wrong_bindings_and_lost_context(defect: str) -> N
 def test_chinese_names_are_original_objects() -> None:
   assert 加载目录 is load_catalog
   assert 知识目录 is Catalog
-  for chinese, english in (
-    ("读取主题", "topic"),
-    ("检索条目", "search_entries"),
-    ("选取条目", "select_entries"),
-    ("转为字典", "to_dict"),
-  ):
-    assert getattr(知识目录, chinese) is getattr(Catalog, english)
   catalog = 加载目录()
-  result = catalog.读取主题("concept.star.tiankong")
-  assert result.检索条目("子年") == result.entries
-  assert result.转为字典()["entries"][0]["id"] == "entry.star.tiankong-year"
+  result = catalog.topic("concept.star.tiankong")
+  assert result.search_entries("子年") == result.entries
+  assert result.to_dict()["entries"][0]["id"] == "entry.star.tiankong-year"

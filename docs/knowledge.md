@@ -189,12 +189,8 @@ True
 |---|---|
 | `load_catalog` | `加载目录` |
 | `Catalog` | `知识目录` |
-| `Catalog.topic` | `知识目录.读取主题` |
-| `Catalog.search_entries` | `知识目录.检索条目` |
-| `Catalog.select_entries` | `知识目录.选取条目` |
-| `Catalog.to_dict` | `知识目录.转为字典` |
 
-其余目录方法使用英文名，如`find()`、`get()`和`filter_entries()`。
+目录方法使用英文名，如`topic()`、`search_entries()`和`to_dict()`。
 
 ### 只有知识的星曜
 

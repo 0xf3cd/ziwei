@@ -31,11 +31,15 @@ from ziwei.knowledge.model import Concept, ConceptKind
 c = load_catalog()
 if len(c.find("庚干四化")) != 3 or not c.references("entry.tianma.year-branch"):
   raise RuntimeError("knowledge lookup did not run")
-topic = c.读取主题("concept.star.tiankong")
-if [entry.id for entry in topic.检索条目("前一位丑宫即安天空")] != ["entry.star.tiankong-year"]:
+topic = c.topic("concept.star.tiankong")
+if [entry.id for entry in topic.search_entries("前一位丑宫即安天空")] != [
+  "entry.star.tiankong-year"
+]:
   raise RuntimeError("independent topic or quote search did not run")
 if (
-  json.loads(json.dumps(c.选取条目([topic.entries[0].id]).转为字典()))["entries"][0]["premises"]
+  json.loads(json.dumps(c.select_entries([topic.entries[0].id]).to_dict()))["entries"][0][
+    "premises"
+  ]
   == []
 ):
   raise RuntimeError("knowledge JSON lost its premises")

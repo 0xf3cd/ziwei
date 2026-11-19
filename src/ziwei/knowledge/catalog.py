@@ -367,10 +367,5 @@ class Catalog:
       for group in fields(self)
     }
 
-  检索条目 = search_entries
-  选取条目 = select_entries
-  读取主题 = topic
-  转为字典 = to_dict
-
 
 知识目录: TypeAlias = Catalog
