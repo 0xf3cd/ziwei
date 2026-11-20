@@ -799,6 +799,39 @@ def test_interpretation_consumer_rejects_changed_corpus(
     installed_check.check_knowledge()
 
 
+@pytest.mark.parametrize("suffix", ["liunian-changqu", "hualu-kequan", "yangtuohuoling-general"])
+@pytest.mark.parametrize("defect", ["concept", "quote", "detail"])
+def test_new_interpretation_consumer_rejects_damage(
+  suffix: str, defect: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+  installed_check.check_knowledge()
+  catalog = load_catalog()
+  identifier = "entry.interpretation." + suffix
+  if defect == "quote":
+    catalog = replace(
+      catalog,
+      citations=tuple(
+        replace(c, quote="原引已丢失") if c.id == "citation.quanshu-juan1." + suffix else c
+        for c in catalog.citations
+      ),
+    )
+  else:
+    changes: dict[str, Any] = (
+      {"concept_ids": ("concept.star.tianji",)}
+      if defect == "concept"
+      else {"limits": "范围说明已丢失"}
+      if suffix == "hualu-kequan"
+      else {"exceptions": ()}
+    )
+    catalog = replace(
+      catalog,
+      entries=tuple(replace(e, **changes) if e.id == identifier else e for e in catalog.entries),
+    )
+  monkeypatch.setattr(installed_check, "load_catalog", lambda: catalog)
+  with pytest.raises(ValueError, match="interpretation"):
+    installed_check.check_knowledge()
+
+
 @pytest.mark.parametrize("choice", [False, True])
 def test_knowledge_consumer_rejects_wrong_display_filter(
   choice: bool, monkeypatch: pytest.MonkeyPatch

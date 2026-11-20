@@ -199,10 +199,13 @@ True
 不将无上下文的“天空”当成全局别名；与时系地空的称名区别见
 [`entry.star.tiankong-year`](knowledge-reference.md#entry.star.tiankong-year)的`limits`。
 
+(knowledge-interpretations)=
 ### 按星曜和来源查解释
 
 《紫微斗數全書》卷一的《诸星问答论》提供十四主星各一条星性描述（书中如何称述星曜）和一条带条件解释，共28条；
-另有天空地劫、天伤天使、天刑、天姚、天哭天虚五节各两条，共38条。
+另有天空地劫、天伤天使、天刑、天姚、天哭天虚五节各两条，两组合计38条。
+昌曲、流年昌曲、辅弼魁钺、禄存、天马、四化、羊陀火铃及两篇总论等十八节再提供33条，
+目录现有71条选定解释。
 用概念与来源一起筛选，可以将这本书的解释和已有安星条目分开读取。
 当前目录的解释来源只有这一卷，因此示例将来源结果解包为`source`：
 
@@ -243,10 +246,13 @@ True
 False
 ```
 
-`statement`是仓内归纳，`references()`给出逐字原引，
-`premises`、`exceptions`与`limits`分别保存条件、例外和解释范围。这些记录说明书中如何称述星曜，
-查询不会检查某张命盘是否满足条件。上例的“已明确”只说明条目前提表达明确，武曲条目仍不默认展示。
-全部38条均可检索，但不进入默认展示；
+`statement`是仓内归纳，可以并列概括原文的几种说法；`exceptions`保存对这些说法的转折或限定。
+读取时应结合`premises`与`exceptions`，用`references()`查看逐字原引，`limits`说明解释范围。
+星性条目的`premises`通常说明收录了原文的哪一部分；带条件解释则记录条件、条件之间的区别和待核范围。
+条目中的“答曰”引出对节题问句的回答，“歌曰”引出歌诀。
+这些记录说明书中对星曜、四化含义与年度条件的说法，查询不会检查某张命盘是否满足条件。
+上例的“已明确”只说明条目前提表达明确，武曲条目仍不默认展示。
+全部71条均可检索，但不进入默认展示；
 展示资格与出处、前提状态的区别见[状态说明](#状态需要分开表达)。
 
 成对论述共用一条记录，关联两颗星。例如，天哭和天虚读到相同的两条解释：
@@ -266,6 +272,50 @@ True
 书中“天空地劫”一节的解释关联本库时系地空、地劫；这个局部文献称名不成为全局星名别名。
 用`catalog.get("entry.interpretation.kongjie-nature")`及`references()`可查同书卷二安诀和年支天空的区别。
 查询仍不检查某张盘是否符合身命、二限、入庙或遇禄等条件，也不补全杂曜亮度。
+
+### 读取四化、年度与共享总论
+
+四化的含义分别用“化禄”“化权”“化科”“化忌”查阅。下面按“化禄”取得化禄概念，
+再读取它的两条解释：
+
+```{doctest}
+>>> hualu, = catalog.find("化禄")
+>>> hualu.id
+'concept.sihua.hualu'
+>>> meaning = catalog.topic(hualu.id)
+>>> [entry.id for entry in meaning.entries]
+['entry.interpretation.hualu-nature', 'entry.interpretation.hualu-kequan']
+>>> meaning.variants
+()
+```
+
+“化祿”和“化權”是显式繁体别名，同样可用。要换读另一个四化，将`find()`的名字换成“化权”等即可。
+化禄含义没有规则变体，所以`meaning.variants`为空。
+查四化表时，可用`catalog.topic("concept.sihua.shengnian")`读取生年四化主题，
+或用`catalog.topic("concept.sihua.liunian")`读取流年四化主题。
+按年干查询哪些星化禄的用法见[四化与大限](sihua-decades.md)和[流年](liunian.md)。
+
+“流年昌曲”也有独立主题，可在主题内检索原引并读取对应例外：
+
+```{doctest}
+>>> annual = catalog.topic("concept.liunian.changqu")
+>>> entry, = annual.search_entries("不能耐久")
+>>> entry.id
+'entry.interpretation.liunian-changqu'
+>>> entry.exceptions
+('末句说二星在巳酉得地不富即贵，但不能耐久。',)
+>>> entry.premise_status is PremiseStatus.待定
+True
+```
+
+魁钺合节的两条解释同时关联天魁与天钺；羊陀二星、羊陀火铃四星两篇总论各用一条记录，
+关联标题中的星曜。从火星主题读取四星总论，仍会保留全部四个主体：
+
+```{doctest}
+>>> shared = catalog.topic("concept.star.huoxing").get("entry.interpretation.yangtuohuoling-general")
+>>> [catalog.get(identifier).name for identifier in shared.concept_ids]
+['擎羊', '陀罗', '火星', '铃星']
+```
 
 来源、文本层次与复核动作见[卷一来源记录](knowledge-reference.md#source.quanshu-juan1-wikisource)
 及其关联条目；其他星曜的解释覆盖由[#77](https://github.com/0xf3cd/ziwei/issues/77)追踪。

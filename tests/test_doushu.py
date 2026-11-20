@@ -393,6 +393,9 @@ def test_runtime_consumer_queries_every_interpreted_star(
     "地劫",
     "天刑",
     "天姚",
+    "流年昌曲",
+    "化祿",
+    "火星",
   }
 
 
@@ -414,6 +417,10 @@ def test_runtime_consumer_queries_every_interpreted_star(
     ("knowledge-query", "knowledge query differs"),
     ("interpretation-missing", "star interpretation query differs"),
     ("interpretation-display", "star interpretation query differs"),
+    ("annual-interpretation", "shared interpretation query differs"),
+    ("sihua-interpretation", "shared interpretation query differs"),
+    ("shared-interpretation", "shared interpretation query differs"),
+    ("interpretation-json", "JSON lost conditions"),
     ("chart-type", "chart differs"),
     ("chart-output", "chart differs"),
     ("chinese-query", "Chinese query differs"),
@@ -477,6 +484,35 @@ def test_runtime_consumer_rejects_invalid_contracts(
 
       monkeypatch.setattr(modules["ziwei.knowledge"], "load_catalog", load_catalog)
       modules["doushu.knowledge"].load_catalog = load_catalog
+    case "annual-interpretation" | "sihua-interpretation" | "shared-interpretation":
+      original_catalog = modules["ziwei.knowledge"].load_catalog()
+      suffix = {
+        "annual-interpretation": "liunian-changqu",
+        "sihua-interpretation": "hualu-kequan",
+        "shared-interpretation": "yangtuohuoling-general",
+      }[defect]
+      changed = replace(
+        original_catalog,
+        entries=tuple(
+          replace(e, concept_ids=("concept.star.tianma",))
+          if e.id == "entry.interpretation." + suffix
+          else e
+          for e in original_catalog.entries
+        ),
+      )
+      monkeypatch.setattr(modules["ziwei.knowledge"], "load_catalog", lambda: changed)
+      modules["doushu.knowledge"].load_catalog = modules["ziwei.knowledge"].load_catalog
+    case "interpretation-json":
+      catalog_type = modules["ziwei.knowledge.catalog"].Catalog
+      original_dict = catalog_type.to_dict
+
+      def lost_premises(catalog: Any) -> Any:
+        document = original_dict(catalog)
+        for entry in document["entries"]:
+          entry["premises"] = []
+        return document
+
+      monkeypatch.setattr(catalog_type, "to_dict", lost_premises)
     case "enum-pickle":
       monkeypatch.setattr(pickle, "loads", lambda data: None)
     case "record-pickle":

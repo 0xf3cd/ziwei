@@ -489,6 +489,9 @@ def check_result(chart: ZiweiChart) -> None:
   print("Installed result JSON: written, read as plain JSON and read back")
 
 
+INTERPRETATION_ENTRY_COUNT = 71
+
+
 def check_knowledge() -> None:
   """消费安装包中的语料、别名、前提与原文引用，不只检查导入成功。"""
   catalog = load_catalog()
@@ -533,12 +536,11 @@ def check_knowledge() -> None:
   if not isinstance(source, Source) or source.lineage_id != "lineage.quanshu-wikisource":
     raise ValueError("Installed knowledge interpretation lineage changed")
   entries = catalog.filter_entries(source_id=source.id)
-  if len(entries) != 38 or any(
+  if len(entries) != INTERPRETATION_ENTRY_COUNT or any(
     entry.show_by_default or not entry.recheck or not entry.tracking_url for entry in entries
   ):
     raise ValueError("Installed knowledge interpretation entries or default display changed")
-  # 逐条内容由源码侧参考核对，制品检查确保安装的是同一份字节；
-  # 这里从安装包读一条主星解释和一条杂曜解释。
+  # 全量内容由源码侧参考核对；这里消费主星、杂曜、年度、四化与总论代表条目。
   for identifier, quote in (
     ("entry.interpretation.ziwei-fubi", "無輔弼同行則為孤君，雖美玉不足。"),
     ("entry.interpretation.tianxing-rumiao", "入庙则吉。"),
@@ -554,6 +556,53 @@ def check_knowledge() -> None:
       or citations[0].aspects != (EvidenceAspect.解释,)
     ):
       raise ValueError("Installed knowledge interpretation citation changed")
+  for name, query, suffix, concept_ids, detail_field, fragment in (
+    (
+      "流年昌曲",
+      "不能耐久",
+      "liunian-changqu",
+      ("concept.liunian.changqu",),
+      "exceptions",
+      "不能耐久",
+    ),
+    (
+      "化祿",
+      "科权相逢必作大臣之职",
+      "hualu-kequan",
+      ("concept.sihua.hualu",),
+      "limits",
+      "小限、大限",
+    ),
+    (
+      "火星",
+      "金谷常安乐",
+      "yangtuohuoling-general",
+      (
+        "concept.star.qingyang",
+        "concept.star.tuoluo",
+        "concept.star.huoxing",
+        "concept.star.lingxing",
+      ),
+      "exceptions",
+      "山寺僧",
+    ),
+  ):
+    (concept,) = catalog.find(name)
+    matches = catalog.topic(concept.id).search_entries(query)
+    if [e.id for e in matches] != ["entry.interpretation." + suffix]:
+      raise ValueError("Installed interpretation topic or quote search changed")
+    document = json.loads(json.dumps(catalog.select_entries([matches[0].id]).to_dict()))
+    entry_data = document["entries"][0]
+    detail = entry_data[detail_field]
+    detail_text = " ".join(detail) if isinstance(detail, list) else detail
+    if (
+      entry_data["concept_ids"] != list(concept_ids)
+      or not entry_data["premises"]
+      or fragment not in detail_text
+      or entry_data["premise_status"] != PremiseStatus.待定.value
+      or query not in document["citations"][0]["quote"]
+    ):
+      raise ValueError("Installed interpretation JSON lost subjects or conditions")
 
 
 if __name__ == "__main__":
