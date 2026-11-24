@@ -23,6 +23,8 @@
 
 - 移除`ziwei.render.render_svg()`，`doushu.render`中的同名入口随之移除。需要图形盘面时，
   读取结果JSON后自行绘制；文本盘面`render_text()`保留。
+- 文档修复API重复锚点，自动编号的节锚点由`id…`改为`sec…`。引用旧编号锚点的外部链接需重新定位；
+  手工命名的锚点（如`month-star-policy`）保持不变。
 
 ## 0.5.0
 
