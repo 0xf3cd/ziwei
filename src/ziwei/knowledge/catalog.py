@@ -307,7 +307,9 @@ class Catalog:
   def topic(self, concept_id: str) -> Catalog:
     """读取一个概念及其条目、变体和出处，条目归属沿用filter_entries。
 
-    沿概念related_ids的出边补齐概念记录，不反查入边，也不据此扩展条目或变体。
+    带齐条目concept_ids及变体concept_ids、school_ids所指的概念。
+    从这些概念与主题概念出发，沿related_ids逐层补齐概念，直到没有新的概念。
+    不反查入边，也不因补入概念而扩展条目或变体。
     所有记录保留原目录顺序。
     """
     concept = self._require(concept_id, Concept)

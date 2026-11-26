@@ -51,6 +51,10 @@ True
 
 `dumps()`的文本不转义中文，保存时用UTF-8。
 
+示例的本命四化与年度四化分别选表；年度入口当前只支持`SihuaVariant.王亭之讲义转录`。
+选表用法见[生年四化](sihua-decades.md)与[年度四化](liunian.md#具名年度四化)。
+另外两项导出选择见[亮度表](brightness.md)与[童限的起限当岁边界](yunxian.md#选择童限的起限当岁边界)。
+
 ## 存了什么
 
 键名与Python读数类型的字段同名，值是领域枚举的中文值，年龄与纪年是整数。
@@ -66,13 +70,19 @@ True
 | `yunxian` | 所选虚岁`age`及其小限`xiaoxian`、童限`tongxian`、大限`decade`地支 |
 | `liunian` | 所选纪年`ganzhi_year`、流年十二宫`palaces`（每宫有`name`、`dizhi`）、`lucun`、`qingyang`、`tuoluo`地支与年度四化`sihua` |
 
-后三层只在导出时选择后出现。`result_of()`的`ages`或`years`传`None`时省略该层，
-传空序列时写出空数组。`yunxian`中`tongxian`为`null`表示该岁不在所选边界的童限内，
+后三层只在导出时选择后出现。导出运限须同时给出`ages`和`tongxian_boundary`；
+不导出时两者均省略或传`None`。请求`liunian_sihua_variant`时须同时给出`years`，
+只给`years`则不查年度四化。配对要求不满足时抛`ValueError`，完整签名见[API](api.md#结果json)。
+
+`ages`或`years`传`None`时省略对应层，传空序列时写出空数组；
+`ages`为空序列时仍须选择`tongxian_boundary`。
+`yunxian`中`tongxian`为`null`表示该岁不在所选边界的童限内，
 `decade`为`null`表示首限之前；`liunian`中`sihua`为`null`表示未请求年度四化。
 
 ## 没存什么
 
-结果不含出生资料、三个口径、所选四化表或亮度表、童限边界、规则标识和软件版本，
+结果不含出生资料、`ChartConfig`中的口径与选择（含月系归月和天马查法）、
+所选四化表或亮度表、童限边界、规则标识和软件版本，
 也没有格式版本号。同一份结果读回后，看不出亮度来自哪张表、四化按哪张表查得。
 需要留档时，另行保存出生资料、配置和导出时的选择。
 
