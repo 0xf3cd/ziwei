@@ -61,7 +61,13 @@ def register_knowledge_targets(app: Sphinx, env: BuildEnvironment) -> None:
       slugs[identifier] = (None, identifier, identifier)
 
 
+def separate_heading_ids(app: Sphinx, env: BuildEnvironment, docnames: list[str]) -> None:
+  """中文节标题与中文签名都会退回到自动编号；Sphinx默认两者都用id加序号，同页会重号。"""
+  env.settings["auto_id_prefix"] = "sec"
+
+
 def setup(app: Sphinx) -> None:
-  """注册定义生成的知识参考页。"""
+  """注册定义生成的知识参考页，并给节标题另设自动编号前缀。"""
   app.connect("source-read", insert_knowledge_reference)
   app.connect("env-updated", register_knowledge_targets)
+  app.connect("env-before-read-docs", separate_heading_ids)

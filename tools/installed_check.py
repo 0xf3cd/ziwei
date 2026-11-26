@@ -1,12 +1,12 @@
 """隔离验证已安装的包。"""
 
+import json
 import sys
 from dataclasses import replace
 from datetime import UTC, date, datetime, time, timedelta
 from importlib import import_module
 from importlib.metadata import distribution
 from pathlib import Path
-from xml.etree.ElementTree import fromstring
 
 import ziwei
 from ziwei.birth import (
@@ -31,7 +31,7 @@ from ziwei.config import ChartConfig, DayRollover, LeapMonthPolicy, YearBoundary
 from ziwei.decades import Direction, decade_periods, place_decades
 from ziwei.ganzhi import Dizhi, Tiangan, 地支
 from ziwei.knowledge import load_catalog
-from ziwei.knowledge.model import Citation, EvidenceAspect, KnowledgeEntry, PremiseStatus, Source
+from ziwei.knowledge.model import EvidenceAspect, KnowledgeEntry, PremiseStatus, Source
 from ziwei.liunian import (
   LIUNIAN_STARS_RULE_ID,
   LiunianBoundary,
@@ -44,7 +44,8 @@ from ziwei.liunian import (
   流年星曜,
 )
 from ziwei.palaces import Palace, PalaceName, effective_month
-from ziwei.render import render_svg, render_text
+from ziwei.render import render_text
+from ziwei.result import ChartResult, dumps, loads, result_of
 from ziwei.sihua import SihuaVariant, shengnian_sihua, sihua_for_stem
 from ziwei.stars import Star
 from ziwei.timezone import AmbiguousTimeError, IanaTimezone, NonexistentTimeError
@@ -349,38 +350,7 @@ def check_chart() -> None:
     part in text for part in ("命宫", "甲子", "大限 4-13虚岁", "紫微", "右弼[科]", "红鸾", "天喜")
   ):
     raise ValueError("Installed text chart is incomplete")
-  image = fromstring(render_svg(chart, selected_palace=PalaceName.命宫))
-  namespace = "{http://www.w3.org/2000/svg}"
-  if image.tag != namespace + "svg":
-    raise ValueError("Installed SVG chart has the wrong root")
-  cells = [node for node in image.findall(namespace + "g") if "data-dizhi" in node.attrib]
-  stars = [node for cell in cells for node in cell if node.get("class") == "star"]
-  if len(cells) != 12 or len(stars) != len(Star):
-    raise ValueError("Installed SVG chart is incomplete")
-  for star, branch in expected_pair:
-    if not any(
-      cell.attrib["data-dizhi"] == branch.name.lower()
-      and any(node.get("class") == "star" and node.text == star.value for node in cell)
-      for cell in cells
-    ):
-      raise ValueError("Installed SVG chart lost hongluan/tianxi placement")
-  roles = {
-    cell.attrib["data-dizhi"]: cell.attrib["class"].split()[1]
-    for cell in cells
-    if len(cell.attrib["class"].split()) == 2
-  }
-  if roles != {"zi": "selected", "chen": "sanhe", "shen": "sanhe", "wu": "opposite"}:
-    raise ValueError("Installed SVG chart has incorrect selected-palace relationships")
-  selected_cell = next(cell for cell in cells if cell.attrib["data-dizhi"] == "zi")
-  labels = {
-    node.attrib["class"]: node.text
-    for node in selected_cell
-    if node.get("class") in ("ganzhi", "decade")
-  }
-  if labels != {"ganzhi": "甲子", "decade": "大限 4-13虚岁"} or not any(
-    node.text == "右弼[科]" for node in stars
-  ):
-    raise ValueError("Installed SVG chart lost palace content")
+  check_result(chart)
   # 论坛《排命盘口诀》1954例第6至9步的独立星位；大限按同页规则推得，不由待测实现生成。
   reference = create_chart(
     LunarBirthRecord(
@@ -438,12 +408,9 @@ def check_chart() -> None:
     (item.star, item.dizhi) for item in chart.stars
   ):
     raise ValueError("Installed brightness changed chart positions")
-  bright_text = render_text(chart, brightness_table=table)
-  bright_image = fromstring(render_svg(chart, brightness_table=table))
-  grades = bright_image.findall(f".//{namespace}text[@class='brightness']")
-  if table.value not in bright_text.splitlines()[0] or len(grades) != 14:
-    raise ValueError("Installed brightness displays are incomplete")
-  print("Installed brightness: named table queried; text and SVG consumed")
+  if table.value not in render_text(chart, brightness_table=table).splitlines()[0]:
+    raise ValueError("Installed brightness text display is incomplete")
+  print("Installed brightness: named table queried; text consumed")
   mixed = create_chart(
     LunarBirthRecord(
       year=2023, month=2, day=16, is_leap_month=True, shichen=Dizhi.子, gender=Gender.女
@@ -478,13 +445,51 @@ def check_chart() -> None:
       raise ValueError("Installed minor star palace query differs")
     if render_text(mixed).count(position.star.value) != 1:
       raise ValueError("Installed minor star text is incomplete")
-    image = fromstring(render_svg(mixed))
-    if (
-      sum(node.text == position.star.value for node in image.iter() if node.get("class") == "star")
-      != 1
-    ):
-      raise ValueError("Installed minor star SVG is incomplete")
   print("Installed full chart: calculated, rendered; independent positions and decades checked")
+
+
+def check_result(chart: ZiweiChart) -> None:
+  """写出结果JSON，用标准库读成字典核宫位、星位与生年四化，查所选层已写出，再经包内读取往返。"""
+
+  def export() -> ChartResult:
+    return result_of(
+      chart,
+      brightness_table=BrightnessTable.全书卷二录文,
+      ages=(1, 30),
+      tongxian_boundary=TongxianBoundary.起限当岁不含,
+      years=(2026,),
+      liunian_sihua_variant=SihuaVariant.王亭之讲义转录,
+    )
+
+  saved = dumps(export())
+  document = json.loads(saved)
+  if [(item["name"], item["tiangan"] + item["dizhi"]) for item in document["palaces"]] != [
+    (palace.name.value, str(palace.ganzhi)) for palace in chart.palaces
+  ]:
+    raise ValueError("Installed result JSON lost palace readings")
+  if [(item["star"], item["dizhi"]) for item in document["stars"]] != [
+    (position.star.value, position.dizhi.value) for position in chart.stars
+  ]:
+    raise ValueError("Installed result JSON lost star positions")
+  if document["sihua"] != {
+    "lu": chart.sihua.lu.value,
+    "quan": chart.sihua.quan.value,
+    "ke": chart.sihua.ke.value,
+    "ji": chart.sihua.ji.value,
+  }:
+    raise ValueError("Installed result JSON lost natal sihua")
+  if (
+    len(document["brightness"]) != 14
+    or [item["age"] for item in document["yunxian"]] != [1, 30]
+    or document["liunian"][0]["sihua"] is None
+  ):
+    raise ValueError("Installed result JSON lost selected layers")
+  if loads(saved) != export():
+    raise ValueError("Installed result JSON did not read back")
+  print("Installed result JSON: written, read as plain JSON and read back")
+
+
+INTERPRETATION_ENTRY_COUNT = 71
 
 
 def check_knowledge() -> None:
@@ -492,6 +497,16 @@ def check_knowledge() -> None:
   catalog = load_catalog()
   if not catalog.find("天馬") or len(catalog.find("庚干四化")) != 3:
     raise ValueError("Installed knowledge corpus or aliases are incomplete")
+  topic = catalog.topic("concept.star.tiankong")
+  matches = topic.search_entries("前一位丑宫即安天空")
+  if [entry.id for entry in matches] != ["entry.star.tiankong-year"]:
+    raise ValueError("Installed independent knowledge topic or quote search failed")
+  document = json.loads(json.dumps(catalog.select_entries([matches[0].id]).to_dict()))
+  if (
+    document["citations"][0]["quote"] != "前一位丑宫即安天空"
+    or not document["entries"][0]["premises"]
+  ):
+    raise ValueError("Installed knowledge JSON lost its citation or premises")
   for choice in (False, True):
     expected = tuple(item for item in catalog.entries if item.show_by_default is choice)
     if catalog.filter_entries(show_by_default=choice) != expected:
@@ -521,231 +536,73 @@ def check_knowledge() -> None:
   if not isinstance(source, Source) or source.lineage_id != "lineage.quanshu-wikisource":
     raise ValueError("Installed knowledge interpretation lineage changed")
   entries = catalog.filter_entries(source_id=source.id)
-  if len(entries) != 38 or any(
+  if len(entries) != INTERPRETATION_ENTRY_COUNT or any(
     entry.show_by_default or not entry.recheck or not entry.tracking_url for entry in entries
   ):
     raise ValueError("Installed knowledge interpretation entries or default display changed")
-  expected_ids: set[str] = set()
-  for name, suffix, nature_quote, quote, condition, status in (
+  # 全量内容由源码侧参考核对；这里消费主星、杂曜、年度、四化与总论代表条目。
+  for identifier, quote in (
+    ("entry.interpretation.ziwei-fubi", "無輔弼同行則為孤君，雖美玉不足。"),
+    ("entry.interpretation.tianxing-rumiao", "入庙则吉。"),
+  ):
+    entry = catalog.get(identifier)
+    citations = catalog.references(identifier)
+    if (
+      not isinstance(entry, KnowledgeEntry)
+      or entry.premise_status is not PremiseStatus.待定
+      or entry.statement == quote
+      or not citations
+      or citations[0].quote != quote
+      or citations[0].aspects != (EvidenceAspect.解释,)
+    ):
+      raise ValueError("Installed knowledge interpretation citation changed")
+  for name, query, suffix, concept_ids, detail_field, fragment in (
     (
-      "紫微",
-      "ziwei-fubi",
-      "紫微屬土，乃中天之尊星為帝座，主掌造化樞機，人生主宰。",
-      "無輔弼同行則為孤君，雖美玉不足。",
-      "同行的具体范围待核",
-      PremiseStatus.待定,
+      "流年昌曲",
+      "不能耐久",
+      "liunian-changqu",
+      ("concept.liunian.changqu",),
+      "exceptions",
+      "不能耐久",
     ),
     (
-      "天府",
-      "tianfu-kongwang",
-      "天府屬土，南斗主令第一星也。",
-      "若值空亡是為孤立，不可一例而推斷，大抵此星多主吉。",
-      "空亡的具体所指待核",
-      PremiseStatus.待定,
+      "化祿",
+      "科权相逢必作大臣之职",
+      "hualu-kequan",
+      ("concept.sihua.hualu",),
+      "limits",
+      "小限、大限",
     ),
     (
-      "天机",
-      "tianji-tianliang",
-      "天機屬木，南斗第三益算之善星也。",
-      "或守於身，更逢天梁，必有高藝隨身。",
-      "守于身、更逢天梁成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "太阳",
-      "taiyang-fubi",
-      "太陽星屬火，日之精也。",
-      "若與左右同宮則為貴論。",
-      "与左右同宫成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "武曲",
-      "wuqu-tianfu",
-      "武曲北斗第六星，屬金，乃財帛宮主。",
-      "與天府同宮有壽",
-      "武曲与天府同宫。",
-      PremiseStatus.已明确,
-    ),
-    (
-      "天同",
-      "tiantong-fuzuo-birth",
-      "天同星屬水，乃南方第四星也，為福德宮之主宰。",
-      "遇左右昌梁貴顯，喜壬乙丙生人，巳亥得地。",
-      "遇左右昌梁、壬乙丙生人和巳亥得地",
-      PremiseStatus.待定,
-    ),
-    (
-      "廉贞",
-      "lianzhen-jumen-limit",
-      "廉貞屬火，北斗第五星也。",
-      "限逢巨門於陷地，則是非起於官司。",
-      "限逢巨门于陷地成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "太阴",
-      "taiyin-shenming-jiji",
-      "太陰乃水之精，為田宅主，化富，與日為配。",
-      "若在身命廟樂，吉集主富貴。",
-      "在身命庙乐、吉集成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "贪狼",
-      "tanlang-kongwang",
-      "貪狼北斗解厄之神，第一星也。屬水，化氣為桃花，為標準，乃主禍福之神。",
-      "喜見空亡，返主端正。",
-      "喜见空亡成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "巨门",
-      "jumen-dizuo",
-      "巨門屬水、金。北斗第二星也，為陰精之星，化氣為暗。",
-      "遇帝座則制其強。",
-      "遇帝座成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "天相",
-      "tianxiang-fubi",
-      "天相屬水，南斗第五星也。",
-      "此星若臨生旺之鄉，雖不逢帝座，若得左右，則職掌威權。",
-      "临生旺之乡、得左右成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "天梁",
-      "tianliang-changqu-fubi",
-      "天梁屬土，南斗第二星也。",
-      "得昌曲左右加會，位至臺省。",
-      "得昌曲左右加会成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "七杀",
-      "qisha-changqu-fubi",
-      "七殺南斗第六星也，屬火、金。",
-      "左右昌曲入廟拱照，掌生殺之權，富貴出眾。",
-      "左右昌曲入庙拱照成立",
-      PremiseStatus.待定,
-    ),
-    (
-      "破军",
-      "pojun-jumen",
-      "破軍屬水，北斗第七星也，司夫妻、子息、奴僕之神。",
-      "與巨門同度則口舌爭鬥",
-      "与巨门同度成立",
-      PremiseStatus.待定,
+      "火星",
+      "金谷常安乐",
+      "yangtuohuoling-general",
+      (
+        "concept.star.qingyang",
+        "concept.star.tuoluo",
+        "concept.star.huoxing",
+        "concept.star.lingxing",
+      ),
+      "exceptions",
+      "山寺僧",
     ),
   ):
     (concept,) = catalog.find(name)
-    selected = catalog.filter_entries(concept_id=concept.id, source_id=source.id)
-    nature_id = f"entry.interpretation.{concept.id.rsplit('.', 1)[1]}-nature"
-    condition_id = f"entry.interpretation.{suffix}"
-    expected_ids.update((nature_id, condition_id))
-    by_id = {entry.id: entry for entry in selected}
-    if set(by_id) != {nature_id, condition_id} or len(selected) != 2:
-      raise ValueError("Installed knowledge interpretation concept or condition changed")
-    conditional = by_id[condition_id]
-    if not any(condition in premise for premise in conditional.premises):
-      raise ValueError("Installed knowledge interpretation concept or condition changed")
+    matches = catalog.topic(concept.id).search_entries(query)
+    if [e.id for e in matches] != ["entry.interpretation." + suffix]:
+      raise ValueError("Installed interpretation topic or quote search changed")
+    document = json.loads(json.dumps(catalog.select_entries([matches[0].id]).to_dict()))
+    entry_data = document["entries"][0]
+    detail = entry_data[detail_field]
+    detail_text = " ".join(detail) if isinstance(detail, list) else detail
     if (
-      by_id[nature_id].premise_status is not PremiseStatus.已明确
-      or conditional.premise_status is not status
+      entry_data["concept_ids"] != list(concept_ids)
+      or not entry_data["premises"]
+      or fragment not in detail_text
+      or entry_data["premise_status"] != PremiseStatus.待定.value
+      or query not in document["citations"][0]["quote"]
     ):
-      raise ValueError("Installed knowledge interpretation premise status changed")
-    if any(
-      entry.statement == citation.quote
-      for entry in selected
-      for citation in catalog.references(entry.id)
-    ):
-      raise ValueError("Installed knowledge interpretation statement duplicates its citation")
-    for identifier, expected_quote in ((nature_id, nature_quote), (condition_id, quote)):
-      citations = catalog.references(identifier)
-      if (
-        len(citations) != 1
-        or citations[0].quote != expected_quote
-        or citations[0].aspects != (EvidenceAspect.解释,)
-      ):
-        raise ValueError("Installed knowledge interpretation citation changed")
-  for names, nature, condition, nature_quote, condition_quote, premise in (
-    (
-      ("地空", "地劫"),
-      "kongjie-nature",
-      "kongjie-shenming-jixiong",
-      "劫空为害最愁人，才智英雄误一身，",
-      "二星守身命，遇吉则吉，遇凶则凶。",
-      "守身命",
-    ),
-    (
-      ("天伤", "天使"),
-      "shangshi-nature",
-      "shangshi-tai-sui-erxian",
-      "天伤乃上天虚耗之神，天使乃上天传使之神。",
-      "太岁二限逢之不问得地否？只要吉多为福其祸稍轻，",
-      "吉多",
-    ),
-    (("天刑",), "tianxing-nature", "tianxing-rumiao", "天刑未必是凶星，", "入庙则吉。", "入庙"),
-    (
-      ("天姚",),
-      "tianyao-nature",
-      "tianyao-ziweijixing",
-      "天姚守身命，心性阴毒，多疑恐、善颜色、风流多婢、主淫。",
-      "或紫微吉星加，刚柔相济，主风骚，",
-      "吉星与加",
-    ),
-    (
-      ("天哭", "天虚"),
-      "kuxu-nature",
-      "kuxu-yulu",
-      "哭虚为恶曜，临命最非常。",
-      "丑卯申宫吉，遇禄名显扬。",
-      "遇禄",
-    ),
-  ):
-    concept_ids = tuple(catalog.find(name)[0].id for name in names)
-    pair = ("entry.interpretation." + nature, "entry.interpretation." + condition)
-    expected_ids.update(pair)
-    for concept_id in concept_ids:
-      if {e.id for e in catalog.filter_entries(concept_id=concept_id, source_id=source.id)} != set(
-        pair
-      ):
-        raise ValueError("Installed knowledge minor interpretation set changed")
-    for index, (identifier, expected_quote) in enumerate(
-      zip(pair, (nature_quote, condition_quote), strict=True)
-    ):
-      entry = catalog.get(identifier)
-      if (
-        not isinstance(entry, KnowledgeEntry)
-        or entry.concept_ids != concept_ids
-        or entry.variant_ids
-      ):
-        raise ValueError("Installed knowledge minor interpretation concept changed")
-      if entry.premise_status is not (PremiseStatus.已明确 if index == 0 else PremiseStatus.待定):
-        raise ValueError("Installed knowledge minor interpretation status changed")
-      if index == 1 and not any(premise in p for p in entry.premises):
-        raise ValueError("Installed knowledge minor interpretation condition changed")
-      citations = catalog.references(identifier)
-      expected_citations: tuple[str, ...] = (
-        identifier.replace("entry.interpretation.", "citation.quanshu-juan1."),
-      )
-      if nature == "kongjie-nature":
-        expected_citations += ("citation.quanshu.kongjie", "citation.jielan.tiankong-year")
-      primary = catalog.get(expected_citations[0])
-      if (
-        not isinstance(primary, Citation)
-        or entry.citation_ids != expected_citations
-        or {c.id for c in citations} != set(expected_citations)
-        or primary.quote != expected_quote
-        or primary.aspects != (EvidenceAspect.解释,)
-      ):
-        raise ValueError("Installed knowledge minor interpretation citation changed")
-      if entry.statement == expected_quote:
-        raise ValueError("Installed knowledge minor interpretation duplicates its quote")
-  if {e.id for e in entries} != expected_ids:
-    raise ValueError("Installed knowledge interpretation entries changed")
+      raise ValueError("Installed interpretation JSON lost subjects or conditions")
 
 
 if __name__ == "__main__":

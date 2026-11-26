@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import ast
 import os
+import posixpath
 import re
 import shutil
 import sys
 import tarfile
 import tempfile
 import tomllib
+from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -93,6 +95,75 @@ class ApiTargets(HTMLParser):
       target = dict(attrs).get("id")
       if target is not None:
         self.targets.add(target)
+
+
+class PageTargets(HTMLParser):
+  """收集页面的全部id、落在节标题上的id，以及std-ref链接。"""
+
+  def __init__(self) -> None:
+    super().__init__()
+    self.ids: Counter[str] = Counter()
+    self.sections: set[str] = set()
+    self.section_links: list[str] = []
+    self.before_heading = False
+    self.link: str | None = None
+
+  def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+    attributes = dict(attrs)
+    identifier = attributes.get("id")
+    if identifier is not None:
+      self.ids[identifier] += 1
+    if tag == "section":
+      self.before_heading = True
+    # 节自身的id与标题之前的标签都定位到节标题。
+    if identifier is not None and self.before_heading and tag in {"section", "span"}:
+      self.sections.add(identifier)
+    if re.fullmatch(r"h[1-6]", tag):
+      self.before_heading = False
+    classes = (attributes.get("class") or "").split()
+    if tag == "a":
+      self.link = attributes.get("href") if "internal" in classes else None
+    elif self.link is not None:
+      # Sphinx把节引用的文字放在std-ref里；对象引用落在签名上，不收。
+      if "std-ref" in classes:
+        self.section_links.append(self.link)
+      self.link = None
+
+
+def check_html_targets(directory: Path, root: Path = ROOT) -> None:
+  """每页id唯一；std-ref链接与README指向在线文档的片段都须落在节标题上。"""
+  errors: list[str] = []
+  pages: dict[str, PageTargets] = {}
+  for page in sorted(directory.rglob("*.html")):
+    parser = PageTargets()
+    parser.feed(page.read_text(encoding="utf-8"))
+    name = page.relative_to(directory).as_posix()
+    pages[name] = parser
+    repeated = sorted(identifier for identifier, count in parser.ids.items() if count > 1)
+    if repeated:
+      errors.append(f"Duplicate HTML ids in {name}: {', '.join(repeated)}")
+
+  def lands_on_section(path: str, fragment: str) -> bool:
+    return path in pages and unquote(fragment) in pages[path].sections
+
+  for name, parser in pages.items():
+    for link in parser.section_links:
+      url = urlsplit(link)
+      path = posixpath.normpath(posixpath.join(posixpath.dirname(name), unquote(url.path)))
+      if url.fragment and not lands_on_section(path if url.path else name, url.fragment):
+        errors.append(f"Section link in {name} does not land on a section heading: {link}")
+  metadata = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+  site = metadata["project"]["urls"]["Documentation"]
+  for token in MarkdownIt("commonmark").parse((root / "README.md").read_text(encoding="utf-8")):
+    for child in token.children or ():
+      target = child.attrGet("href") if child.type == "link_open" else None
+      if not isinstance(target, str) or not target.startswith(site):
+        continue
+      url = urlsplit(target[len(site) :])
+      if url.fragment and not lands_on_section(unquote(url.path), url.fragment):
+        errors.append(f"README link does not land on a section heading: {target}")
+  if errors:
+    raise ValueError("\n".join(errors))
 
 
 def check_api_reference(directory: Path, root: Path = ROOT) -> None:
@@ -213,8 +284,8 @@ def check_distribution(
   run((sys.executable, "-m", "build", "--no-isolation", "--outdir", str(artifacts)), cwd=ROOT)
   sdist, wheel = built_artifacts(artifacts)
   hashes = {path: file_sha256(path) for path in (sdist, wheel)}
-  check_sdist(sdist, version, source_members(ROOT))
-  check_wheel(wheel, version)
+  check_sdist(sdist, version, source_members(ROOT), ROOT)
+  check_wheel(wheel, version, ROOT)
   run((sys.executable, "-m", "twine", "check", str(sdist), str(wheel)), cwd=ROOT)
   alias = alias_from_sdist(sdist, version, directory)
   alias_digest = file_sha256(alias)
@@ -267,6 +338,7 @@ def check_documentation(directory: Path) -> None:
   check_examples(sphinx_report(directory))
   html = directory / "html"
   check_api_reference(html, ROOT)
+  check_html_targets(html, ROOT)
   check_knowledge_reference(html)
   if not (html / "docs/index.html").is_file():
     raise ValueError("Missing documentation entry point: docs/index.html")

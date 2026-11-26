@@ -1,11 +1,16 @@
 """显示只读、同宫多星保全和等宽终端列宽；不把显示当计算参考。"""
 
+import subprocess
+import sys
 from copy import deepcopy
 from dataclasses import asdict, replace
+from pathlib import Path
+from typing import Never
 from unicodedata import east_asian_width
 
 import pytest
 
+from ziwei import calendar, chart, render, resolver, timezone
 from ziwei.birth import Gender, LunarBirthRecord
 from ziwei.chart import ZiweiChart, create_chart
 from ziwei.config import ChartConfig
@@ -89,3 +94,73 @@ def test_body_palace_marker_is_not_always_on_minggong(chart_choices: ChartConfig
     if "身宫" in cell
   ]
   assert marked == ["福德 丁卯 身宫"]
+
+
+@pytest.fixture
+def forbid_computation(monkeypatch: pytest.MonkeyPatch) -> None:
+  """让排盘、解析、历法与时区入口一经调用即失败，并使原生历法与时区数据无法导入。
+
+  测试须先取得命盘等输入，再请求本夹具。
+  """
+
+  def forbidden(*args: object, **kwargs: object) -> Never:
+    raise AssertionError("调用了计算或资源入口")
+
+  for owner, names in (
+    (
+      chart,
+      ("resolve", "create_chart", "place_stars", "shengnian_sihua", "place_decades", "chart_frame"),
+    ),
+    (resolver, ("resolve",)),
+    (
+      calendar,
+      (
+        "validate_lunar_date",
+        "gregorian_to_lunar",
+        "lunar_to_gregorian",
+        "lichun_jd",
+        "utc_to_ut1_jd",
+        "apparent_solar",
+        "celestial_version",
+      ),
+    ),
+    (timezone, ("_load_zone", "current_timezone_data", "resolve_civil_time")),
+  ):
+    for name in names:
+      monkeypatch.setattr(owner, name, forbidden)
+  for name in tuple(sys.modules):
+    if name.split(".")[0] in ("celestial_calendar", "tzdata"):
+      monkeypatch.delitem(sys.modules, name)
+  monkeypatch.setitem(sys.modules, "celestial_calendar", None)
+  monkeypatch.setitem(sys.modules, "tzdata", None)
+
+
+@pytest.mark.usefixtures("unload_celestial")
+def test_text_display_does_not_recompute_or_access_calendar(
+  lunar_chart: ZiweiChart, forbid_computation: None
+) -> None:
+  before = deepcopy(lunar_chart)
+  render_text(lunar_chart)
+  assert lunar_chart == before
+
+
+def test_render_module_import_does_not_initialize_native_resources() -> None:
+  script = """
+import sys
+sys.modules['celestial_calendar'] = None
+sys.modules['tzdata'] = None
+from ziwei.render import render_text
+if not callable(render_text):
+  raise RuntimeError('text entry is missing')
+"""
+  result = subprocess.run([sys.executable, "-I", "-c", script], capture_output=True, text=True)
+  assert result.returncode == 0, result.stderr
+
+
+def test_svg_entry_and_its_generation_code_are_removed() -> None:
+  # wheel的代码成员与src逐字节相同，核src即可。
+  assert not hasattr(render, "render_svg")
+  package = Path(render.__file__).parent
+  assert [
+    p.name for p in package.rglob("*.py") if "svg" in p.read_text(encoding="utf-8").lower()
+  ] == []

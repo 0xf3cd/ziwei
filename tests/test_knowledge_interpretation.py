@@ -53,6 +53,14 @@ def reference() -> dict[str, Any]:
     )
   )
   value["extra_entry_ids"] = ["entry.interpretation." + row["suffix"] for row in minor["entries"]]
+  juan1 = json.loads(
+    (Path(__file__).parent / "fixtures/juan1-interpretation-reference.json").read_text(
+      encoding="utf-8"
+    )
+  )
+  value["extra_entry_ids"].extend(
+    "entry.interpretation." + row["suffix"] for row in juan1["entries"]
+  )
   return cast(dict[str, Any], value)
 
 

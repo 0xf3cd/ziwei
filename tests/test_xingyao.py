@@ -2,7 +2,6 @@
 
 from dataclasses import replace
 from datetime import date, time, timedelta
-from xml.etree.ElementTree import fromstring
 
 import pytest
 
@@ -22,7 +21,7 @@ from ziwei.decades import place_decades
 from ziwei.ganzhi import Dizhi
 from ziwei.knowledge import load_catalog
 from ziwei.knowledge.model import KnowledgeEntry
-from ziwei.render import render_svg, render_text
+from ziwei.render import render_text
 from ziwei.resolver import resolve
 from ziwei.sihua import SihuaVariant, shengnian_sihua
 from ziwei.stars import STAR_RULES, Star, StarPlacement, place_month_stars, place_stars
@@ -269,14 +268,11 @@ def test_new_stars_render_and_chinese_palace_queries(chart_choices: ChartConfig)
   )
   assert len(chart.stars) == len(OLD_STARS) + 6
   text = render_text(chart)
-  svg = fromstring(render_svg(chart))
   readings = chart_brightness(chart, table=BrightnessTable.全书卷二录文)
   for star, branch in ((Star.天刑, Dizhi.亥), (Star.天姚, Dizhi.卯)):
     assert text.count(star.value) == 1
     view = palace_view(chart, branch)
     assert any(p.星曜 is star and p.地支 is branch for p in view.星位)
-    (cell,) = [n for n in svg if n.get("data-dizhi") == branch.name.lower()]
-    assert any(n.get("class") == "star" and n.text == star.value for n in cell)
     (reading,) = [r for r in readings if r.star is star]
     assert reading.level is None
   rows = liunian_palaces(chart, 2030, sihua_variant=SihuaVariant.王亭之讲义转录)

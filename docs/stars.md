@@ -119,7 +119,7 @@ True
 ```
 
 这个位置与iLuck九月直接例相同。两星没有生年四化或本库亮度等级；从完整盘按宫读取时仍是普通星位，
-文本与SVG盘面都会显示这两颗星。定位依据见[刑姚条目](knowledge-reference.md#entry.star.tianxing-tianyao-month)。
+文本盘面会显示这两颗星。定位依据见[刑姚条目](knowledge-reference.md#entry.star.tianxing-tianyao-month)。
 
 ## 天哭天虚与固定法天伤天使
 
@@ -140,6 +140,7 @@ True
 没有执行选项。定位来源见[哭虚](knowledge-reference.md#entry.star.tianku-tianxu-year-branch)与
 [固定伤使](knowledge-reference.md#entry.star.tianshang-tianshi-fixed)条目。
 
+(month-star-policy)=
 ## 归月与失败边界
 
 `leap_month_policy`选择命身取月；`month_star_leap_month_policy`可另选辅弼、月马与刑姚取月，

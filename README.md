@@ -10,7 +10,7 @@ Python 紫微斗数排盘与知识库。历法与时间由
 
 目前提供出生记录、显式口径配置、民用时刻消歧、干支基础、celestial 历法适配、解析层
 （公历/农历记录到计算输入）、命宫身宫与十二宫、五行局、36星安星、具名生年四化与大限，
-以及完整命盘组合、十四主星七级亮度、流年十二宫、具名年度四化与禄羊陀、小限、童限与运限查询、只读按宫查询与宫位关系、文本十二宫格、静态SVG盘面和独立知识目录。
+以及完整命盘组合、十四主星七级亮度、流年十二宫、具名年度四化与禄羊陀、小限、童限与运限查询、只读按宫查询与宫位关系、文本十二宫格、结果JSON读写和独立知识目录。
 用法见[出生输入](https://0xf3cd.github.io/ziwei/docs/birth.html)、[历法与时间](https://0xf3cd.github.io/ziwei/docs/calendar.html)、
 [解析层](https://0xf3cd.github.io/ziwei/docs/resolver.html)、[命宫身宫与十二宫](https://0xf3cd.github.io/ziwei/docs/palaces.html)、
 [五行局](https://0xf3cd.github.io/ziwei/docs/bureau.html)、[安星](https://0xf3cd.github.io/ziwei/docs/stars.html)、
@@ -22,7 +22,8 @@ Python 紫微斗数排盘与知识库。历法与时间由
 [参与开发](https://0xf3cd.github.io/ziwei/docs/contributing.html)，发布状态与失败处理见
 [发布指南](https://0xf3cd.github.io/ziwei/docs/releasing.html)。
 
-当前不提供命盘JSON保存／恢复与旧盘重算接口，也不读取旧JSON命盘；历史兼容变化见
+结果JSON只存读数，读回时不重新排盘；不提供旧盘重算接口，也不读取0.1.0的旧JSON命盘，见
+[结果JSON](https://0xf3cd.github.io/ziwei/docs/result.html)。历史兼容变化见
 [发行说明](https://0xf3cd.github.io/ziwei/docs/releases.html)。
 
 ## 安装
@@ -107,11 +108,11 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 
 - 保存出生原始记录，显式处理时区与可选的真太阳时，保留解析后的农历年月日时与所用历法算法。
 - 闰月归属、子时换日、换年三个口径作为具名配置，不设静默默认。
-- 月系星（辅弼、月马与刑姚）的归月未单独指定时跟随命身，也可[单独选择](https://0xf3cd.github.io/ziwei/docs/stars.html#归月与失败边界)；示例推荐半月法，其他两种仍可显式选用。
+- 月系星（辅弼、月马与刑姚）的归月未单独指定时跟随命身，也可[单独选择](https://0xf3cd.github.io/ziwei/docs/stars.html#month-star-policy)；示例推荐半月法，其他两种仍可显式选用。
 - 安命宫、身宫与十二宫宫干，定五行局，安紫微、天府两系十四主星。
 - 安六吉、六煞、禄存、天马、红鸾天喜、刑姚、哭虚与固定法伤使；按所选具名四化表取生年四化。
 - 起大限：顺逆由年干阴阳与性别定，首限起始虚岁由五行局数定。
-- 命盘结果不可变，保留输入、口径、历法版本与派生结果；另提供文本与静态SVG盘面用于显示。
+- 命盘对象不可变，保留输入、口径、历法版本与派生结果；另提供文本盘面，以及只含读数的结果JSON。
 
 功能与改进进度见[项目议题](https://github.com/0xf3cd/ziwei/issues)。
 
@@ -122,7 +123,9 @@ Intel macOS、Windows ARM64、较旧macOS和musl Linux不在上述制品覆盖�
 - [参与开发](https://0xf3cd.github.io/ziwei/docs/contributing.html)
 
 也可独立查知识：无需出生资料或先排盘，就能查到星曜、宫位、四化等概念，
-以及安星规则的流派变体、书中对星曜的解释与各自出处。来源核验状态、适用前提与展示资格分别记录。
+以及安星规则的流派变体、书中对星曜、四化含义与流年昌曲的解释和各自出处。
+用法见[解释查询](https://0xf3cd.github.io/ziwei/docs/knowledge.html#knowledge-interpretations)；
+来源核验状态、适用前提与展示资格分别记录。
 
 通用概念用惯用英语，术数专有词用拼音；领域类型和结果另有[中文读取入口](https://0xf3cd.github.io/ziwei/docs/api.html#chinese-domain-api)，
 如`流年星曜(2024).陀罗`，枚举也有中文成员。文档、issue 与 PR 使用中文。

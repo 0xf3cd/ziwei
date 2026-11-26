@@ -34,7 +34,7 @@ assert LunarBirthRecord.__module__ == "ziwei.birth"
 ## 中文领域入口
 
 下表的中文类型名与原名指向同一对象；中文结果属性读取原字段或property。构造关键字、函数名、
-规则标识及知识查询方法仍用原名。表中模块名省略`ziwei.`前缀，例如`性别`从`ziwei.birth`导入；
+规则标识仍用原名；知识目录的中文入口见[查询指南](knowledge.md#中文入口)。表中模块名省略`ziwei.`前缀，例如`性别`从`ziwei.birth`导入；
 也可从对应的`doushu.*`模块导入。
 
 | 模块 | 中文类型名 → 原类型名 |
@@ -53,6 +53,7 @@ assert LunarBirthRecord.__module__ == "ziwei.birth"
 | `tongxian` | `童限边界 → TongxianBoundary`、`童限 → Tongxian` |
 | `yunxian` | `运限 → Yunxian` |
 | `chart` | `紫微命盘 → ZiweiChart`、`宫位视图 → PalaceView`、`流年叠读 → LiunianView`、`流年宫位 → LiunianPalaceView` |
+| `result` | `命盘结果 → ChartResult`、`结果宫位 → ResultPalace`、`结果星位 → ResultStar`、`结果四化 → ResultSihua`、`结果亮度 → ResultBrightness`、`结果大限 → ResultDecade`、`结果大限组 → ResultDecades`、`结果运限 → ResultYunxian`、`结果流年宫位 → ResultLiunianPalace`、`结果流年 → ResultLiunian` |
 
 ### 只读属性
 
@@ -82,6 +83,16 @@ assert LunarBirthRecord.__module__ == "ziwei.birth"
 | `PalaceView` | `宫位 → palace`、`星位 → stars`、`化禄 → lu`、`化权 → quan`、`化科 → ke`、`化忌 → ji`、`是否身宫 → is_shengong` |
 | `LiunianView` | `流年 → liunian`、`本命宫 → natal` |
 | `LiunianPalaceView` | `纪年 → ganzhi_year`、`宫名 → name`、`地支 → dizhi`、`本命宫 → natal`、`流年四化 → sihua`、`化禄 → lu`、`化权 → quan`、`化科 → ke`、`化忌 → ji` |
+| `ResultPalace` | `宫名 → name`、`天干 → tiangan`、`地支 → dizhi` |
+| `ResultStar` | `星曜 → star`、`地支 → dizhi` |
+| `ResultSihua` | `化禄 → lu`、`化权 → quan`、`化科 → ke`、`化忌 → ji` |
+| `ResultBrightness` | `星曜 → star`、`等级 → level` |
+| `ResultDecade` | `地支 → dizhi`、`起始虚岁 → start_age`、`终止虚岁 → end_age` |
+| `ResultDecades` | `行运方向 → direction`、`各限 → periods` |
+| `ResultYunxian` | `虚岁 → age`、`小限 → xiaoxian`、`童限 → tongxian`、`大限 → decade` |
+| `ResultLiunianPalace` | `宫名 → name`、`地支 → dizhi` |
+| `ResultLiunian` | `纪年 → ganzhi_year`、`十二宫 → palaces`、`禄存 → lucun`、`擎羊 → qingyang`、`陀罗 → tuoluo`、`流年四化 → sihua` |
+| `ChartResult` | `十二宫 → palaces`、`身宫 → shengong`、`五行局 → bureau`、`星位 → stars`、`生年四化 → sihua`、`大限 → decades`、`亮度 → brightness`、`运限 → yunxian`、`流年 → liunian` |
 
 大限的起止虚岁首尾包含；流年区间的起始日期包含、终止日期不含。`命宫`和`身宫`仍是地支，
 完整宫位从`宫位视图.宫位`读取。出生记录与配置增加了中文类型名，字段和构造关键字仍用原名；
@@ -211,6 +222,26 @@ True
 .. autodata:: ziwei.chart.流年叠读
    :no-value:
 .. autodata:: ziwei.chart.流年宫位
+   :no-value:
+.. autodata:: ziwei.result.命盘结果
+   :no-value:
+.. autodata:: ziwei.result.结果宫位
+   :no-value:
+.. autodata:: ziwei.result.结果星位
+   :no-value:
+.. autodata:: ziwei.result.结果四化
+   :no-value:
+.. autodata:: ziwei.result.结果亮度
+   :no-value:
+.. autodata:: ziwei.result.结果大限
+   :no-value:
+.. autodata:: ziwei.result.结果大限组
+   :no-value:
+.. autodata:: ziwei.result.结果运限
+   :no-value:
+.. autodata:: ziwei.result.结果流年宫位
+   :no-value:
+.. autodata:: ziwei.result.结果流年
    :no-value:
 ```
 
@@ -458,8 +489,7 @@ celestial-calendar 的具体适配；导入本模块不初始化 celestial 原�
 
 ## 完整命盘与显示
 
-[用法与参考盘例](chart.md)。从原始出生记录排盘，生成只读文本或静态SVG盘面，不提供命盘保存／恢复接口。
-`render_svg()`自v0.2.0起提供。
+[用法与参考盘例](chart.md)。从原始出生记录排盘，生成只读文本盘面；保存与交换用[结果JSON](#结果json)。
 
 ```{eval-rst}
 .. automodule:: ziwei.chart
@@ -468,7 +498,19 @@ celestial-calendar 的具体适配；导入本模块不初始化 celestial 原�
    :member-order: bysource
 
 .. automodule:: ziwei.render
-   :members: render_text, render_svg
+   :members: render_text
+```
+
+## 结果JSON
+
+[用法、字段与读取检查](result.md)。结果只含读数，不含出生资料、口径、所选表、规则标识或版本；
+读取不调用历法，也不按现行规则重算。
+
+```{eval-rst}
+.. automodule:: ziwei.result
+   :members: ChartResult, ResultPalace, ResultStar, ResultSihua, ResultBrightness, ResultDecade, ResultDecades, ResultYunxian, ResultLiunianPalace, ResultLiunian, result_of, dumps, loads
+   :undoc-members:
+   :member-order: bysource
 ```
 
 ## 独立知识目录
@@ -479,7 +521,7 @@ celestial-calendar 的具体适配；导入本模块不初始化 celestial 原�
 
 ```{eval-rst}
 .. automodule:: ziwei.knowledge
-   :members: load_catalog
+   :members: load_catalog, 加载目录
 ```
 
 ### 记录类型与状态
@@ -500,6 +542,9 @@ celestial-calendar 的具体适配；导入本模块不初始化 celestial 原�
    :member-order: bysource
 
 .. autodata:: ziwei.knowledge.catalog.Record
+   :no-value:
+
+.. autodata:: ziwei.knowledge.catalog.知识目录
    :no-value:
 
 ```

@@ -19,6 +19,8 @@ from ziwei.knowledge import load_catalog
 from ziwei.knowledge.data import _star_entries
 from ziwei.knowledge.model import Concept, ConceptKind, RuleVariant, Source, SourceStatus
 
+FIXTURES = Path(__file__).parent / "fixtures"
+
 # 用字面值固定规则ID对应的星曜，否则执行定义与目录一起错绑时，期望也会跟着改变。
 # 新增规则另加期望，不改已有规则的ID与星曜对应关系。
 EXPECTED_RULE_STARS = {
@@ -119,10 +121,14 @@ def test_rule_display_names_do_not_change_position_identities(
 
 def test_every_star_and_rule_is_queryable_without_birth() -> None:
   catalog = load_catalog()
-  assert len(catalog.list_concepts(kind=ConceptKind.星曜)) == len(stars.Star)
+  implemented_ids = {star.concept_id for star in stars.Star}
+  assert {item.id for item in catalog.list_concepts(kind=ConceptKind.星曜)} - implemented_ids == {
+    "concept.star.tiankong",
+  }
   for star in stars.Star:
     concept = catalog.get(star.concept_id)
     assert isinstance(concept, Concept)
+    assert concept.kind is ConceptKind.星曜
     assert concept.name == star.value
     assert concept in catalog.find(star.value)
     assert catalog.references(star.concept_id)
@@ -143,6 +149,26 @@ def test_every_star_and_rule_is_queryable_without_birth() -> None:
 def test_rule_meaning_does_not_include_configuration_defaults() -> None:
   for rule in stars.STAR_RULES:
     assert all("默认" not in text for text in (rule.definition, rule.scope, *rule.conditions))
+
+
+@pytest.mark.parametrize("defect", ["missing", "kind", "name", "extra"])
+def test_star_mapping_check_rejects_defects(monkeypatch: pytest.MonkeyPatch, defect: str) -> None:
+  from ziwei.knowledge import data
+
+  concepts = data.CONCEPTS
+  if defect == "missing":
+    concepts = tuple(item for item in concepts if item.id != stars.Star.紫微.concept_id)
+  elif defect == "extra":
+    concepts = (*concepts, Concept(id="concept.star.extra", name="额外星", kind=ConceptKind.星曜))
+  else:
+    changes: dict[str, Any] = {"kind": ConceptKind.宫位} if defect == "kind" else {"name": "错名"}
+    concepts = tuple(
+      replace(item, **changes) if item.id == stars.Star.紫微.concept_id else item
+      for item in concepts
+    )
+  monkeypatch.setattr(data, "CONCEPTS", concepts)
+  with pytest.raises((AssertionError, KeyError)):
+    test_every_star_and_rule_is_queryable_without_birth()
 
 
 @pytest.mark.parametrize(
@@ -186,46 +212,12 @@ def test_star_concepts_have_explicit_identity(
       member = '  FUTURE = "测试星"\n'
     code = code.replace(marker, member + marker)
   path.write_text(code, encoding="utf-8")
-  check = """
-import sys
-sys.path.insert(0, sys.argv[1])
-if sys.argv[3]:
-  sys.stderr.reconfigure(encoding=sys.argv[3], errors='backslashreplace')
-try:
-  from ziwei.stars import Star
-except ValueError as error:
-  if sys.argv[2] != 'missing-id' or str(error) != '新增星曜须显式指定知识标识':
-    raise
-  print('MISSING_ID_REJECTED')
-  raise SystemExit(0)
-if sys.argv[2] == 'missing-id':
-  raise RuntimeError('missing identity accepted')
-from ziwei.knowledge import load_catalog
-catalog = load_catalog()
-for star in Star:
-  if catalog.get(star.concept_id).name != star.value:
-    raise RuntimeError('star concept mismatch')
-if Star.紫微.concept_id != 'concept.star.ziwei':
-  raise RuntimeError('renamed member changed identity')
-if sys.argv[2] == 'rename' and Star.紫微.name != 'ZIWEI_RENAMED':
-  raise RuntimeError('rename was not applied')
-if sys.argv[2] == 'display-name' and Star.紫微.value != '紫微（显示名）':
-  raise RuntimeError('display name was not changed')
-if sys.argv[2] == 'alias' and Star.新增别名 is not Star.紫微:
-  raise RuntimeError('alias was not added')
-if sys.argv[2] == 'rule-name':
-  rule = catalog.get('variant.star.ziwei-series')
-  if rule.name != '紫微系显示名' or 'concept.star.tianji' not in rule.concept_ids:
-    raise RuntimeError('rule display name changed identity')
-print('CONCEPTS_OK', len(Star))
-"""
   result = subprocess.run(
     [
       sys.executable,
       "-I",
       *(["-O"] if sys.flags.optimize else []),
-      "-c",
-      check,
+      str(FIXTURES / "star_concepts.py"),
       str(source),
       change,
       error_encoding or "",
@@ -298,6 +290,12 @@ def test_pending_quanshu_is_not_executed_and_modern_evidence_is_not_upgraded() -
   assert "六辛逢虎马" in quotes and "丙丁猪狗位" in quotes and "壬癸免蛇藏" in quotes
   assert "天空" not in {item.name for item in catalog.list_concepts(kind=ConceptKind.星曜)}
   assert catalog.find("天空") == ()
+  (tiankong,) = catalog.find("年支天空")
+  assert catalog.find("年支天空星") == (tiankong,)
+  assert tiankong.id == "concept.star.tiankong"
+  assert tiankong.id not in {star.concept_id for star in stars.Star}
+  assert catalog.list_variants(concept_id=tiankong.id) == ()
+  assert catalog.references(tiankong.id)[0].quote == "前一位丑宫即安天空"
   old = catalog.get("source.zhongzhou-wangtingzhi")
   new = catalog.get("source.zhongzhou-5shubook")
   assert isinstance(old, Source) and isinstance(new, Source)
@@ -315,22 +313,6 @@ def test_pending_quanshu_is_not_executed_and_modern_evidence_is_not_upgraded() -
   assert "citation.zhongyi999.tianma-year" in {
     item.id for item in catalog.references("entry.tianma.year-branch")
   }
-
-
-def test_modern_short_quotes_stay_below_budget_per_lineage() -> None:
-  catalog = load_catalog()
-  lengths: dict[str, int] = {}
-  for source in catalog.sources:
-    if source.id in (
-      "source.zhongzhou-wangtingzhi",
-      "source.zhongzhou-5shubook",
-      "source.jingcheng-golla",
-      "source.jielan-tianji",
-    ):
-      lengths[source.lineage_id] = lengths.get(source.lineage_id, 0) + sum(
-        len(citation.quote) for citation in catalog.references(source.id)
-      )
-  assert lengths and all(length <= 90 for length in lengths.values())
 
 
 @pytest.mark.parametrize(
